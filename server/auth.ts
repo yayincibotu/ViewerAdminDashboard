@@ -22,10 +22,17 @@ async function hashPassword(password: string) {
 // Bcrypt ile şifre karşılaştırma fonksiyonu
 async function comparePasswords(supplied: string, stored: string) {
   // Eğer stored şifre boş veya tanımsızsa, karşılaştırma başarısız
-  if (!stored) return false;
+  if (!stored) {
+    console.log("Password verification failed: stored password is empty or undefined");
+    return false;
+  }
+  
+  console.log(`Comparing passwords: supplied length=${supplied.length}, stored=${stored.substring(0, 10)}...`);
   
   try {
-    return await bcrypt.compare(supplied, stored);
+    const result = await bcrypt.compare(supplied, stored);
+    console.log(`Password comparison result: ${result}`);
+    return result;
   } catch (error) {
     console.error("Password comparison error:", error);
     return false;
@@ -51,13 +58,24 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log(`Login attempt: username=${username}, password length=${password.length}`);
         const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
+        if (!user) {
+          console.log(`User not found: ${username}`);
           return done(null, false);
-        } else {
-          return done(null, user);
         }
+        
+        console.log(`User found: ${username}, checking password...`);
+        const passwordValid = await comparePasswords(password, user.password);
+        if (!passwordValid) {
+          console.log(`Password invalid for user: ${username}`);
+          return done(null, false);
+        }
+
+        console.log(`Login successful for user: ${username}`);
+        return done(null, user);
       } catch (error) {
+        console.error(`Login error: ${error}`);
         return done(error);
       }
     }),
