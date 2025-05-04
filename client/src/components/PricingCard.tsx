@@ -62,15 +62,15 @@ const PricingCard: React.FC<PricingCardProps> = ({ name, price, period, features
       <div className="p-6 border-t">
         {user ? (
           <Link href={`/subscribe/${planId}`}>
-            <a className="block w-full py-3 px-4 text-center bg-primary-600 hover:bg-primary-700 text-white rounded-md font-medium transition">
-              Purchase
-            </a>
+            <div className="cursor-pointer block w-full py-3 px-4 text-center bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-md font-medium transition shadow-md hover:shadow-lg">
+              Purchase Now
+            </div>
           </Link>
         ) : (
           <Link href="/auth">
-            <a className="block w-full py-3 px-4 text-center bg-primary-600 hover:bg-primary-700 text-white rounded-md font-medium transition">
+            <div className="cursor-pointer block w-full py-3 px-4 text-center bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-md font-medium transition shadow-md hover:shadow-lg">
               Sign Up to Purchase
-            </a>
+            </div>
           </Link>
         )}
       </div>
