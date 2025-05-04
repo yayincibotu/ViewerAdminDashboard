@@ -1,0 +1,62 @@
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import NotFound from "@/pages/not-found";
+import HomePage from "@/pages/HomePage";
+import AuthPage from "@/pages/auth-page";
+import { ProtectedRoute } from "@/lib/protected-route";
+import Dashboard from "@/pages/app/Dashboard";
+import Services from "@/pages/app/Services";
+import Subscriptions from "@/pages/app/Subscriptions";
+import Settings from "@/pages/app/Settings";
+import AdminDashboard from "@/pages/webadmin/Dashboard";
+import AdminUsers from "@/pages/webadmin/Users";
+import AdminPayments from "@/pages/webadmin/Payments";
+import AdminServices from "@/pages/webadmin/Services";
+import Checkout from "@/pages/payment/Checkout";
+import Subscribe from "@/pages/payment/Subscribe";
+import { useAuth } from "@/hooks/use-auth";
+
+function Router() {
+  const { user } = useAuth();
+  
+  const isAdmin = user?.role === "admin";
+  
+  return (
+    <Switch>
+      <Route path="/" component={HomePage} />
+      <Route path="/auth" component={AuthPage} />
+      
+      {/* User Dashboard Routes */}
+      <ProtectedRoute path="/app" component={Dashboard} />
+      <ProtectedRoute path="/app/services" component={Services} />
+      <ProtectedRoute path="/app/subscriptions" component={Subscriptions} />
+      <ProtectedRoute path="/app/settings" component={Settings} />
+      
+      {/* Payment Routes */}
+      <ProtectedRoute path="/checkout" component={Checkout} />
+      <ProtectedRoute path="/subscribe/:planId" component={Subscribe} />
+      
+      {/* Admin Routes */}
+      {isAdmin && (
+        <>
+          <ProtectedRoute path="/webadmin" component={AdminDashboard} />
+          <ProtectedRoute path="/webadmin/users" component={AdminUsers} />
+          <ProtectedRoute path="/webadmin/payments" component={AdminPayments} />
+          <ProtectedRoute path="/webadmin/services" component={AdminServices} />
+        </>
+      )}
+      
+      {/* Fallback to 404 */}
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function App() {
+  return <Router />;
+}
+
+export default App;
