@@ -51,6 +51,15 @@ const UserSidebar: React.FC = () => {
             </Link>
           </div>
           
+          <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app/bot-control')}`}>
+            <Link href="/app/bot-control">
+              <div className="flex items-center w-full">
+                <i className="fas fa-robot mr-3"></i>
+                Bot Control
+              </div>
+            </Link>
+          </div>
+          
           <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app/settings')}`}>
             <Link href="/app/settings">
               <div className="flex items-center w-full">
