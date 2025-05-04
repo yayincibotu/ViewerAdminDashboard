@@ -26,16 +26,16 @@ const NavBar: React.FC = () => {
             <Logo />
             <div className="hidden md:flex ml-10 space-x-8">
               <Link href="/">
-                <a className={`text-sm font-medium ${isActive('/')} transition`}>Live Viewers</a>
+                <div className={`text-sm font-medium ${isActive('/')} transition cursor-pointer`}>Live Viewers</div>
               </Link>
               <Link href="/#pricing">
-                <a className={`text-sm font-medium ${isActive('/#pricing')} transition`}>Followers & Sub</a>
+                <div className={`text-sm font-medium ${isActive('/#pricing')} transition cursor-pointer`}>Followers & Sub</div>
               </Link>
               <Link href="/#platforms">
-                <a className={`text-sm font-medium ${isActive('/#platforms')} transition`}>Video View & Like</a>
+                <div className={`text-sm font-medium ${isActive('/#platforms')} transition cursor-pointer`}>Video View & Like</div>
               </Link>
               <Link href="/#contact">
-                <a className={`text-sm font-medium ${isActive('/#contact')} transition`}>Market</a>
+                <div className={`text-sm font-medium ${isActive('/#contact')} transition cursor-pointer`}>Market</div>
               </Link>
             </div>
           </div>
@@ -44,11 +44,11 @@ const NavBar: React.FC = () => {
               <div className="flex items-center gap-4">
                 {user.role === 'admin' && (
                   <Link href="/webadmin">
-                    <a className="text-sm font-medium text-white hover:text-blue-400 transition">Admin</a>
+                    <div className="text-sm font-medium text-white hover:text-blue-400 transition cursor-pointer">Admin</div>
                   </Link>
                 )}
                 <Link href="/app">
-                  <a className="text-sm font-medium text-white hover:text-blue-400 transition">Dashboard</a>
+                  <div className="text-sm font-medium text-white hover:text-blue-400 transition cursor-pointer">Dashboard</div>
                 </Link>
                 <Button 
                   variant="ghost" 
@@ -61,9 +61,9 @@ const NavBar: React.FC = () => {
               </div>
             ) : (
               <Link href="/auth">
-                <a className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 transition text-sm font-medium">
+                <div className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 transition text-sm font-medium cursor-pointer">
                   Login/Register
-                </a>
+                </div>
               </Link>
             )}
             <button
