@@ -40,8 +40,15 @@ export interface IStorage {
   
   // User Subscription operations
   getUserSubscriptions(userId: number): Promise<UserSubscription[]>;
+  getUserSubscriptionWithPlan(id: number): Promise<{ subscription: UserSubscription, plan: SubscriptionPlan } | undefined>;
   createUserSubscription(subscription: InsertUserSubscription): Promise<UserSubscription>;
   updateUserSubscription(id: number, data: Partial<UserSubscription>): Promise<UserSubscription | undefined>;
+  updateSubscriptionTwitchChannel(id: number, twitchChannel: string): Promise<UserSubscription | undefined>;
+  toggleSubscriptionStatus(id: number, isActive: boolean): Promise<UserSubscription | undefined>;
+  updateViewerSettings(id: number, settings: string): Promise<UserSubscription | undefined>;
+  updateChatSettings(id: number, settings: string): Promise<UserSubscription | undefined>;
+  updateFollowerSettings(id: number, settings: string): Promise<UserSubscription | undefined>;
+  updateGeographicTargeting(id: number, countries: string): Promise<UserSubscription | undefined>;
 
   // Session store
   sessionStore: session.SessionStore;

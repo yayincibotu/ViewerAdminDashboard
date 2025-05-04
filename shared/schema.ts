@@ -50,6 +50,13 @@ export const userSubscriptions = pgTable("user_subscriptions", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  twitchChannel: text("twitch_channel"),
+  isActive: boolean("is_active").default(false),
+  lastActivated: timestamp("last_activated"),
+  viewerSettings: text("viewer_settings").default("{}"), // JSON settings for viewers
+  chatSettings: text("chat_settings").default("{}"), // JSON settings for chat bots
+  followerSettings: text("follower_settings").default("{}"), // JSON settings for followers
+  geographicTargeting: text("geographic_targeting"), // Countries targeted
 });
 
 export const insertSubscriptionSchema = createInsertSchema(userSubscriptions).omit({
