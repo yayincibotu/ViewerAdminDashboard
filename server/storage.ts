@@ -245,6 +245,20 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, userId));
   }
 
+  async getUserSubscriptionWithPlan(id: number): Promise<{ subscription: UserSubscription, plan: SubscriptionPlan } | undefined> {
+    const result = await db
+      .select({
+        subscription: userSubscriptions,
+        plan: subscriptionPlans
+      })
+      .from(userSubscriptions)
+      .innerJoin(subscriptionPlans, eq(userSubscriptions.planId, subscriptionPlans.id))
+      .where(eq(userSubscriptions.id, id))
+      .limit(1);
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+
   async createUserSubscription(subscription: InsertUserSubscription): Promise<UserSubscription> {
     const [newSubscription] = await db.insert(userSubscriptions).values(subscription).returning();
     return newSubscription;
@@ -256,6 +270,34 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userSubscriptions.id, id))
       .returning();
     return updatedSubscription;
+  }
+  
+  async updateSubscriptionTwitchChannel(id: number, twitchChannel: string): Promise<UserSubscription | undefined> {
+    return this.updateUserSubscription(id, { twitchChannel });
+  }
+  
+  async toggleSubscriptionStatus(id: number, isActive: boolean): Promise<UserSubscription | undefined> {
+    const lastActivated = isActive ? new Date() : undefined;
+    return this.updateUserSubscription(id, { 
+      isActive, 
+      lastActivated: lastActivated as any // Drizzle type casting
+    });
+  }
+  
+  async updateViewerSettings(id: number, settings: string): Promise<UserSubscription | undefined> {
+    return this.updateUserSubscription(id, { viewerSettings: settings });
+  }
+  
+  async updateChatSettings(id: number, settings: string): Promise<UserSubscription | undefined> {
+    return this.updateUserSubscription(id, { chatSettings: settings });
+  }
+  
+  async updateFollowerSettings(id: number, settings: string): Promise<UserSubscription | undefined> {
+    return this.updateUserSubscription(id, { followerSettings: settings });
+  }
+  
+  async updateGeographicTargeting(id: number, countries: string): Promise<UserSubscription | undefined> {
+    return this.updateUserSubscription(id, { geographicTargeting: countries });
   }
 }
 

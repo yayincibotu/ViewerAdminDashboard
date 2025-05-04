@@ -24,33 +24,41 @@ const UserSidebar: React.FC = () => {
           Main
         </div>
         <nav className="space-y-1">
-          <Link href="/app">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app')}`}>
-              <i className="fas fa-home mr-3"></i>
-              Dashboard
-            </a>
-          </Link>
+          <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app')}`}>
+            <Link href="/app">
+              <div className="flex items-center w-full">
+                <i className="fas fa-home mr-3"></i>
+                Dashboard
+              </div>
+            </Link>
+          </div>
           
-          <Link href="/app/services">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app/services')}`}>
-              <i className="fas fa-layer-group mr-3"></i>
-              Services
-            </a>
-          </Link>
+          <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app/services')}`}>
+            <Link href="/app/services">
+              <div className="flex items-center w-full">
+                <i className="fas fa-layer-group mr-3"></i>
+                Services
+              </div>
+            </Link>
+          </div>
           
-          <Link href="/app/subscriptions">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app/subscriptions')}`}>
-              <i className="fas fa-dollar-sign mr-3"></i>
-              Subscriptions
-            </a>
-          </Link>
+          <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app/subscriptions')}`}>
+            <Link href="/app/subscriptions">
+              <div className="flex items-center w-full">
+                <i className="fas fa-dollar-sign mr-3"></i>
+                Subscriptions
+              </div>
+            </Link>
+          </div>
           
-          <Link href="/app/settings">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app/settings')}`}>
-              <i className="fas fa-cog mr-3"></i>
-              Settings
-            </a>
-          </Link>
+          <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/app/settings')}`}>
+            <Link href="/app/settings">
+              <div className="flex items-center w-full">
+                <i className="fas fa-cog mr-3"></i>
+                Settings
+              </div>
+            </Link>
+          </div>
         </nav>
       </div>
       

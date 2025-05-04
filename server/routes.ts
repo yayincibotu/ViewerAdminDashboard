@@ -57,9 +57,286 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const subscriptions = await storage.getUserSubscriptions(req.user.id);
-      res.json(subscriptions);
+      
+      // Get plan details for each subscription
+      const results = await Promise.all(
+        subscriptions.map(async (sub) => {
+          const plan = await storage.getSubscriptionPlan(sub.planId);
+          return { subscription: sub, plan };
+        })
+      );
+      
+      res.json(results);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching user subscriptions: " + error.message });
+    }
+  });
+  
+  app.get("/api/user-subscriptions/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const id = parseInt(req.params.id);
+      const subscriptionWithPlan = await storage.getUserSubscriptionWithPlan(id);
+      
+      if (!subscriptionWithPlan) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      
+      // Check if the subscription belongs to the logged-in user
+      if (subscriptionWithPlan.subscription.userId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      res.json(subscriptionWithPlan);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching subscription: " + error.message });
+    }
+  });
+  
+  // Update Twitch channel for subscription
+  app.put("/api/user-subscriptions/:id/twitch-channel", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const subscriptionId = parseInt(req.params.id);
+      const { twitchChannel } = req.body;
+      
+      // Validate data
+      if (!twitchChannel) {
+        return res.status(400).json({ message: "Twitch channel is required" });
+      }
+      
+      // Get the subscription to verify ownership
+      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      
+      // Check if subscription belongs to the user
+      if (subscription.subscription.userId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Update the twitch channel
+      const updated = await storage.updateSubscriptionTwitchChannel(subscriptionId, twitchChannel);
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating Twitch channel: " + error.message });
+    }
+  });
+  
+  // Toggle subscription activation
+  app.put("/api/user-subscriptions/:id/toggle", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const subscriptionId = parseInt(req.params.id);
+      const { isActive } = req.body;
+      
+      // Get the subscription to verify ownership
+      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      
+      // Check if subscription belongs to the user
+      if (subscription.subscription.userId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Check if the channel is set
+      if (isActive && !subscription.subscription.twitchChannel) {
+        return res.status(400).json({ message: "You must set a Twitch channel before activating this subscription" });
+      }
+      
+      // Toggle subscription
+      const updated = await storage.toggleSubscriptionStatus(subscriptionId, isActive);
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error toggling subscription: " + error.message });
+    }
+  });
+  
+  // Update Viewer Settings
+  app.put("/api/user-subscriptions/:id/viewer-settings", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const subscriptionId = parseInt(req.params.id);
+      const { settings } = req.body;
+      
+      // Get the subscription to verify ownership
+      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      
+      // Check if subscription belongs to the user
+      if (subscription.subscription.userId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Validate settings
+      const settingsSchema = z.object({
+        viewerCount: z.number().min(1).max(subscription.plan.viewerCount),
+        chatMode: z.enum(["quiet", "moderate", "active"]),
+        autoMessages: z.boolean(),
+        customMessages: z.array(z.string()).optional(),
+      });
+      
+      try {
+        settingsSchema.parse(JSON.parse(settings));
+      } catch (validationError) {
+        return res.status(400).json({ message: "Invalid settings format", error: validationError });
+      }
+      
+      // Update the settings
+      const updated = await storage.updateViewerSettings(subscriptionId, settings);
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating viewer settings: " + error.message });
+    }
+  });
+  
+  // Update Chat Settings
+  app.put("/api/user-subscriptions/:id/chat-settings", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const subscriptionId = parseInt(req.params.id);
+      const { settings } = req.body;
+      
+      // Get the subscription to verify ownership
+      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      
+      // Check if subscription belongs to the user
+      if (subscription.subscription.userId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Validate settings
+      const settingsSchema = z.object({
+        chatCount: z.number().min(1).max(subscription.plan.chatCount),
+        messageFrequency: z.enum(["low", "medium", "high"]),
+        autoRespond: z.boolean(),
+        chatBotNames: z.array(z.string()).optional(),
+        customResponses: z.record(z.string(), z.string()).optional(),
+      });
+      
+      try {
+        settingsSchema.parse(JSON.parse(settings));
+      } catch (validationError) {
+        return res.status(400).json({ message: "Invalid settings format", error: validationError });
+      }
+      
+      // Update the settings
+      const updated = await storage.updateChatSettings(subscriptionId, settings);
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating chat settings: " + error.message });
+    }
+  });
+  
+  // Update Follower Settings
+  app.put("/api/user-subscriptions/:id/follower-settings", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const subscriptionId = parseInt(req.params.id);
+      const { settings } = req.body;
+      
+      // Get the subscription to verify ownership
+      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      
+      // Check if subscription belongs to the user
+      if (subscription.subscription.userId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Validate settings
+      const settingsSchema = z.object({
+        followerCount: z.number().min(1).max(subscription.plan.followerCount),
+        deliverySpeed: z.enum(["slow", "normal", "fast"]),
+        scheduleDelivery: z.boolean(),
+        scheduleTime: z.string().optional(),
+      });
+      
+      try {
+        settingsSchema.parse(JSON.parse(settings));
+      } catch (validationError) {
+        return res.status(400).json({ message: "Invalid settings format", error: validationError });
+      }
+      
+      // Update the settings
+      const updated = await storage.updateFollowerSettings(subscriptionId, settings);
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating follower settings: " + error.message });
+    }
+  });
+  
+  // Update Geographic Targeting
+  app.put("/api/user-subscriptions/:id/geographic-targeting", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const subscriptionId = parseInt(req.params.id);
+      const { countries } = req.body;
+      
+      // Get the subscription to verify ownership
+      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      
+      // Check if subscription belongs to the user
+      if (subscription.subscription.userId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Check if plan supports geographic targeting
+      if (!subscription.plan.geographicTargeting) {
+        return res.status(400).json({ message: "Your plan does not support geographic targeting" });
+      }
+      
+      // Update the geographic targeting
+      const updated = await storage.updateGeographicTargeting(subscriptionId, countries);
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating geographic targeting: " + error.message });
     }
   });
 
