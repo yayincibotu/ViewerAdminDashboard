@@ -19,6 +19,16 @@ interface PricingCardProps {
 const PricingCard: React.FC<PricingCardProps> = ({ name, price, period, features, popular = false, planId }) => {
   const { user } = useAuth();
   
+  // Button logic based on user and plan status
+  const getButtonText = () => {
+    if (!user) {
+      return "Sign Up to Purchase";
+    }
+    
+    // For logged in users, just show "Purchase"
+    return "Purchase";
+  };
+  
   const borderClass = popular 
     ? "border-primary-200 ring-2 ring-primary-500" 
     : "border-gray-100";
@@ -63,13 +73,13 @@ const PricingCard: React.FC<PricingCardProps> = ({ name, price, period, features
         {user ? (
           <Link href={`/subscribe/${planId}`}>
             <div className="cursor-pointer block w-full py-3 px-4 text-center bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-md font-medium transition shadow-md hover:shadow-lg">
-              Purchase Now
+              {getButtonText()}
             </div>
           </Link>
         ) : (
           <Link href="/auth">
             <div className="cursor-pointer block w-full py-3 px-4 text-center bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-md font-medium transition shadow-md hover:shadow-lg">
-              Sign Up to Purchase
+              {getButtonText()}
             </div>
           </Link>
         )}
