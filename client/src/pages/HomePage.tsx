@@ -199,14 +199,30 @@ const HomePage: React.FC = () => {
         </section>
         
         {/* Pricing Plans */}
-        <section id="pricing" className="py-16 bg-gray-50">
+        <section id="pricing" className="py-20 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl font-bold mb-4">Twitch Viewbot Plans & Pricing</h2>
-              <p className="text-gray-600">We have crafted exciting plans to help you attract more potential viewers, downloads and customers and surpass your competitors.</p>
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <span className="inline-block py-1 px-3 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold mb-3">PRICING PLANS</span>
+              <h2 className="text-3xl md:text-4xl font-bold mb-5">Twitch Viewbot Plans & Pricing</h2>
+              <p className="text-gray-600">We have crafted premium plans to help you grow your audience, boost engagement, and surpass your competitors with our reliable viewbot services.</p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Pricing toggle */}
+            <div className="flex justify-center mb-10">
+              <div className="relative flex items-center p-1 bg-gray-100 rounded-lg">
+                <button className="py-2 px-5 rounded-md bg-white shadow-sm text-blue-700 font-medium">
+                  Monthly Billing
+                </button>
+                <button className="py-2 px-5 rounded-md text-gray-700 font-medium">
+                  Annual Billing
+                </button>
+                <span className="absolute right-0 top-0 transform translate-x-2 -translate-y-1/2 bg-green-500 text-white text-xs font-bold rounded-full py-0.5 px-2">
+                  Save 20%
+                </span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {pricingPlans.map((plan, index) => (
                 <PricingCard
                   key={index}
@@ -220,11 +236,177 @@ const HomePage: React.FC = () => {
               ))}
             </div>
             
+            {/* Compare all features section */}
+            <div className="mt-16 bg-white p-8 rounded-xl shadow-md border border-gray-100">
+              <div className="text-center mb-10">
+                <h3 className="text-2xl font-bold">Compare All Features</h3>
+                <p className="text-gray-600 mt-2">A detailed comparison of what's included in each plan</p>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-4 px-4 font-semibold text-gray-700">Feature</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-700">25 Viewers</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-700">50 Viewers</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-700">100 Viewers</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-700">250 Viewers</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-800">Live Viewers</td>
+                      <td className="py-3 px-4 text-center">25</td>
+                      <td className="py-3 px-4 text-center">50</td>
+                      <td className="py-3 px-4 text-center">100</td>
+                      <td className="py-3 px-4 text-center">250</td>
+                    </tr>
+                    <tr className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-800">Active Chatters</td>
+                      <td className="py-3 px-4 text-center">25</td>
+                      <td className="py-3 px-4 text-center">50</td>
+                      <td className="py-3 px-4 text-center">100</td>
+                      <td className="py-3 px-4 text-center">250</td>
+                    </tr>
+                    <tr className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-800">Twitch Followers</td>
+                      <td className="py-3 px-4 text-center">50</td>
+                      <td className="py-3 px-4 text-center">100</td>
+                      <td className="py-3 px-4 text-center">250</td>
+                      <td className="py-3 px-4 text-center">500</td>
+                    </tr>
+                    <tr className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-800">Realistic View Count</td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                    </tr>
+                    <tr className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-800">Customizable Chat</td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-red-500 mx-auto">
+                          <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-red-500 mx-auto">
+                          <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                    </tr>
+                    <tr className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-800">Geographic Targeting</td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-red-500 mx-auto">
+                          <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-red-500 mx-auto">
+                          <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-red-500 mx-auto">
+                          <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                    </tr>
+                    <tr className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-800">Priority Support</td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mx-auto">
+                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
             <div className="mt-12 text-center">
               <a href="#" className="inline-flex items-center px-6 py-3 border border-gray-300 hover:border-gray-400 text-gray-700 rounded-md font-medium transition">
-                View Higher Tier Plans
-                <i className="fas fa-arrow-right ml-2"></i>
+                Need More? View Enterprise Plans
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 ml-2">
+                  <path fillRule="evenodd" d="M12.97 3.97a.75.75 0 011.06 0l7.5 7.5a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 11-1.06-1.06l6.22-6.22H3a.75.75 0 010-1.5h16.19l-6.22-6.22a.75.75 0 010-1.06z" clipRule="evenodd" />
+                </svg>
               </a>
+            </div>
+            
+            {/* FAQ section */}
+            <div className="mt-16">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold">Frequently Asked Questions</h3>
+                <p className="text-gray-600 mt-2">Get answers to common questions about our pricing plans</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-lg font-semibold mb-2">Is there a free trial available?</h4>
+                  <p className="text-gray-600">Yes, we offer a free trial for new users to experience our services before committing to a paid plan.</p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-lg font-semibold mb-2">Can I upgrade my plan later?</h4>
+                  <p className="text-gray-600">Absolutely! You can upgrade your plan at any time to access more features and higher viewer counts.</p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-lg font-semibold mb-2">How do I cancel my subscription?</h4>
+                  <p className="text-gray-600">You can cancel your subscription at any time through your account dashboard with no cancellation fees.</p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                  <h4 className="text-lg font-semibold mb-2">Do you offer custom plans?</h4>
+                  <p className="text-gray-600">Yes, we offer custom enterprise plans for users who need more advanced features or higher viewer counts.</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
