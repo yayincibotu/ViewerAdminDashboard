@@ -27,7 +27,8 @@ import {
   Save,
   Globe,
   Sparkles,
-  Twitch
+  Twitch,
+  X
 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -59,27 +60,26 @@ const BotControl = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [location] = useLocation();
+  
   // Extract the ID from the query string manually
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const subscriptionId = urlParams.get('id');
-  const [selectedSubscription, setSelectedSubscription] = useState<number | null>(subscriptionId ? parseInt(subscriptionId) : null);
   
-  // Viewer settings state
+  // All state variables defined at the beginning
+  const [selectedSubscription, setSelectedSubscription] = useState<number | null>(
+    subscriptionId ? parseInt(subscriptionId) : null
+  );
   const [viewerSettings, setViewerSettings] = useState(DEFAULT_VIEWER_SETTINGS);
   const [customMessage, setCustomMessage] = useState('');
-  
-  // Chat settings state
   const [chatSettings, setChatSettings] = useState(DEFAULT_CHAT_SETTINGS);
   const [botName, setBotName] = useState('');
   const [responseKey, setResponseKey] = useState('');
   const [responseValue, setResponseValue] = useState('');
-  
-  // Follower settings state
   const [followerSettings, setFollowerSettings] = useState(DEFAULT_FOLLOWER_SETTINGS);
-  
-  // Geo targeting state
   const [geoTargeting, setGeoTargeting] = useState('');
   const [countryInput, setCountryInput] = useState('');
+  const [twitchChannelInput, setTwitchChannelInput] = useState('');
+  const [showChannelChangeForm, setShowChannelChangeForm] = useState(false);
   
   // Fetch user subscriptions
   const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery({
@@ -92,60 +92,32 @@ const BotControl = () => {
     enabled: !!selectedSubscription,
   });
   
-  // Parse settings when subscription detail loads
-  useEffect(() => {
-    if (subscriptionDetail) {
-      try {
-        // Parse viewer settings
-        if (subscriptionDetail.subscription.viewerSettings) {
-          const parsedViewerSettings = JSON.parse(subscriptionDetail.subscription.viewerSettings);
-          setViewerSettings({
-            ...DEFAULT_VIEWER_SETTINGS,
-            ...parsedViewerSettings
-          });
-        }
-        
-        // Parse chat settings
-        if (subscriptionDetail.subscription.chatSettings) {
-          const parsedChatSettings = JSON.parse(subscriptionDetail.subscription.chatSettings);
-          setChatSettings({
-            ...DEFAULT_CHAT_SETTINGS,
-            ...parsedChatSettings
-          });
-        }
-        
-        // Parse follower settings
-        if (subscriptionDetail.subscription.followerSettings) {
-          const parsedFollowerSettings = JSON.parse(subscriptionDetail.subscription.followerSettings);
-          setFollowerSettings({
-            ...DEFAULT_FOLLOWER_SETTINGS,
-            ...parsedFollowerSettings
-          });
-        }
-        
-        // Parse geographic targeting
-        if (subscriptionDetail.subscription.geographicTargeting) {
-          setGeoTargeting(subscriptionDetail.subscription.geographicTargeting);
-        }
-      } catch (error) {
-        console.error('Error parsing settings:', error);
-      }
-    }
-  }, [subscriptionDetail]);
+  // All mutations
+  const updateTwitchChannelMutation = useMutation({
+    mutationFn: async (twitchChannel: string) => {
+      if (!selectedSubscription) return null;
+      
+      const res = await apiRequest('PUT', `/api/user-subscriptions/${selectedSubscription}/twitch-channel`, {
+        twitchChannel
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Twitch Channel Updated',
+        description: 'Your Twitch channel has been saved for this subscription.',
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/user-subscriptions/${selectedSubscription}`] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Update failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
   
-  // Select first subscription if none selected and subscriptions are loaded
-  useEffect(() => {
-    if (
-      !selectedSubscription && 
-      !subscriptionsLoading && 
-      subscriptions.length > 0 && 
-      !subscriptionId
-    ) {
-      setSelectedSubscription(subscriptions[0].subscription.id);
-    }
-  }, [subscriptions, subscriptionsLoading, selectedSubscription, subscriptionId]);
-  
-  // Viewer settings update mutation
   const updateViewerSettingsMutation = useMutation({
     mutationFn: async () => {
       if (!selectedSubscription) return null;
@@ -171,7 +143,6 @@ const BotControl = () => {
     },
   });
   
-  // Chat settings update mutation
   const updateChatSettingsMutation = useMutation({
     mutationFn: async () => {
       if (!selectedSubscription) return null;
@@ -197,7 +168,6 @@ const BotControl = () => {
     },
   });
   
-  // Follower settings update mutation
   const updateFollowerSettingsMutation = useMutation({
     mutationFn: async () => {
       if (!selectedSubscription) return null;
@@ -223,7 +193,6 @@ const BotControl = () => {
     },
   });
   
-  // Geographic targeting update mutation
   const updateGeoTargetingMutation = useMutation({
     mutationFn: async () => {
       if (!selectedSubscription) return null;
@@ -249,7 +218,60 @@ const BotControl = () => {
     },
   });
   
-  // Add custom message to viewer settings
+  // Parse settings when subscription detail loads
+  useEffect(() => {
+    if (subscriptionDetail) {
+      try {
+        // Parse viewer settings
+        if (subscriptionDetail.subscription?.viewerSettings) {
+          const parsedViewerSettings = JSON.parse(subscriptionDetail.subscription.viewerSettings);
+          setViewerSettings({
+            ...DEFAULT_VIEWER_SETTINGS,
+            ...parsedViewerSettings
+          });
+        }
+        
+        // Parse chat settings
+        if (subscriptionDetail.subscription?.chatSettings) {
+          const parsedChatSettings = JSON.parse(subscriptionDetail.subscription.chatSettings);
+          setChatSettings({
+            ...DEFAULT_CHAT_SETTINGS,
+            ...parsedChatSettings
+          });
+        }
+        
+        // Parse follower settings
+        if (subscriptionDetail.subscription?.followerSettings) {
+          const parsedFollowerSettings = JSON.parse(subscriptionDetail.subscription.followerSettings);
+          setFollowerSettings({
+            ...DEFAULT_FOLLOWER_SETTINGS,
+            ...parsedFollowerSettings
+          });
+        }
+        
+        // Parse geographic targeting
+        if (subscriptionDetail.subscription?.geographicTargeting) {
+          setGeoTargeting(subscriptionDetail.subscription.geographicTargeting);
+        }
+      } catch (error) {
+        console.error('Error parsing settings:', error);
+      }
+    }
+  }, [subscriptionDetail]);
+  
+  // Select first subscription if none selected and subscriptions are loaded
+  useEffect(() => {
+    if (
+      !selectedSubscription && 
+      !subscriptionsLoading && 
+      subscriptions.length > 0 && 
+      !subscriptionId
+    ) {
+      setSelectedSubscription(subscriptions[0]?.subscription?.id);
+    }
+  }, [subscriptions, subscriptionsLoading, selectedSubscription, subscriptionId]);
+  
+  // Helper functions
   const addCustomMessage = () => {
     if (!customMessage.trim()) return;
     
@@ -261,7 +283,6 @@ const BotControl = () => {
     setCustomMessage('');
   };
   
-  // Remove custom message from viewer settings
   const removeCustomMessage = (index: number) => {
     setViewerSettings(prev => ({
       ...prev,
@@ -269,7 +290,6 @@ const BotControl = () => {
     }));
   };
   
-  // Add bot name to chat settings
   const addBotName = () => {
     if (!botName.trim()) return;
     
@@ -281,7 +301,6 @@ const BotControl = () => {
     setBotName('');
   };
   
-  // Remove bot name from chat settings
   const removeBotName = (index: number) => {
     setChatSettings(prev => ({
       ...prev,
@@ -289,7 +308,6 @@ const BotControl = () => {
     }));
   };
   
-  // Add custom response to chat settings
   const addCustomResponse = () => {
     if (!responseKey.trim() || !responseValue.trim()) return;
     
@@ -305,7 +323,6 @@ const BotControl = () => {
     setResponseValue('');
   };
   
-  // Remove custom response from chat settings
   const removeCustomResponse = (key: string) => {
     setChatSettings(prev => {
       const responses = { ...(prev.customResponses || {}) };
@@ -317,7 +334,6 @@ const BotControl = () => {
     });
   };
   
-  // Add country to geographic targeting
   const addCountry = () => {
     if (!countryInput.trim()) return;
     
@@ -333,7 +349,6 @@ const BotControl = () => {
     setCountryInput('');
   };
   
-  // Remove country from geographic targeting
   const removeCountry = (country: string) => {
     const countries = geoTargeting
       ? geoTargeting.split(',').map(c => c.trim()).filter(c => c !== country)
@@ -342,6 +357,7 @@ const BotControl = () => {
     setGeoTargeting(countries.join(', '));
   };
   
+  // Loading state
   if (subscriptionsLoading || (selectedSubscription && detailLoading)) {
     return (
       <div className="flex h-screen bg-gray-100">
@@ -352,9 +368,9 @@ const BotControl = () => {
       </div>
     );
   }
-
-  // Check if user has any subscriptions
-  if (subscriptions.length === 0) {
+  
+  // No subscriptions state
+  if (!subscriptions || subscriptions.length === 0) {
     return (
       <div className="flex h-screen bg-gray-100">
         <UserSidebar />
@@ -373,9 +389,11 @@ const BotControl = () => {
       </div>
     );
   }
-
+  
   // Check if selected subscription has a Twitch channel
   const currentSubscription = subscriptionDetail?.subscription;
+  
+  // If the subscription doesn't have a Twitch channel, show the setup form
   if (currentSubscription && !currentSubscription.twitchChannel) {
     return (
       <div className="flex h-screen bg-gray-100">
@@ -387,49 +405,173 @@ const BotControl = () => {
             </div>
             <h2 className="text-xl font-semibold mb-2">Twitch Channel Required</h2>
             <p className="text-gray-500 mb-6">
-              You need to set a Twitch channel for your subscription before you can use the bot control panel.
+              You need to set a Twitch channel for this subscription before you can use the bot control panel.
             </p>
-            <Button asChild>
-              <a href="/app/subscriptions">Configure Channel</a>
+            
+            <div className="w-full max-w-md mb-6">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="twitch-channel">Twitch Channel Name</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      id="twitch-channel"
+                      placeholder="yourchannelname" 
+                      value={twitchChannelInput}
+                      onChange={(e) => setTwitchChannelInput(e.target.value)}
+                    />
+                    <Button 
+                      onClick={() => updateTwitchChannelMutation.mutate(twitchChannelInput)}
+                      disabled={!twitchChannelInput.trim() || updateTwitchChannelMutation.isPending}
+                    >
+                      {updateTwitchChannelMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Enter your Twitch channel name without the @ symbol
+                  </p>
+                </div>
+                
+                <div className="text-sm text-gray-700 bg-blue-50 p-4 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-blue-700">Each subscription can have a different Twitch channel</p>
+                      <p className="mt-1">This allows you to use different bot plans for different channels you manage.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <Button asChild variant="outline">
+              <a href="/app/subscriptions">Back to Subscriptions</a>
             </Button>
           </div>
         </div>
       </div>
     );
   }
-
+  
+  // Main bot control panel
   return (
     <div className="flex h-screen bg-gray-100">
       <UserSidebar />
       
       <div className="flex-1 overflow-auto">
         <div className="p-8">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
             <div>
               <h1 className="text-2xl font-bold">Bot Control Panel</h1>
               <p className="text-gray-500">Configure your Twitch bot settings</p>
             </div>
             
             {/* Subscription selector */}
-            {subscriptions.length > 1 && (
-              <div className="w-64">
-                <Select
-                  value={selectedSubscription?.toString()}
-                  onValueChange={(value) => setSelectedSubscription(parseInt(value))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a subscription" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subscriptions.map((sub: any) => (
-                      <SelectItem key={sub.subscription.id} value={sub.subscription.id.toString()}>
-                        {sub.plan.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="w-full md:w-auto bg-white p-4 rounded-lg shadow-sm border">
+              <div className="flex flex-col space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-sm text-gray-700">Subscription Plan</div>
+                  {currentSubscription && subscriptionDetail && subscriptionDetail.plan && (
+                    <div className="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-medium">
+                      {subscriptionDetail.plan.viewerCount} Viewers Max
+                    </div>
+                  )}
+                </div>
+                
+                <div className="w-full">
+                  <Select
+                    value={selectedSubscription?.toString()}
+                    onValueChange={(value) => setSelectedSubscription(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a subscription" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subscriptions.map((sub: any) => (
+                        <SelectItem 
+                          key={sub.subscription.id} 
+                          value={sub.subscription.id.toString()}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div>{sub.plan.name}</div>
+                            {sub.subscription.twitchChannel && (
+                              <div className="text-xs text-gray-500">
+                                - {sub.subscription.twitchChannel}
+                              </div>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {currentSubscription && (
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="text-gray-500">
+                      Twitch Channel: 
+                    </div>
+                    <div className="font-medium flex items-center">
+                      {currentSubscription.twitchChannel ? (
+                        <div className="flex items-center gap-1">
+                          <Twitch className="h-3 w-3 text-purple-600" />
+                          <span className="text-purple-600">{currentSubscription.twitchChannel}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-5 w-5 p-0 hover:bg-gray-100 rounded-full"
+                            onClick={() => {
+                              setTwitchChannelInput('');
+                              setShowChannelChangeForm(!showChannelChangeForm);
+                            }}
+                          >
+                            <RefreshCw className="h-3 w-3 text-gray-500" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-yellow-600">Not set</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Channel change form */}
+                {showChannelChangeForm && currentSubscription && (
+                  <div className="pt-2 border-t mt-2">
+                    <div className="text-xs font-medium mb-1 text-gray-700">Change Twitch Channel</div>
+                    <div className="flex gap-1">
+                      <Input 
+                        placeholder="New channel name" 
+                        value={twitchChannelInput}
+                        onChange={(e) => setTwitchChannelInput(e.target.value)}
+                        className="h-7 text-xs"
+                      />
+                      <Button 
+                        size="sm"
+                        className="h-7 text-xs px-2"
+                        onClick={() => {
+                          if (twitchChannelInput.trim()) {
+                            updateTwitchChannelMutation.mutate(twitchChannelInput);
+                            setShowChannelChangeForm(false);
+                          }
+                        }}
+                        disabled={updateTwitchChannelMutation.isPending}
+                      >
+                        {updateTwitchChannelMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          'Save'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
           
           {/* Status indicator */}
@@ -451,7 +593,7 @@ const BotControl = () => {
             </div>
           )}
           
-          {currentSubscription && subscriptionDetail && (
+          {currentSubscription && subscriptionDetail && subscriptionDetail.plan && (
             <Tabs defaultValue="viewers" className="w-full">
               <TabsList className="grid grid-cols-4 mb-6">
                 <TabsTrigger value="viewers" className="flex items-center gap-2">
@@ -564,41 +706,40 @@ const BotControl = () => {
                             {viewerSettings.customMessages.map((message, index) => (
                               <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                                 <span className="text-sm">{message}</span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
                                   onClick={() => removeCustomMessage(index)}
                                 >
-                                  &times;
+                                  <X className="h-4 w-4" />
                                 </Button>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500 mt-2">
-                            No custom messages added yet. Add messages above.
-                          </p>
+                          <p className="text-sm text-gray-500 mt-2">No custom messages added</p>
                         )}
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter className="border-t pt-6 flex justify-between">
-                    <Button
-                      variant="outline"
-                      onClick={() => setViewerSettings(DEFAULT_VIEWER_SETTINGS)}
-                    >
-                      Reset to Default
-                    </Button>
-                    <Button
+                  <CardFooter>
+                    <Button 
                       onClick={() => updateViewerSettingsMutation.mutate()}
                       disabled={updateViewerSettingsMutation.isPending}
+                      className="ml-auto"
                     >
                       {updateViewerSettingsMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
                       ) : (
-                        <Save className="mr-2 h-4 w-4" />
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Viewer Settings
+                        </>
                       )}
-                      Save Settings
                     </Button>
                   </CardFooter>
                 </Card>
@@ -609,11 +750,11 @@ const BotControl = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <MessageSquare className="h-5 w-5 text-purple-500" />
+                      <MessageSquare className="h-5 w-5 text-blue-500" />
                       Chat Bot Settings
                     </CardTitle>
                     <CardDescription>
-                      Configure chat bots and their behavior in your stream
+                      Configure your chat bot's appearance and behavior
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -648,7 +789,7 @@ const BotControl = () => {
                           })}
                         >
                           <SelectTrigger id="message-frequency">
-                            <SelectValue placeholder="Select frequency" />
+                            <SelectValue placeholder="Select message frequency" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="low">Low (Occasional messages)</SelectItem>
@@ -656,6 +797,9 @@ const BotControl = () => {
                             <SelectItem value="high">High (Frequent messages)</SelectItem>
                           </SelectContent>
                         </Select>
+                        <p className="text-sm text-gray-500">
+                          Controls how often bots will chat in your channel
+                        </p>
                       </div>
                       
                       <div className="flex items-center space-x-2">
@@ -667,14 +811,14 @@ const BotControl = () => {
                             autoRespond: checked
                           })}
                         />
-                        <Label htmlFor="auto-respond">Auto-Respond to Messages</Label>
+                        <Label htmlFor="auto-respond">Enable Auto Responses</Label>
                       </div>
                       
                       <div className="space-y-2">
                         <Label>Custom Bot Names</Label>
                         <div className="flex gap-2">
                           <Input
-                            placeholder="Add a username for your chat bots"
+                            placeholder="Add a custom bot name"
                             value={botName}
                             onChange={(e) => setBotName(e.target.value)}
                           />
@@ -691,94 +835,88 @@ const BotControl = () => {
                             {chatSettings.chatBotNames.map((name, index) => (
                               <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                                 <span className="text-sm">{name}</span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
                                   onClick={() => removeBotName(index)}
                                 >
-                                  &times;
+                                  <X className="h-4 w-4" />
                                 </Button>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500 mt-2">
-                            No bot names added yet. Random names will be used.
-                          </p>
+                          <p className="text-sm text-gray-500 mt-2">No custom bot names added</p>
                         )}
                       </div>
                       
                       <div className="space-y-2">
                         <Label>Custom Responses</Label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 gap-2">
                           <Input
-                            placeholder="When someone says this..."
+                            placeholder="Trigger phrase (e.g. !commands)"
                             value={responseKey}
                             onChange={(e) => setResponseKey(e.target.value)}
                           />
-                          <Input
-                            placeholder="Bot will respond with this..."
+                          <Textarea
+                            placeholder="Bot response"
                             value={responseValue}
                             onChange={(e) => setResponseValue(e.target.value)}
+                            className="min-h-[80px]"
                           />
+                          <Button 
+                            type="button" 
+                            onClick={addCustomResponse}
+                            variant="outline"
+                            disabled={!responseKey.trim() || !responseValue.trim()}
+                          >
+                            Add Response
+                          </Button>
                         </div>
-                        <Button 
-                          type="button" 
-                          onClick={addCustomResponse}
-                          variant="outline"
-                          className="w-full mt-2"
-                        >
-                          Add Response
-                        </Button>
+                        
                         {chatSettings.customResponses && Object.keys(chatSettings.customResponses).length > 0 ? (
                           <div className="mt-2 space-y-2">
                             {Object.entries(chatSettings.customResponses).map(([key, value]) => (
-                              <div key={key} className="p-2 bg-gray-50 rounded">
-                                <div className="flex justify-between items-center">
-                                  <div className="flex items-center gap-1">
-                                    <span className="font-medium text-xs">Trigger:</span>
-                                    <span className="text-sm">{key}</span>
-                                  </div>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                              <div key={key} className="border p-3 rounded-md bg-gray-50">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="font-medium text-sm">{key}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
                                     onClick={() => removeCustomResponse(key)}
                                   >
-                                    &times;
+                                    <X className="h-4 w-4" />
                                   </Button>
                                 </div>
-                                <div className="mt-1 pl-4 border-l-2 border-gray-200">
-                                  <span className="text-xs text-gray-500">Response:</span>
-                                  <p className="text-sm">{value}</p>
-                                </div>
+                                <p className="text-sm text-gray-600">{value}</p>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500 mt-2">
-                            No custom responses added yet. Bots will use default responses.
-                          </p>
+                          <p className="text-sm text-gray-500 mt-2">No custom responses added</p>
                         )}
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter className="border-t pt-6 flex justify-between">
-                    <Button
-                      variant="outline"
-                      onClick={() => setChatSettings(DEFAULT_CHAT_SETTINGS)}
-                    >
-                      Reset to Default
-                    </Button>
-                    <Button
+                  <CardFooter>
+                    <Button 
                       onClick={() => updateChatSettingsMutation.mutate()}
                       disabled={updateChatSettingsMutation.isPending}
+                      className="ml-auto"
                     >
                       {updateChatSettingsMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
                       ) : (
-                        <Save className="mr-2 h-4 w-4" />
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Chat Settings
+                        </>
                       )}
-                      Save Settings
                     </Button>
                   </CardFooter>
                 </Card>
@@ -789,11 +927,11 @@ const BotControl = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-green-500" />
+                      <Users className="h-5 w-5 text-blue-500" />
                       Follower Bot Settings
                     </CardTitle>
                     <CardDescription>
-                      Configure follower behavior and delivery schedule
+                      Configure your follower bot settings
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -831,11 +969,14 @@ const BotControl = () => {
                             <SelectValue placeholder="Select delivery speed" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="slow">Slow (Over several days)</SelectItem>
-                            <SelectItem value="normal">Normal (Over 24 hours)</SelectItem>
-                            <SelectItem value="fast">Fast (Over a few hours)</SelectItem>
+                            <SelectItem value="slow">Slow (Natural growth)</SelectItem>
+                            <SelectItem value="normal">Normal (Balanced delivery)</SelectItem>
+                            <SelectItem value="fast">Fast (Quick boost)</SelectItem>
                           </SelectContent>
                         </Select>
+                        <p className="text-sm text-gray-500">
+                          Controls how quickly followers will be added to your channel
+                        </p>
                       </div>
                       
                       <div className="space-y-2">
@@ -848,53 +989,50 @@ const BotControl = () => {
                               scheduleDelivery: checked
                             })}
                           />
-                          <Label htmlFor="schedule-delivery">Schedule Delivery</Label>
+                          <Label htmlFor="schedule-delivery">Schedule Delivery Time</Label>
                         </div>
                         
                         {followerSettings.scheduleDelivery && (
                           <div className="mt-2">
-                            <Label htmlFor="schedule-time">Start Time</Label>
                             <Input
-                              id="schedule-time"
                               type="time"
                               value={followerSettings.scheduleTime}
                               onChange={(e) => setFollowerSettings({
                                 ...followerSettings,
                                 scheduleTime: e.target.value
                               })}
-                              className="mt-1"
                             />
-                            <p className="text-sm text-gray-500 mt-1">
-                              Follower delivery will start at this time in your local timezone
+                            <p className="text-xs text-gray-500 mt-1">
+                              Followers will be delivered at this time (24-hour format, UTC time zone)
                             </p>
                           </div>
                         )}
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter className="border-t pt-6 flex justify-between">
-                    <Button
-                      variant="outline"
-                      onClick={() => setFollowerSettings(DEFAULT_FOLLOWER_SETTINGS)}
-                    >
-                      Reset to Default
-                    </Button>
-                    <Button
+                  <CardFooter>
+                    <Button 
                       onClick={() => updateFollowerSettingsMutation.mutate()}
                       disabled={updateFollowerSettingsMutation.isPending}
+                      className="ml-auto"
                     >
                       {updateFollowerSettingsMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
                       ) : (
-                        <Save className="mr-2 h-4 w-4" />
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Follower Settings
+                        </>
                       )}
-                      Save Settings
                     </Button>
                   </CardFooter>
                 </Card>
               </TabsContent>
               
-              {/* Geo Targeting Tab */}
+              {/* Geographic Targeting Tab */}
               {subscriptionDetail.plan.geographicTargeting && (
                 <TabsContent value="geo">
                   <Card>
@@ -904,91 +1042,81 @@ const BotControl = () => {
                         Geographic Targeting
                       </CardTitle>
                       <CardDescription>
-                        Configure the countries your viewers will appear to be from
+                        Target specific countries for your viewer bots
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div>
-                        <p className="text-sm text-gray-700 mb-4">
-                          Geographic targeting allows you to specify which countries your viewers will appear to come from.
-                          This helps make your audience seem more realistic and can be important for regional content.
-                        </p>
+                      <div className="space-y-4">
+                        <div className="bg-blue-50 p-4 rounded-md">
+                          <p className="text-sm text-blue-800">
+                            Geographic targeting allows you to make your viewers appear from specific countries.
+                            This helps simulate a more realistic audience from your target regions.
+                          </p>
+                        </div>
                         
-                        <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Add Countries</Label>
                           <div className="flex gap-2">
                             <Input
-                              placeholder="Enter a country name (e.g. USA, Germany, Brazil)"
+                              placeholder="Enter country name (e.g., United States)"
                               value={countryInput}
                               onChange={(e) => setCountryInput(e.target.value)}
-                              className="flex-1"
                             />
                             <Button 
                               type="button" 
                               onClick={addCountry}
                               variant="outline"
+                              disabled={!countryInput.trim()}
                             >
                               Add
                             </Button>
                           </div>
                           
-                          <div>
+                          <div className="mt-4">
                             <Label className="mb-2 block">Selected Countries</Label>
                             {geoTargeting ? (
-                              <div className="flex flex-wrap gap-2">
+                              <div className="flex flex-wrap gap-2 mt-2">
                                 {geoTargeting.split(',').map((country) => (
                                   <div 
                                     key={country.trim()} 
-                                    className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full flex items-center text-sm"
+                                    className="bg-blue-100 text-blue-800 rounded-full px-3 py-1 text-sm flex items-center"
                                   >
-                                    {country.trim()}
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      className="h-5 w-5 p-0 ml-1"
+                                    <span>{country.trim()}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-5 w-5 p-0 ml-1 hover:bg-blue-200 rounded-full"
                                       onClick={() => removeCountry(country.trim())}
                                     >
-                                      &times;
+                                      <X className="h-3 w-3" />
                                     </Button>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <div className="text-sm text-gray-500 p-4 border border-dashed rounded-md text-center">
-                                No countries selected. Viewers will come from all regions by default.
-                              </div>
+                              <p className="text-sm text-gray-500">No countries selected. Viewers will appear from random locations.</p>
                             )}
-                          </div>
-                          
-                          <div className="bg-blue-50 p-4 rounded-md">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Sparkles className="h-4 w-4 text-blue-600" />
-                              <h3 className="font-medium text-blue-700">Pro Tip</h3>
-                            </div>
-                            <p className="text-sm text-blue-600">
-                              For best results, select countries that match your target audience or content language.
-                              If left empty, viewers will be distributed across all regions.
-                            </p>
                           </div>
                         </div>
                       </div>
                     </CardContent>
-                    <CardFooter className="border-t pt-6 flex justify-between">
-                      <Button
-                        variant="outline"
-                        onClick={() => setGeoTargeting('')}
-                      >
-                        Reset to Default
-                      </Button>
-                      <Button
+                    <CardFooter>
+                      <Button 
                         onClick={() => updateGeoTargetingMutation.mutate()}
                         disabled={updateGeoTargetingMutation.isPending}
+                        className="ml-auto"
                       >
                         {updateGeoTargetingMutation.isPending ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
                         ) : (
-                          <Save className="mr-2 h-4 w-4" />
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Save Targeting Settings
+                          </>
                         )}
-                        Save Settings
                       </Button>
                     </CardFooter>
                   </Card>
