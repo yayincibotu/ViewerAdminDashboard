@@ -10,8 +10,9 @@ const Logo: React.FC<LogoProps> = ({ className = '', textColorClass = 'text-blue
   return (
     <Link href="/">
       <div className={`flex items-center cursor-pointer ${className}`}>
-        <div className={`text-xl font-bold ${textColorClass}`}>
-          <i className="fas fa-eye mr-2"></i>VIEWERAPPS
+        <div className={`flex items-center font-bold ${textColorClass}`}>
+          <span className="text-blue-500 mr-1">➤</span>
+          <span>VIEWERAPPS</span>
         </div>
       </div>
     </Link>
