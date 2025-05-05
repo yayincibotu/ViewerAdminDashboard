@@ -593,6 +593,163 @@ const BotControl = () => {
             </div>
           )}
           
+          {/* Bot Control Panel */}
+          {currentSubscription && subscriptionDetail && subscriptionDetail.plan && (
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 text-primary p-1.5 rounded-full">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <span>Bot Control Command Center</span>
+                  </div>
+                  <div className="flex gap-3 items-center">
+                    <div className="flex items-center gap-1 text-xs font-medium">
+                      <div className={`w-2 h-2 rounded-full ${currentSubscription.isActive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                      <span className={`${currentSubscription.isActive ? 'text-green-600' : 'text-red-600'}`}>
+                        {currentSubscription.isActive ? 'Services Active' : 'Services Inactive'}
+                      </span>
+                    </div>
+                    {!currentSubscription.isActive && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs h-7 bg-green-50 text-green-600 hover:bg-green-100 border-green-200"
+                        asChild
+                      >
+                        <a href="/app/subscriptions">Activate Services</a>
+                      </Button>
+                    )}
+                  </div>
+                </CardTitle>
+                <CardDescription>
+                  Control all your Twitch bot services from a single dashboard
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Viewer Bot Control */}
+                  <div className="border rounded-lg p-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16">
+                      <div className="absolute transform rotate-45 bg-blue-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
+                        {currentSubscription.isActive ? 'Running' : 'Inactive'}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Eye className="h-5 w-5 text-blue-500" />
+                          <h3 className="font-medium">Viewer Bot</h3>
+                        </div>
+                        <div className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md font-medium">
+                          {viewerSettings.viewerCount} / {subscriptionDetail.plan.viewerCount}
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Adds simulated viewers to your Twitch stream
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-500">
+                          {currentSubscription.isActive ? 
+                            `${viewerSettings.viewerCount} viewers currently active` : 
+                            'Waiting to be activated'}
+                        </div>
+                        <Switch 
+                          checked={currentSubscription.isActive} 
+                          disabled={!currentSubscription.isActive}
+                          aria-readonly="true"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chat Bot Control */}
+                  <div className="border rounded-lg p-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16">
+                      <div className="absolute transform rotate-45 bg-purple-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
+                        {currentSubscription.isActive ? 'Running' : 'Inactive'}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-5 w-5 text-purple-500" />
+                          <h3 className="font-medium">Chat Bot</h3>
+                        </div>
+                        <div className="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-md font-medium">
+                          {chatSettings.chatCount} / {subscriptionDetail.plan.chatCount}
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Simulates chat activity in your Twitch channel
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-500">
+                          {currentSubscription.isActive ? 
+                            `${chatSettings.chatBotNames?.length || 0} bots active with ${chatSettings.messageFrequency} frequency` : 
+                            'Waiting to be activated'}
+                        </div>
+                        <Switch 
+                          checked={currentSubscription.isActive} 
+                          disabled={!currentSubscription.isActive}
+                          aria-readonly="true"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Follower Bot Control */}
+                  <div className="border rounded-lg p-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16">
+                      <div className="absolute transform rotate-45 bg-green-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
+                        {currentSubscription.isActive ? 'Running' : 'Inactive'}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-5 w-5 text-green-500" />
+                          <h3 className="font-medium">Follower Bot</h3>
+                        </div>
+                        <div className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md font-medium">
+                          {followerSettings.followerCount} / {subscriptionDetail.plan.followerCount}
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Adds followers to your Twitch channel
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-500">
+                          {currentSubscription.isActive ? 
+                            `Delivering ${followerSettings.followerCount} followers at ${followerSettings.deliverySpeed} speed` : 
+                            'Waiting to be activated'}
+                        </div>
+                        <Switch 
+                          checked={currentSubscription.isActive} 
+                          disabled={!currentSubscription.isActive}
+                          aria-readonly="true"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {currentSubscription.isActive && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm text-blue-800 flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <Sparkles className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div>
+                      <p>Your bots are currently active and running on <strong>{currentSubscription.twitchChannel}</strong>. 
+                      Configure specific settings for each bot type in the tabs below.</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {currentSubscription && subscriptionDetail && subscriptionDetail.plan && (
             <Tabs defaultValue="viewers" className="w-full">
               <TabsList className="grid grid-cols-4 mb-6">
