@@ -42,8 +42,8 @@ function Router() {
       <ProtectedRoute path="/app/settings" component={Settings} />
       
       {/* Payment Routes */}
-      <ProtectedRoute path="/checkout" component={Checkout} />
-      <ProtectedRoute path="/subscribe/:planId" component={Subscribe} />
+      <ProtectedRoute path="/checkout" component={Checkout} noLayout={true} />
+      <ProtectedRoute path="/subscribe/:planId" component={Subscribe} noLayout={true} />
       
       {/* Admin Routes */}
       {isAdmin && (

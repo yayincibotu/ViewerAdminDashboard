@@ -1,9 +1,9 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import AdminLayout from "@/components/layout/AdminLayout";
 
-export function ProtectedRoute({
+export function ProtectedAdminRoute({
   path,
   component: Component,
   noLayout = false,
@@ -24,7 +24,7 @@ export function ProtectedRoute({
     );
   }
 
-  if (!user) {
+  if (!user || user.role !== "admin") {
     return (
       <Route path={path}>
         <Redirect to="/auth" />
@@ -38,9 +38,9 @@ export function ProtectedRoute({
 
   return (
     <Route path={path}>
-      <DashboardLayout>
+      <AdminLayout>
         <Component />
-      </DashboardLayout>
+      </AdminLayout>
     </Route>
   );
 }
