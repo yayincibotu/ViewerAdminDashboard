@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import UserSidebar from '@/components/dashboard/UserSidebar';
+import Header from '@/components/dashboard/Header';
 import StatCard from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -49,7 +50,8 @@ const Dashboard: React.FC = () => {
     <div className="flex h-screen bg-gray-100">
       <UserSidebar />
       
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto flex flex-col">
+        <Header />
         <div className="p-8">
           <div className="flex justify-between items-center mb-8">
             <div>

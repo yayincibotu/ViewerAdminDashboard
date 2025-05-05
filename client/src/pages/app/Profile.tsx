@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import UserSidebar from '@/components/dashboard/UserSidebar';
+import Header from '@/components/dashboard/Header';
 import { 
   Card, 
   CardContent, 
@@ -170,7 +171,8 @@ const Profile = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       <UserSidebar />
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto flex flex-col">
+        <Header />
         <div className="container mx-auto py-6 px-4">
           <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
 
