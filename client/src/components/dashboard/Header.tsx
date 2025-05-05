@@ -94,8 +94,11 @@ const Header = () => {
   const hasFollowerBot = hasSubscription && activeSubscription?.plan?.followerBotEnabled;
 
   const handleLogout = () => {
-    logoutMutation.mutate();
-    navigate('/');
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        window.location.href = '/';
+      }
+    });
   };
 
   if (!user) return null;
