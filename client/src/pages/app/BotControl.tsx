@@ -28,8 +28,19 @@ import {
   Globe,
   Sparkles,
   Twitch,
-  X
+  X,
+  CircleDot
 } from 'lucide-react';
+
+// Durum gösterge bileşeni
+const StatusIndicator = ({ active }: { active: boolean }) => (
+  <div className="flex items-center gap-1.5">
+    <div className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-green-500' : 'bg-red-500'}`} />
+    <span className={`text-xs font-medium ${active ? 'text-green-600' : 'text-red-600'}`}>
+      {active ? 'Active' : 'Inactive'}
+    </span>
+  </div>
+);
 import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
@@ -637,11 +648,6 @@ const BotControl = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Viewer Bot Control */}
                   <div className="border rounded-lg p-4 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16">
-                      <div className="absolute transform rotate-45 bg-blue-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
-                        {currentSubscription.isActive && viewerBotActive ? 'Running' : 'Inactive'}
-                      </div>
-                    </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -652,8 +658,11 @@ const BotControl = () => {
                           {viewerSettings.viewerCount} / {subscriptionDetail.plan.viewerCount}
                         </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        Adds simulated viewers to your Twitch stream
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-500">
+                          Adds simulated viewers to your Twitch stream
+                        </div>
+                        <StatusIndicator active={currentSubscription.isActive && viewerBotActive} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
@@ -687,11 +696,6 @@ const BotControl = () => {
 
                   {/* Chat List Control */}
                   <div className="border rounded-lg p-4 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16">
-                      <div className="absolute transform rotate-45 bg-purple-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
-                        {currentSubscription.isActive && chatListActive ? 'Running' : 'Inactive'}
-                      </div>
-                    </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -702,8 +706,11 @@ const BotControl = () => {
                           {chatSettings.chatCount} / {subscriptionDetail.plan.chatCount}
                         </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        Displays a static chat list in your Twitch channel
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-500">
+                          Displays a static chat list in your Twitch channel
+                        </div>
+                        <StatusIndicator active={currentSubscription.isActive && chatListActive} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
@@ -737,11 +744,6 @@ const BotControl = () => {
                   
                   {/* Chat Bot Control */}
                   <div className="border rounded-lg p-4 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16">
-                      <div className="absolute transform rotate-45 bg-indigo-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
-                        {currentSubscription.isActive && chatBotActive ? 'Running' : 'Inactive'}
-                      </div>
-                    </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -752,8 +754,11 @@ const BotControl = () => {
                           {chatSettings.chatBotNames?.length || 0} bots
                         </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        Simulates chat activity in your Twitch channel
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-500">
+                          Simulates chat activity in your Twitch channel
+                        </div>
+                        <StatusIndicator active={currentSubscription.isActive && chatBotActive} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
