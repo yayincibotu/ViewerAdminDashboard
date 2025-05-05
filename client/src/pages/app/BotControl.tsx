@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import UserSidebar from '@/components/dashboard/UserSidebar';
+import Header from '@/components/dashboard/Header';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -379,8 +380,11 @@ const BotControl = () => {
     return (
       <div className="flex h-screen bg-gray-100">
         <UserSidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
         </div>
       </div>
     );
@@ -391,16 +395,19 @@ const BotControl = () => {
     return (
       <div className="flex h-screen bg-gray-100">
         <UserSidebar />
-        <div className="flex-1 p-8">
-          <div className="flex flex-col items-center justify-center bg-white rounded-lg p-8 text-center shadow">
-            <div className="rounded-full bg-gray-100 p-4 mb-4">
-              <Twitch className="h-8 w-8 text-gray-400" />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <div className="p-8">
+            <div className="flex flex-col items-center justify-center bg-white rounded-lg p-8 text-center shadow">
+              <div className="rounded-full bg-gray-100 p-4 mb-4">
+                <Twitch className="h-8 w-8 text-gray-400" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">No Active Subscriptions</h2>
+              <p className="text-gray-500 mb-6">You need an active subscription to access the bot control panel.</p>
+              <Button asChild>
+                <a href="/#pricing">View Plans</a>
+              </Button>
             </div>
-            <h2 className="text-xl font-semibold mb-2">No Active Subscriptions</h2>
-            <p className="text-gray-500 mb-6">You need an active subscription to access the bot control panel.</p>
-            <Button asChild>
-              <a href="/#pricing">View Plans</a>
-            </Button>
           </div>
         </div>
       </div>
@@ -415,59 +422,62 @@ const BotControl = () => {
     return (
       <div className="flex h-screen bg-gray-100">
         <UserSidebar />
-        <div className="flex-1 p-8">
-          <div className="flex flex-col items-center justify-center bg-white rounded-lg p-8 text-center shadow">
-            <div className="rounded-full bg-yellow-100 p-4 mb-4">
-              <Twitch className="h-8 w-8 text-yellow-600" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Twitch Channel Required</h2>
-            <p className="text-gray-500 mb-6">
-              You need to set a Twitch channel for this subscription before you can use the bot control panel.
-            </p>
-            
-            <div className="w-full max-w-md mb-6">
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="twitch-channel">Twitch Channel Name</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      id="twitch-channel"
-                      placeholder="yourchannelname" 
-                      value={twitchChannelInput}
-                      onChange={(e) => setTwitchChannelInput(e.target.value)}
-                    />
-                    <Button 
-                      onClick={() => updateTwitchChannelMutation.mutate(twitchChannelInput)}
-                      disabled={!twitchChannelInput.trim() || updateTwitchChannelMutation.isPending}
-                    >
-                      {updateTwitchChannelMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="mr-2 h-4 w-4" />
-                      )}
-                      Save
-                    </Button>
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <div className="p-8">
+            <div className="flex flex-col items-center justify-center bg-white rounded-lg p-8 text-center shadow">
+              <div className="rounded-full bg-yellow-100 p-4 mb-4">
+                <Twitch className="h-8 w-8 text-yellow-600" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Twitch Channel Required</h2>
+              <p className="text-gray-500 mb-6">
+                You need to set a Twitch channel for this subscription before you can use the bot control panel.
+              </p>
+              
+              <div className="w-full max-w-md mb-6">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="twitch-channel">Twitch Channel Name</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        id="twitch-channel"
+                        placeholder="yourchannelname" 
+                        value={twitchChannelInput}
+                        onChange={(e) => setTwitchChannelInput(e.target.value)}
+                      />
+                      <Button 
+                        onClick={() => updateTwitchChannelMutation.mutate(twitchChannelInput)}
+                        disabled={!twitchChannelInput.trim() || updateTwitchChannelMutation.isPending}
+                      >
+                        {updateTwitchChannelMutation.isPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="mr-2 h-4 w-4" />
+                        )}
+                        Save
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Enter your Twitch channel name without the @ symbol
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    Enter your Twitch channel name without the @ symbol
-                  </p>
-                </div>
-                
-                <div className="text-sm text-gray-700 bg-blue-50 p-4 rounded-md">
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-blue-700">Each subscription can have a different Twitch channel</p>
-                      <p className="mt-1">This allows you to use different bot plans for different channels you manage.</p>
+                  
+                  <div className="text-sm text-gray-700 bg-blue-50 p-4 rounded-md">
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-blue-700">Each subscription can have a different Twitch channel</p>
+                        <p className="mt-1">This allows you to use different bot plans for different channels you manage.</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+              
+              <Button asChild variant="outline">
+                <a href="/app/subscriptions">Back to Subscriptions</a>
+              </Button>
             </div>
-            
-            <Button asChild variant="outline">
-              <a href="/app/subscriptions">Back to Subscriptions</a>
-            </Button>
           </div>
         </div>
       </div>
@@ -479,7 +489,8 @@ const BotControl = () => {
     <div className="flex h-screen bg-gray-100">
       <UserSidebar />
       
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto flex flex-col">
+        <Header />
         <div className="p-8">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
             <div>
