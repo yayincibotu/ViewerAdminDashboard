@@ -14,6 +14,8 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : undefined;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Import required functions and modules
+  const { hashPassword, comparePasswords } = await import('./auth');
   // Sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
 
@@ -479,6 +481,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ message: "Error creating subscription: " + error.message });
+    }
+  });
+  
+  // User profile endpoints
+  app.put("/api/user/profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      // Validate incoming data
+      const profileSchema = z.object({
+        fullName: z.string().min(2, "Full name must be at least 2 characters").optional(),
+        displayName: z.string().min(2, "Display name must be at least 2 characters").optional(),
+        email: z.string().email("Invalid email address").optional(),
+        bio: z.string().optional(),
+        location: z.string().optional(),
+        website: z.string().optional(),
+        twitterHandle: z.string().optional(),
+        discordUsername: z.string().optional(),
+      });
+      
+      const validData = profileSchema.parse(req.body);
+      
+      // Update the user profile
+      const updatedUser = await storage.updateUser(req.user.id, {
+        // Only include email in the update if it's actually provided
+        ...(validData.email && { email: validData.email }),
+        // Store additional profile data as JSON in the metadata field
+        profileData: JSON.stringify({
+          fullName: validData.fullName || "",
+          displayName: validData.displayName || "",
+          bio: validData.bio || "",
+          location: validData.location || "",
+          website: validData.website || "",
+          twitterHandle: validData.twitterHandle || "",
+          discordUsername: validData.discordUsername || "",
+        })
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const userResponse = { ...updatedUser };
+      delete userResponse.password;
+      
+      res.json(userResponse);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors.map(e => ({
+            path: e.path.join("."),
+            message: e.message
+          })) 
+        });
+      }
+      res.status(500).json({ message: "Error updating profile: " + error.message });
+    }
+  });
+  
+  // Update security settings
+  app.put("/api/user/security", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      // Validate incoming data
+      const securitySchema = z.object({
+        twoFactorEnabled: z.boolean().optional(),
+        loginNotifications: z.boolean().optional(),
+        sessionTimeout: z.string().optional(),
+      });
+      
+      const validData = securitySchema.parse(req.body);
+      
+      // Update the user security settings
+      const updatedUser = await storage.updateUser(req.user.id, {
+        securitySettings: JSON.stringify(validData),
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const userResponse = { ...updatedUser };
+      delete userResponse.password;
+      
+      res.json(userResponse);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors.map(e => ({
+            path: e.path.join("."),
+            message: e.message
+          })) 
+        });
+      }
+      res.status(500).json({ message: "Error updating security settings: " + error.message });
+    }
+  });
+  
+  // Update notification preferences
+  app.put("/api/user/notifications", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      // Validate incoming data
+      const notificationsSchema = z.object({
+        email: z.boolean().optional(),
+        sms: z.boolean().optional(),
+        browser: z.boolean().optional(),
+        payments: z.boolean().optional(),
+        updates: z.boolean().optional(),
+        marketing: z.boolean().optional(),
+      });
+      
+      const validData = notificationsSchema.parse(req.body);
+      
+      // Update the user notification preferences
+      const updatedUser = await storage.updateUser(req.user.id, {
+        notificationPreferences: JSON.stringify(validData),
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const userResponse = { ...updatedUser };
+      delete userResponse.password;
+      
+      res.json(userResponse);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors.map(e => ({
+            path: e.path.join("."),
+            message: e.message
+          })) 
+        });
+      }
+      res.status(500).json({ message: "Error updating notification preferences: " + error.message });
+    }
+  });
+  
+  // Change password endpoint
+  app.put("/api/user/change-password", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      // Validate incoming data
+      const passwordSchema = z.object({
+        currentPassword: z.string().min(1, "Current password is required"),
+        newPassword: z.string().min(6, "New password must be at least 6 characters"),
+        confirmPassword: z.string().min(6, "Confirm password must be at least 6 characters"),
+      }).refine(data => data.newPassword === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+      });
+      
+      const validData = passwordSchema.parse(req.body);
+      
+      // Verify current password
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const passwordValid = await comparePasswords(validData.currentPassword, user.password);
+      if (!passwordValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      
+      // Update password
+      const updatedUser = await storage.updateUser(req.user.id, {
+        password: await hashPassword(validData.newPassword),
+      });
+      
+      res.json({ message: "Password changed successfully" });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors.map(e => ({
+            path: e.path.join("."),
+            message: e.message
+          })) 
+        });
+      }
+      res.status(500).json({ message: "Error changing password: " + error.message });
     }
   });
 

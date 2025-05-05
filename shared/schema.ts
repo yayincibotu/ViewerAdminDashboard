@@ -11,6 +11,9 @@ export const users = pgTable("users", {
   role: text("role").default("user").notNull(),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  profileData: text("profile_data"),
+  securitySettings: text("security_settings"),
+  notificationPreferences: text("notification_preferences"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

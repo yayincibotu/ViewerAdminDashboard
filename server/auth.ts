@@ -14,13 +14,13 @@ declare global {
 }
 
 // Bcrypt ile şifre hashleme fonksiyonu
-async function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   const saltRounds = 10;
   return await bcrypt.hash(password, saltRounds);
 }
 
 // Bcrypt ile şifre karşılaştırma fonksiyonu
-async function comparePasswords(supplied: string, stored: string) {
+export async function comparePasswords(supplied: string, stored: string) {
   // Eğer stored şifre boş veya tanımsızsa, karşılaştırma başarısız
   if (!stored) {
     console.log("Password verification failed: stored password is empty or undefined");
