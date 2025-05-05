@@ -227,6 +227,33 @@ const Profile = () => {
       });
     },
   });
+  
+  // Password change mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: async (passwordData) => {
+      const res = await apiRequest("PUT", "/api/user/change-password", passwordData);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been changed successfully.',
+      });
+      // Reset password form
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Password change failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   // Handle profile form submission
   const handleProfileSubmit = (e: React.FormEvent) => {
@@ -244,6 +271,36 @@ const Profile = () => {
   const handleNotificationsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateNotificationsMutation.mutate(notifications);
+  };
+  
+  // Handle password change form submission
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic validation
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: 'Passwords do not match',
+        description: 'New password and confirmation password must match.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (passwordForm.newPassword.length < 8) {
+      toast({
+        title: 'Password too short',
+        description: 'Password must be at least 8 characters long.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Submit password change
+    changePasswordMutation.mutate({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword
+    });
   };
 
   // Handle profile image change
@@ -480,177 +537,245 @@ const Profile = () => {
 
             {/* Security Tab */}
             <TabsContent value="security">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Security Settings</CardTitle>
-                  <CardDescription>
-                    Manage your security settings and protect your account
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSecuritySubmit}>
-                    <div className="space-y-6">
-                      {/* Change Password */}
-                      <div className="space-y-4 pb-6 border-b">
-                        <h3 className="font-medium text-lg">Change Password</h3>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="currentPassword">Current Password</Label>
-                            <Input id="currentPassword" type="password" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="newPassword">New Password</Label>
-                            <Input id="newPassword" type="password" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">Confirm Password</Label>
-                            <Input id="confirmPassword" type="password" />
-                          </div>
-                          <Button type="button" variant="outline">
-                            Change Password
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Two-Factor Authentication */}
-                      <div className="space-y-4 pb-6 border-b">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <h3 className="font-medium text-lg">Two-Factor Authentication</h3>
-                            <p className="text-sm text-gray-500">
-                              Add an extra layer of security to your account
-                            </p>
-                          </div>
-                          <Switch
-                            checked={securitySettings.twoFactorEnabled}
-                            onCheckedChange={(checked) =>
-                              setSecuritySettings({
-                                ...securitySettings,
-                                twoFactorEnabled: checked,
-                              })
-                            }
-                          />
-                        </div>
-                        {securitySettings.twoFactorEnabled && (
-                          <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                            <h4 className="font-medium">
-                              Two-factor authentication is enabled
-                            </h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              We'll ask for a code in addition to your password when you log in.
-                            </p>
-                            <div className="mt-4">
-                              <Button variant="outline" size="sm">
-                                Configure 2FA
-                              </Button>
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Security Settings Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Security Settings</CardTitle>
+                    <CardDescription>
+                      Manage your security settings and protect your account
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleSecuritySubmit}>
+                      <div className="space-y-6">
+                        {/* Two-Factor Authentication */}
+                        <div className="space-y-4 pb-6 border-b">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h3 className="font-medium text-lg">Two-Factor Authentication</h3>
+                              <p className="text-sm text-gray-500">
+                                Add an extra layer of security to your account
+                              </p>
                             </div>
+                            <Switch
+                              checked={securitySettings.twoFactorEnabled}
+                              onCheckedChange={(checked) =>
+                                setSecuritySettings({
+                                  ...securitySettings,
+                                  twoFactorEnabled: checked,
+                                })
+                              }
+                            />
                           </div>
-                        )}
+                          {securitySettings.twoFactorEnabled && (
+                            <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                              <h4 className="font-medium">
+                                Two-factor authentication is enabled
+                              </h4>
+                              <p className="text-sm text-gray-500 mt-1">
+                                We'll ask for a code in addition to your password when you log in.
+                              </p>
+                              <div className="mt-4">
+                                <Button variant="outline" size="sm">
+                                  Configure 2FA
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Login Notifications */}
+                        <div className="space-y-4 pb-6 border-b">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h3 className="font-medium text-lg">Login Notifications</h3>
+                              <p className="text-sm text-gray-500">
+                                We'll let you know when someone logs into your account
+                              </p>
+                            </div>
+                            <Switch
+                              checked={securitySettings.loginNotifications}
+                              onCheckedChange={(checked) =>
+                                setSecuritySettings({
+                                  ...securitySettings,
+                                  loginNotifications: checked,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        {/* Session Timeout */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-lg">Session Timeout</h3>
+                          <p className="text-sm text-gray-500">
+                            Set how long you can be inactive before being automatically signed out
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            <Button
+                              type="button"
+                              variant={
+                                securitySettings.sessionTimeout === "15"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              onClick={() =>
+                                setSecuritySettings({
+                                  ...securitySettings,
+                                  sessionTimeout: "15",
+                                })
+                              }
+                            >
+                              15 minutes
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={
+                                securitySettings.sessionTimeout === "30"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              onClick={() =>
+                                setSecuritySettings({
+                                  ...securitySettings,
+                                  sessionTimeout: "30",
+                                })
+                              }
+                            >
+                              30 minutes
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={
+                                securitySettings.sessionTimeout === "60"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              onClick={() =>
+                                setSecuritySettings({
+                                  ...securitySettings,
+                                  sessionTimeout: "60",
+                                })
+                              }
+                            >
+                              1 hour
+                            </Button>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Login Notifications */}
-                      <div className="space-y-4 pb-6 border-b">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <h3 className="font-medium text-lg">Login Notifications</h3>
-                            <p className="text-sm text-gray-500">
-                              We'll let you know when someone logs into your account
-                            </p>
-                          </div>
-                          <Switch
-                            checked={securitySettings.loginNotifications}
-                            onCheckedChange={(checked) =>
-                              setSecuritySettings({
-                                ...securitySettings,
-                                loginNotifications: checked,
+                      <div className="mt-6 flex justify-end">
+                        <Button
+                          type="submit"
+                          disabled={updateSecurityMutation.isPending}
+                        >
+                          {updateSecurityMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : updateSecurityMutation.isSuccess ? (
+                            <>
+                              <Check className="mr-2 h-4 w-4" />
+                              Saved
+                            </>
+                          ) : (
+                            "Save Security Settings"
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+                
+                {/* Change Password Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Change Password</CardTitle>
+                    <CardDescription>
+                      Update your password to maintain account security
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handlePasswordChange}>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="currentPassword">Current Password</Label>
+                          <Input
+                            id="currentPassword"
+                            type="password"
+                            value={passwordForm.currentPassword}
+                            onChange={(e) =>
+                              setPasswordForm({
+                                ...passwordForm,
+                                currentPassword: e.target.value,
                               })
                             }
+                            required
                           />
                         </div>
-                      </div>
-
-                      {/* Session Timeout */}
-                      <div className="space-y-4">
-                        <h3 className="font-medium text-lg">Session Timeout</h3>
-                        <p className="text-sm text-gray-500">
-                          Set how long you can be inactive before being automatically signed out
-                        </p>
-                        <div className="grid grid-cols-3 gap-2">
-                          <Button
-                            type="button"
-                            variant={
-                              securitySettings.sessionTimeout === "15"
-                                ? "default"
-                                : "outline"
-                            }
-                            onClick={() =>
-                              setSecuritySettings({
-                                ...securitySettings,
-                                sessionTimeout: "15",
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="newPassword">New Password</Label>
+                          <Input
+                            id="newPassword"
+                            type="password"
+                            value={passwordForm.newPassword}
+                            onChange={(e) =>
+                              setPasswordForm({
+                                ...passwordForm,
+                                newPassword: e.target.value,
                               })
                             }
-                          >
-                            15 minutes
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={
-                              securitySettings.sessionTimeout === "30"
-                                ? "default"
-                                : "outline"
-                            }
-                            onClick={() =>
-                              setSecuritySettings({
-                                ...securitySettings,
-                                sessionTimeout: "30",
+                            required
+                          />
+                          <p className="text-sm text-gray-500">
+                            Must be at least 8 characters
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                          <Input
+                            id="confirmPassword"
+                            type="password"
+                            value={passwordForm.confirmPassword}
+                            onChange={(e) =>
+                              setPasswordForm({
+                                ...passwordForm,
+                                confirmPassword: e.target.value,
                               })
                             }
-                          >
-                            30 minutes
-                          </Button>
+                            required
+                          />
+                        </div>
+                        
+                        <div className="mt-6 flex justify-end">
                           <Button
-                            type="button"
-                            variant={
-                              securitySettings.sessionTimeout === "60"
-                                ? "default"
-                                : "outline"
-                            }
-                            onClick={() =>
-                              setSecuritySettings({
-                                ...securitySettings,
-                                sessionTimeout: "60",
-                              })
-                            }
+                            type="submit"
+                            disabled={changePasswordMutation.isPending}
                           >
-                            1 hour
+                            {changePasswordMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Changing...
+                              </>
+                            ) : changePasswordMutation.isSuccess ? (
+                              <>
+                                <Check className="mr-2 h-4 w-4" />
+                                Changed
+                              </>
+                            ) : (
+                              "Change Password"
+                            )}
                           </Button>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="mt-6 flex justify-end">
-                      <Button
-                        type="submit"
-                        disabled={updateSecurityMutation.isPending}
-                      >
-                        {updateSecurityMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
-                          </>
-                        ) : updateSecurityMutation.isSuccess ? (
-                          <>
-                            <Check className="mr-2 h-4 w-4" />
-                            Saved
-                          </>
-                        ) : (
-                          "Save Security Settings"
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             {/* Notifications Tab */}
