@@ -785,55 +785,7 @@ const BotControl = () => {
                     </div>
                   </div>
 
-                  {/* Follower Bot Control */}
-                  <div className="border rounded-lg p-4 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16">
-                      <div className="absolute transform rotate-45 bg-green-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
-                        {currentSubscription.isActive && followerBotActive ? 'Running' : 'Inactive'}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-green-500" />
-                          <h3 className="font-medium">Follower Bot</h3>
-                        </div>
-                        <div className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md font-medium">
-                          {followerSettings.followerCount} / {subscriptionDetail.plan.followerCount}
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Adds followers to your Twitch channel
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-gray-500">
-                          {currentSubscription.isActive ? 
-                            (followerBotActive ? 
-                              `Delivering ${followerSettings.followerCount} followers at ${followerSettings.deliverySpeed} speed` : 
-                              'Follower bot is ready to start') :
-                            'Waiting to be activated'}
-                        </div>
-                        <Switch 
-                          checked={followerBotActive}
-                          disabled={!currentSubscription.isActive}
-                          onCheckedChange={(checked) => {
-                            setFollowerBotActive(checked);
-                            if (checked) {
-                              toast({
-                                title: 'Follower Bot Activated',
-                                description: `Follower bot delivering ${followerSettings.followerCount} followers at ${followerSettings.deliverySpeed} speed has been activated.`,
-                              });
-                            } else {
-                              toast({
-                                title: 'Follower Bot Deactivated',
-                                description: 'Follower bot has been turned off.',
-                              });
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+
                 </div>
 
                 {currentSubscription.isActive && (
@@ -853,7 +805,7 @@ const BotControl = () => {
 
           {currentSubscription && subscriptionDetail && subscriptionDetail.plan && (
             <Tabs defaultValue="viewers" className="w-full">
-              <TabsList className="grid grid-cols-4 mb-6">
+              <TabsList className="grid grid-cols-3 mb-6">
                 <TabsTrigger value="viewers" className="flex items-center gap-2">
                   <Eye className="h-4 w-4" />
                   <span>Viewers</span>
@@ -861,10 +813,6 @@ const BotControl = () => {
                 <TabsTrigger value="chat" className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
                   <span>Chat</span>
-                </TabsTrigger>
-                <TabsTrigger value="followers" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <span>Followers</span>
                 </TabsTrigger>
                 {subscriptionDetail.plan.geographicTargeting && (
                   <TabsTrigger value="geo" className="flex items-center gap-2">
@@ -1180,115 +1128,7 @@ const BotControl = () => {
                 </Card>
               </TabsContent>
               
-              {/* Followers Tab */}
-              <TabsContent value="followers">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-blue-500" />
-                      Follower Bot Settings
-                    </CardTitle>
-                    <CardDescription>
-                      Configure your follower bot settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label htmlFor="follower-count">Follower Count: {followerSettings.followerCount}</Label>
-                          <span className="text-sm text-gray-500">
-                            Max: {subscriptionDetail.plan.followerCount}
-                          </span>
-                        </div>
-                        <Slider
-                          id="follower-count"
-                          value={[followerSettings.followerCount]}
-                          max={subscriptionDetail.plan.followerCount}
-                          min={1}
-                          step={1}
-                          onValueChange={(values) => setFollowerSettings({
-                            ...followerSettings,
-                            followerCount: values[0]
-                          })}
-                        />
-                      </div>
-                      
-                      <div className="grid gap-2">
-                        <Label htmlFor="delivery-speed">Delivery Speed</Label>
-                        <Select
-                          value={followerSettings.deliverySpeed}
-                          onValueChange={(value) => setFollowerSettings({
-                            ...followerSettings,
-                            deliverySpeed: value
-                          })}
-                        >
-                          <SelectTrigger id="delivery-speed">
-                            <SelectValue placeholder="Select delivery speed" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="slow">Slow (Natural growth)</SelectItem>
-                            <SelectItem value="normal">Normal (Balanced delivery)</SelectItem>
-                            <SelectItem value="fast">Fast (Quick boost)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-sm text-gray-500">
-                          Controls how quickly followers will be added to your channel
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="schedule-delivery"
-                            checked={followerSettings.scheduleDelivery}
-                            onCheckedChange={(checked) => setFollowerSettings({
-                              ...followerSettings,
-                              scheduleDelivery: checked
-                            })}
-                          />
-                          <Label htmlFor="schedule-delivery">Schedule Delivery Time</Label>
-                        </div>
-                        
-                        {followerSettings.scheduleDelivery && (
-                          <div className="mt-2">
-                            <Input
-                              type="time"
-                              value={followerSettings.scheduleTime}
-                              onChange={(e) => setFollowerSettings({
-                                ...followerSettings,
-                                scheduleTime: e.target.value
-                              })}
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                              Followers will be delivered at this time (24-hour format, UTC time zone)
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      onClick={() => updateFollowerSettingsMutation.mutate()}
-                      disabled={updateFollowerSettingsMutation.isPending}
-                      className="ml-auto"
-                    >
-                      {updateFollowerSettingsMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save Follower Settings
-                        </>
-                      )}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
+
               
               {/* Geographic Targeting Tab */}
               {subscriptionDetail.plan.geographicTargeting && (
