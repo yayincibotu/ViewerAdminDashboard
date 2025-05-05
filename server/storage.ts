@@ -304,7 +304,14 @@ export class DatabaseStorage implements IStorage {
     const subscription = await this.getUserSubscriptionWithPlan(id);
     if (!subscription) return undefined;
     
-    let services = {
+    interface ServiceStatus {
+      viewers: boolean;
+      chat: boolean;
+      followers: boolean;
+      [key: string]: boolean;
+    }
+    
+    let services: ServiceStatus = {
       viewers: false,
       chat: false,
       followers: false
@@ -313,7 +320,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Parse existing services status or use the default
       if (subscription.subscription.servicesStatus) {
-        services = JSON.parse(subscription.subscription.servicesStatus);
+        services = JSON.parse(subscription.subscription.servicesStatus) as ServiceStatus;
       }
       
       // Update the specified service status

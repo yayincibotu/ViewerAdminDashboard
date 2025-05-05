@@ -1,1131 +1,432 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/use-auth';
-import UserSidebar from '@/components/dashboard/UserSidebar';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  Eye, 
-  MessageSquare, 
-  Users, 
-  RefreshCw, 
-  Loader2, 
-  Save,
-  Globe,
-  Sparkles,
-  Twitch,
-  X
-} from 'lucide-react';
-import { useLocation } from 'wouter';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, PlayCircle, StopCircle, Users, MessageSquare, UserPlus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Define default settings
-const DEFAULT_VIEWER_SETTINGS = {
-  viewerCount: 15,
-  chatMode: 'moderate',
-  autoMessages: true,
-  customMessages: []
-};
-
-const DEFAULT_CHAT_SETTINGS = {
-  chatCount: 10,
-  messageFrequency: 'medium',
-  autoRespond: true,
-  chatBotNames: [],
-  customResponses: {}
-};
-
-const DEFAULT_FOLLOWER_SETTINGS = {
-  followerCount: 25,
-  deliverySpeed: 'normal',
-  scheduleDelivery: false,
-  scheduleTime: ''
-};
+interface SubscriptionWithPlan {
+  subscription: {
+    id: number;
+    userId: number;
+    planId: number;
+    status: string;
+    startDate: string;
+    endDate: string;
+    stripeSubscriptionId: string | null;
+    twitchChannel: string | null;
+    isActive: boolean;
+    viewerSettings: string;
+    chatSettings: string;
+    followerSettings: string;
+    geographicTargeting: string | null;
+    servicesStatus: string;
+  };
+  plan: {
+    id: number;
+    name: string;
+    price: number;
+    description: string;
+    viewerCount: number;
+    chatCount: number;
+    followerCount: number;
+    geographicTargeting: boolean;
+  };
+}
 
 const BotControl = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [location] = useLocation();
-  
-  // Extract the ID from the query string manually
-  const urlParams = new URLSearchParams(location.split('?')[1] || '');
-  const subscriptionId = urlParams.get('id');
-  
-  // All state variables defined at the beginning
-  const [selectedSubscription, setSelectedSubscription] = useState<number | null>(
-    subscriptionId ? parseInt(subscriptionId) : null
-  );
-  const [viewerSettings, setViewerSettings] = useState(DEFAULT_VIEWER_SETTINGS);
-  const [customMessage, setCustomMessage] = useState('');
-  const [chatSettings, setChatSettings] = useState(DEFAULT_CHAT_SETTINGS);
-  const [botName, setBotName] = useState('');
-  const [responseKey, setResponseKey] = useState('');
-  const [responseValue, setResponseValue] = useState('');
-  const [followerSettings, setFollowerSettings] = useState(DEFAULT_FOLLOWER_SETTINGS);
-  const [geoTargeting, setGeoTargeting] = useState('');
-  const [countryInput, setCountryInput] = useState('');
-  const [twitchChannelInput, setTwitchChannelInput] = useState('');
-  const [showChannelChangeForm, setShowChannelChangeForm] = useState(false);
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<number | null>(null);
   
   // Fetch user subscriptions
-  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery({
-    queryKey: ['/api/user-subscriptions'],
+  const { data: subscriptions, isLoading } = useQuery<SubscriptionWithPlan[]>({
+    queryKey: ["/api/user-subscriptions"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
-  
-  // Fetch detailed subscription data when a subscription is selected
-  const { data: subscriptionDetail, isLoading: detailLoading } = useQuery({
-    queryKey: [`/api/user-subscriptions/${selectedSubscription}`],
-    enabled: !!selectedSubscription,
-  });
-  
-  // All mutations
-  const updateTwitchChannelMutation = useMutation({
-    mutationFn: async (twitchChannel: string) => {
-      if (!selectedSubscription) return null;
-      
-      const res = await apiRequest('PUT', `/api/user-subscriptions/${selectedSubscription}/twitch-channel`, {
-        twitchChannel
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Twitch Channel Updated',
-        description: 'Your Twitch channel has been saved for this subscription.',
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/user-subscriptions/${selectedSubscription}`] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Update failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-  
-  const updateViewerSettingsMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedSubscription) return null;
-      
-      const res = await apiRequest('PUT', `/api/user-subscriptions/${selectedSubscription}/viewer-settings`, {
-        settings: JSON.stringify(viewerSettings)
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Viewer settings updated',
-        description: 'Your viewer settings have been saved successfully.',
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/user-subscriptions/${selectedSubscription}`] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Update failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-  
-  const updateChatSettingsMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedSubscription) return null;
-      
-      const res = await apiRequest('PUT', `/api/user-subscriptions/${selectedSubscription}/chat-settings`, {
-        settings: JSON.stringify(chatSettings)
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Chat settings updated',
-        description: 'Your chat settings have been saved successfully.',
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/user-subscriptions/${selectedSubscription}`] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Update failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-  
-  const updateFollowerSettingsMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedSubscription) return null;
-      
-      const res = await apiRequest('PUT', `/api/user-subscriptions/${selectedSubscription}/follower-settings`, {
-        settings: JSON.stringify(followerSettings)
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Follower settings updated',
-        description: 'Your follower settings have been saved successfully.',
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/user-subscriptions/${selectedSubscription}`] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Update failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-  
-  const updateGeoTargetingMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedSubscription) return null;
-      
-      const res = await apiRequest('PUT', `/api/user-subscriptions/${selectedSubscription}/geographic-targeting`, {
-        countries: geoTargeting
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Geographic targeting updated',
-        description: 'Your geographic targeting settings have been saved successfully.',
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/user-subscriptions/${selectedSubscription}`] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Update failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-  
-  // Parse settings when subscription detail loads
+
+  // Find the selected subscription
+  const selectedSubscription = subscriptions?.find(
+    (sub) => sub.subscription.id === selectedSubscriptionId
+  );
+
+  // Parse service statuses
+  const servicesStatus = selectedSubscription?.subscription.servicesStatus 
+    ? JSON.parse(selectedSubscription.subscription.servicesStatus) 
+    : { viewers: false, chat: false, followers: false };
+
+  // Set the first subscription as selected by default
   useEffect(() => {
-    if (subscriptionDetail) {
-      try {
-        // Parse viewer settings
-        if (subscriptionDetail.subscription?.viewerSettings) {
-          const parsedViewerSettings = JSON.parse(subscriptionDetail.subscription.viewerSettings);
-          setViewerSettings({
-            ...DEFAULT_VIEWER_SETTINGS,
-            ...parsedViewerSettings
-          });
-        }
-        
-        // Parse chat settings
-        if (subscriptionDetail.subscription?.chatSettings) {
-          const parsedChatSettings = JSON.parse(subscriptionDetail.subscription.chatSettings);
-          setChatSettings({
-            ...DEFAULT_CHAT_SETTINGS,
-            ...parsedChatSettings
-          });
-        }
-        
-        // Parse follower settings
-        if (subscriptionDetail.subscription?.followerSettings) {
-          const parsedFollowerSettings = JSON.parse(subscriptionDetail.subscription.followerSettings);
-          setFollowerSettings({
-            ...DEFAULT_FOLLOWER_SETTINGS,
-            ...parsedFollowerSettings
-          });
-        }
-        
-        // Parse geographic targeting
-        if (subscriptionDetail.subscription?.geographicTargeting) {
-          setGeoTargeting(subscriptionDetail.subscription.geographicTargeting);
-        }
-      } catch (error) {
-        console.error('Error parsing settings:', error);
-      }
+    if (subscriptions && subscriptions.length > 0 && !selectedSubscriptionId) {
+      setSelectedSubscriptionId(subscriptions[0].subscription.id);
     }
-  }, [subscriptionDetail]);
-  
-  // Select first subscription if none selected and subscriptions are loaded
-  useEffect(() => {
-    if (
-      !selectedSubscription && 
-      !subscriptionsLoading && 
-      subscriptions.length > 0 && 
-      !subscriptionId
-    ) {
-      setSelectedSubscription(subscriptions[0]?.subscription?.id);
+  }, [subscriptions, selectedSubscriptionId]);
+
+  // Toggle service (viewers, chat, followers)
+  const toggleServiceMutation = useMutation({
+    mutationFn: async ({ 
+      subscriptionId, 
+      serviceType, 
+      isActive 
+    }: { 
+      subscriptionId: number; 
+      serviceType: string; 
+      isActive: boolean 
+    }) => {
+      const response = await apiRequest(
+        "PUT",
+        `/api/user-subscriptions/${subscriptionId}/service/${serviceType}`,
+        { isActive }
+      );
+      return await response.json();
+    },
+    onSuccess: () => {
+      // Invalidate the subscription query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["/api/user-subscriptions"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleToggleService = (serviceType: string, currentStatus: boolean) => {
+    if (!selectedSubscriptionId) return;
+
+    // Check if the subscription is active
+    if (!selectedSubscription?.subscription.isActive) {
+      toast({
+        title: "Subscription Inactive",
+        description: "Please activate your subscription first before starting services.",
+        variant: "destructive",
+      });
+      return;
     }
-  }, [subscriptions, subscriptionsLoading, selectedSubscription, subscriptionId]);
-  
-  // Helper functions
-  const addCustomMessage = () => {
-    if (!customMessage.trim()) return;
-    
-    setViewerSettings(prev => ({
-      ...prev,
-      customMessages: [...(prev.customMessages || []), customMessage.trim()]
-    }));
-    
-    setCustomMessage('');
-  };
-  
-  const removeCustomMessage = (index: number) => {
-    setViewerSettings(prev => ({
-      ...prev,
-      customMessages: prev.customMessages?.filter((_, i) => i !== index) || []
-    }));
-  };
-  
-  const addBotName = () => {
-    if (!botName.trim()) return;
-    
-    setChatSettings(prev => ({
-      ...prev,
-      chatBotNames: [...(prev.chatBotNames || []), botName.trim()]
-    }));
-    
-    setBotName('');
-  };
-  
-  const removeBotName = (index: number) => {
-    setChatSettings(prev => ({
-      ...prev,
-      chatBotNames: prev.chatBotNames?.filter((_, i) => i !== index) || []
-    }));
-  };
-  
-  const addCustomResponse = () => {
-    if (!responseKey.trim() || !responseValue.trim()) return;
-    
-    setChatSettings(prev => ({
-      ...prev,
-      customResponses: {
-        ...(prev.customResponses || {}),
-        [responseKey.trim()]: responseValue.trim()
-      }
-    }));
-    
-    setResponseKey('');
-    setResponseValue('');
-  };
-  
-  const removeCustomResponse = (key: string) => {
-    setChatSettings(prev => {
-      const responses = { ...(prev.customResponses || {}) };
-      delete responses[key];
-      return {
-        ...prev,
-        customResponses: responses
-      };
+
+    // Check if Twitch channel is set
+    if (!selectedSubscription?.subscription.twitchChannel) {
+      toast({
+        title: "No Twitch Channel",
+        description: "Please set a Twitch channel for this subscription before starting services.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toggleServiceMutation.mutate({
+      subscriptionId: selectedSubscriptionId,
+      serviceType,
+      isActive: !currentStatus,
     });
   };
-  
-  const addCountry = () => {
-    if (!countryInput.trim()) return;
-    
-    const countries = geoTargeting 
-      ? geoTargeting.split(',').map(c => c.trim()) 
-      : [];
-      
-    if (!countries.includes(countryInput.trim())) {
-      countries.push(countryInput.trim());
-    }
-    
-    setGeoTargeting(countries.join(', '));
-    setCountryInput('');
-  };
-  
-  const removeCountry = (country: string) => {
-    const countries = geoTargeting
-      ? geoTargeting.split(',').map(c => c.trim()).filter(c => c !== country)
-      : [];
-      
-    setGeoTargeting(countries.join(', '));
-  };
-  
-  // Loading state
-  if (subscriptionsLoading || (selectedSubscription && detailLoading)) {
+
+  if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-100">
-        <UserSidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+      <div className="flex items-center justify-center min-h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
-  
-  // No subscriptions state
+
   if (!subscriptions || subscriptions.length === 0) {
     return (
-      <div className="flex h-screen bg-gray-100">
-        <UserSidebar />
-        <div className="flex-1 p-8">
-          <div className="flex flex-col items-center justify-center bg-white rounded-lg p-8 text-center shadow">
-            <div className="rounded-full bg-gray-100 p-4 mb-4">
-              <Twitch className="h-8 w-8 text-gray-400" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">No Active Subscriptions</h2>
-            <p className="text-gray-500 mb-6">You need an active subscription to access the bot control panel.</p>
-            <Button asChild>
-              <a href="/#pricing">View Plans</a>
-            </Button>
-          </div>
-        </div>
-      </div>
+      <Alert>
+        <AlertTitle>No Subscriptions Found</AlertTitle>
+        <AlertDescription>
+          You don't have any active subscriptions. Please purchase a subscription to access bot controls.
+        </AlertDescription>
+      </Alert>
     );
   }
-  
-  // Check if selected subscription has a Twitch channel
-  const currentSubscription = subscriptionDetail?.subscription;
-  
-  // If the subscription doesn't have a Twitch channel, show the setup form
-  if (currentSubscription && !currentSubscription.twitchChannel) {
-    return (
-      <div className="flex h-screen bg-gray-100">
-        <UserSidebar />
-        <div className="flex-1 p-8">
-          <div className="flex flex-col items-center justify-center bg-white rounded-lg p-8 text-center shadow">
-            <div className="rounded-full bg-yellow-100 p-4 mb-4">
-              <Twitch className="h-8 w-8 text-yellow-600" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Twitch Channel Required</h2>
-            <p className="text-gray-500 mb-6">
-              You need to set a Twitch channel for this subscription before you can use the bot control panel.
-            </p>
+
+  return (
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold">Bot Control Panel</h1>
+        <p className="text-muted-foreground">
+          Control your Twitch bots and monitor their status
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Select Subscription</CardTitle>
             
-            <div className="w-full max-w-md mb-6">
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="twitch-channel">Twitch Channel Name</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      id="twitch-channel"
-                      placeholder="yourchannelname" 
-                      value={twitchChannelInput}
-                      onChange={(e) => setTwitchChannelInput(e.target.value)}
-                    />
-                    <Button 
-                      onClick={() => updateTwitchChannelMutation.mutate(twitchChannelInput)}
-                      disabled={!twitchChannelInput.trim() || updateTwitchChannelMutation.isPending}
-                    >
-                      {updateTwitchChannelMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="mr-2 h-4 w-4" />
-                      )}
-                      Save
-                    </Button>
+            {selectedSubscription && (
+              <Badge variant={selectedSubscription.subscription.isActive ? "default" : "destructive"}>
+                {selectedSubscription.subscription.isActive ? "Active" : "Inactive"}
+              </Badge>
+            )}
+          </div>
+          <CardDescription>
+            Choose the subscription plan you want to control
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select
+            value={selectedSubscriptionId?.toString() || ""}
+            onValueChange={(value) => setSelectedSubscriptionId(parseInt(value))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a subscription plan" />
+            </SelectTrigger>
+            <SelectContent>
+              {subscriptions.map((sub) => (
+                <SelectItem key={sub.subscription.id} value={sub.subscription.id.toString()}>
+                  {sub.plan.name} {sub.subscription.twitchChannel ? `(${sub.subscription.twitchChannel})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {selectedSubscription && !selectedSubscription.subscription.twitchChannel && (
+            <Alert className="mt-4" variant="destructive">
+              <AlertTitle>No Twitch Channel Set</AlertTitle>
+              <AlertDescription>
+                Please set a Twitch channel for this subscription in the Subscriptions page.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {selectedSubscription && !selectedSubscription.subscription.isActive && (
+            <Alert className="mt-4" variant="destructive">
+              <AlertTitle>Subscription Inactive</AlertTitle>
+              <AlertDescription>
+                This subscription is currently inactive. Please activate it in the Subscriptions page.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {selectedSubscription && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Twitch Channel: {selectedSubscription.subscription.twitchChannel || "Not Set"}</CardTitle>
+              <CardDescription>
+                Controlling services for {selectedSubscription.plan.name} ({selectedSubscription.plan.description})
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Viewer Bot Control */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-medium">Viewer Bot</h3>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    Enter your Twitch channel name without the @ symbol
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="viewers-toggle">
+                      {servicesStatus.viewers ? "Running" : "Stopped"}
+                    </Label>
+                    <Switch
+                      id="viewers-toggle"
+                      checked={servicesStatus.viewers}
+                      onCheckedChange={() => handleToggleService("viewers", servicesStatus.viewers)}
+                      disabled={
+                        toggleServiceMutation.isPending ||
+                        !selectedSubscription.subscription.isActive ||
+                        !selectedSubscription.subscription.twitchChannel
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="bg-muted p-4 rounded-md">
+                  <p className="text-sm">
+                    <span className="font-medium">Status:</span>{" "}
+                    {servicesStatus.viewers ? (
+                      <span className="text-green-500">
+                        {selectedSubscription.plan.viewerCount} viewers currently active on {selectedSubscription.subscription.twitchChannel}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Not currently running</span>
+                    )}
+                  </p>
+                  <p className="text-sm mt-1">
+                    <span className="font-medium">Max Viewers:</span>{" "}
+                    {selectedSubscription.plan.viewerCount}
                   </p>
                 </div>
-                
-                <div className="text-sm text-gray-700 bg-blue-50 p-4 rounded-md">
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-blue-700">Each subscription can have a different Twitch channel</p>
-                      <p className="mt-1">This allows you to use different bot plans for different channels you manage.</p>
-                    </div>
-                  </div>
-                </div>
               </div>
-            </div>
-            
-            <Button asChild variant="outline">
-              <a href="/app/subscriptions">Back to Subscriptions</a>
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
-  // Main bot control panel
-  return (
-    <div className="flex h-screen bg-gray-100">
-      <UserSidebar />
-      
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-            <div>
-              <h1 className="text-2xl font-bold">Bot Control Panel</h1>
-              <p className="text-gray-500">Configure your Twitch bot settings</p>
-            </div>
-            
-            {/* Subscription selector */}
-            <div className="w-full md:w-auto bg-white p-4 rounded-lg shadow-sm border">
-              <div className="flex flex-col space-y-2">
+
+              <Separator />
+
+              {/* Chat Bot Control */}
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="font-medium text-sm text-gray-700">Subscription Plan</div>
-                  {currentSubscription && subscriptionDetail && subscriptionDetail.plan && (
-                    <div className="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-medium">
-                      {subscriptionDetail.plan.viewerCount} Viewers Max
-                    </div>
-                  )}
-                </div>
-                
-                <div className="w-full">
-                  <Select
-                    value={selectedSubscription?.toString()}
-                    onValueChange={(value) => setSelectedSubscription(parseInt(value))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a subscription" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subscriptions.map((sub: any) => (
-                        <SelectItem 
-                          key={sub.subscription.id} 
-                          value={sub.subscription.id.toString()}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div>{sub.plan.name}</div>
-                            {sub.subscription.twitchChannel && (
-                              <div className="text-xs text-gray-500">
-                                - {sub.subscription.twitchChannel}
-                              </div>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {currentSubscription && (
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="text-gray-500">
-                      Twitch Channel: 
-                    </div>
-                    <div className="font-medium flex items-center">
-                      {currentSubscription.twitchChannel ? (
-                        <div className="flex items-center gap-1">
-                          <Twitch className="h-3 w-3 text-purple-600" />
-                          <span className="text-purple-600">{currentSubscription.twitchChannel}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-5 w-5 p-0 hover:bg-gray-100 rounded-full"
-                            onClick={() => {
-                              setTwitchChannelInput('');
-                              setShowChannelChangeForm(!showChannelChangeForm);
-                            }}
-                          >
-                            <RefreshCw className="h-3 w-3 text-gray-500" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-yellow-600">Not set</span>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-medium">Chat Bot</h3>
                   </div>
-                )}
-                
-                {/* Channel change form */}
-                {showChannelChangeForm && currentSubscription && (
-                  <div className="pt-2 border-t mt-2">
-                    <div className="text-xs font-medium mb-1 text-gray-700">Change Twitch Channel</div>
-                    <div className="flex gap-1">
-                      <Input 
-                        placeholder="New channel name" 
-                        value={twitchChannelInput}
-                        onChange={(e) => setTwitchChannelInput(e.target.value)}
-                        className="h-7 text-xs"
-                      />
-                      <Button 
-                        size="sm"
-                        className="h-7 text-xs px-2"
-                        onClick={() => {
-                          if (twitchChannelInput.trim()) {
-                            updateTwitchChannelMutation.mutate(twitchChannelInput);
-                            setShowChannelChangeForm(false);
-                          }
-                        }}
-                        disabled={updateTwitchChannelMutation.isPending}
-                      >
-                        {updateTwitchChannelMutation.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          'Save'
-                        )}
-                      </Button>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="chat-toggle">
+                      {servicesStatus.chat ? "Running" : "Stopped"}
+                    </Label>
+                    <Switch
+                      id="chat-toggle"
+                      checked={servicesStatus.chat}
+                      onCheckedChange={() => handleToggleService("chat", servicesStatus.chat)}
+                      disabled={
+                        toggleServiceMutation.isPending ||
+                        !selectedSubscription.subscription.isActive ||
+                        !selectedSubscription.subscription.twitchChannel
+                      }
+                    />
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          {/* Status indicator */}
-          {currentSubscription && (
-            <div className={`mb-6 p-4 rounded-lg ${currentSubscription.isActive ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
-              <div className="flex items-center">
-                <div className={`w-2 h-2 rounded-full ${currentSubscription.isActive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'} mr-2`}></div>
-                <p className={`text-sm font-medium ${currentSubscription.isActive ? 'text-green-700' : 'text-yellow-700'}`}>
-                  {currentSubscription.isActive 
-                    ? `Services are running for channel: ${currentSubscription.twitchChannel}`
-                    : `Services are currently inactive. Configure your settings and activate your subscription.`}
-                </p>
-              </div>
-              {!currentSubscription.isActive && (
-                <div className="mt-2 text-xs text-yellow-600">
-                  You can activate your subscription from the Subscriptions page.
                 </div>
-              )}
-            </div>
-          )}
-          
-          {currentSubscription && subscriptionDetail && subscriptionDetail.plan && (
-            <Tabs defaultValue="viewers" className="w-full">
-              <TabsList className="grid grid-cols-4 mb-6">
-                <TabsTrigger value="viewers" className="flex items-center gap-2">
-                  <Eye className="h-4 w-4" />
-                  <span>Viewers</span>
-                </TabsTrigger>
-                <TabsTrigger value="chat" className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Chat</span>
-                </TabsTrigger>
-                <TabsTrigger value="followers" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <span>Followers</span>
-                </TabsTrigger>
-                {subscriptionDetail.plan.geographicTargeting && (
-                  <TabsTrigger value="geo" className="flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    <span>Geo Targeting</span>
-                  </TabsTrigger>
+                <div className="bg-muted p-4 rounded-md">
+                  <p className="text-sm">
+                    <span className="font-medium">Status:</span>{" "}
+                    {servicesStatus.chat ? (
+                      <span className="text-green-500">
+                        {selectedSubscription.plan.chatCount} chat bots currently active on {selectedSubscription.subscription.twitchChannel}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Not currently running</span>
+                    )}
+                  </p>
+                  <p className="text-sm mt-1">
+                    <span className="font-medium">Max Chat Bots:</span>{" "}
+                    {selectedSubscription.plan.chatCount}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Follower Bot Control */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-medium">Follower Bot</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="followers-toggle">
+                      {servicesStatus.followers ? "Running" : "Stopped"}
+                    </Label>
+                    <Switch
+                      id="followers-toggle"
+                      checked={servicesStatus.followers}
+                      onCheckedChange={() => handleToggleService("followers", servicesStatus.followers)}
+                      disabled={
+                        toggleServiceMutation.isPending ||
+                        !selectedSubscription.subscription.isActive ||
+                        !selectedSubscription.subscription.twitchChannel
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="bg-muted p-4 rounded-md">
+                  <p className="text-sm">
+                    <span className="font-medium">Status:</span>{" "}
+                    {servicesStatus.followers ? (
+                      <span className="text-green-500">
+                        Adding {selectedSubscription.plan.followerCount} followers to {selectedSubscription.subscription.twitchChannel}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Not currently running</span>
+                    )}
+                  </p>
+                  <p className="text-sm mt-1">
+                    <span className="font-medium">Max Followers:</span>{" "}
+                    {selectedSubscription.plan.followerCount}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t pt-6 flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!selectedSubscriptionId) return;
+                  // Turn all services off
+                  toggleServiceMutation.mutate({
+                    subscriptionId: selectedSubscriptionId,
+                    serviceType: "viewers",
+                    isActive: false,
+                  });
+                  toggleServiceMutation.mutate({
+                    subscriptionId: selectedSubscriptionId,
+                    serviceType: "chat",
+                    isActive: false,
+                  });
+                  toggleServiceMutation.mutate({
+                    subscriptionId: selectedSubscriptionId,
+                    serviceType: "followers",
+                    isActive: false,
+                  });
+                }}
+                disabled={
+                  toggleServiceMutation.isPending ||
+                  !selectedSubscription.subscription.isActive ||
+                  !selectedSubscription.subscription.twitchChannel ||
+                  (!servicesStatus.viewers && !servicesStatus.chat && !servicesStatus.followers)
+                }
+              >
+                {toggleServiceMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <StopCircle className="h-4 w-4 mr-2" />
                 )}
-              </TabsList>
-              
-              {/* Viewers Tab */}
-              <TabsContent value="viewers">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Eye className="h-5 w-5 text-blue-500" />
-                      Viewer Bot Settings
-                    </CardTitle>
-                    <CardDescription>
-                      Configure how many viewers will be added to your stream and their behavior
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label htmlFor="viewer-count">Viewer Count: {viewerSettings.viewerCount}</Label>
-                          <span className="text-sm text-gray-500">
-                            Max: {subscriptionDetail.plan.viewerCount}
-                          </span>
-                        </div>
-                        <Slider
-                          id="viewer-count"
-                          value={[viewerSettings.viewerCount]}
-                          max={subscriptionDetail.plan.viewerCount}
-                          min={1}
-                          step={1}
-                          onValueChange={(values) => setViewerSettings({
-                            ...viewerSettings,
-                            viewerCount: values[0]
-                          })}
-                        />
-                      </div>
-                      
-                      <div className="grid gap-2">
-                        <Label htmlFor="chat-mode">Chat Mode</Label>
-                        <Select
-                          value={viewerSettings.chatMode}
-                          onValueChange={(value) => setViewerSettings({
-                            ...viewerSettings,
-                            chatMode: value
-                          })}
-                        >
-                          <SelectTrigger id="chat-mode">
-                            <SelectValue placeholder="Select chat mode" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="quiet">Quiet (Minimal chatting)</SelectItem>
-                            <SelectItem value="moderate">Moderate (Regular chatting)</SelectItem>
-                            <SelectItem value="active">Active (Frequent chatting)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-sm text-gray-500">
-                          Controls how frequently the viewers will chat in your stream
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="auto-messages"
-                          checked={viewerSettings.autoMessages}
-                          onCheckedChange={(checked) => setViewerSettings({
-                            ...viewerSettings,
-                            autoMessages: checked
-                          })}
-                        />
-                        <Label htmlFor="auto-messages">Enable Auto Messages</Label>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Custom Chat Messages</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Add a custom message for bots to use"
-                            value={customMessage}
-                            onChange={(e) => setCustomMessage(e.target.value)}
-                          />
-                          <Button 
-                            type="button" 
-                            onClick={addCustomMessage}
-                            variant="outline"
-                          >
-                            Add
-                          </Button>
-                        </div>
-                        {viewerSettings.customMessages && viewerSettings.customMessages.length > 0 ? (
-                          <div className="mt-2 space-y-2">
-                            {viewerSettings.customMessages.map((message, index) => (
-                              <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                <span className="text-sm">{message}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => removeCustomMessage(index)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-500 mt-2">No custom messages added</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      onClick={() => updateViewerSettingsMutation.mutate()}
-                      disabled={updateViewerSettingsMutation.isPending}
-                      className="ml-auto"
-                    >
-                      {updateViewerSettingsMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save Viewer Settings
-                        </>
-                      )}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-              
-              {/* Chat Tab */}
-              <TabsContent value="chat">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageSquare className="h-5 w-5 text-blue-500" />
-                      Chat Bot Settings
-                    </CardTitle>
-                    <CardDescription>
-                      Configure your chat bot's appearance and behavior
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label htmlFor="chat-count">Chat Bot Count: {chatSettings.chatCount}</Label>
-                          <span className="text-sm text-gray-500">
-                            Max: {subscriptionDetail.plan.chatCount}
-                          </span>
-                        </div>
-                        <Slider
-                          id="chat-count"
-                          value={[chatSettings.chatCount]}
-                          max={subscriptionDetail.plan.chatCount}
-                          min={1}
-                          step={1}
-                          onValueChange={(values) => setChatSettings({
-                            ...chatSettings,
-                            chatCount: values[0]
-                          })}
-                        />
-                      </div>
-                      
-                      <div className="grid gap-2">
-                        <Label htmlFor="message-frequency">Message Frequency</Label>
-                        <Select
-                          value={chatSettings.messageFrequency}
-                          onValueChange={(value) => setChatSettings({
-                            ...chatSettings,
-                            messageFrequency: value
-                          })}
-                        >
-                          <SelectTrigger id="message-frequency">
-                            <SelectValue placeholder="Select message frequency" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">Low (Occasional messages)</SelectItem>
-                            <SelectItem value="medium">Medium (Regular messages)</SelectItem>
-                            <SelectItem value="high">High (Frequent messages)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-sm text-gray-500">
-                          Controls how often bots will chat in your channel
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="auto-respond"
-                          checked={chatSettings.autoRespond}
-                          onCheckedChange={(checked) => setChatSettings({
-                            ...chatSettings,
-                            autoRespond: checked
-                          })}
-                        />
-                        <Label htmlFor="auto-respond">Enable Auto Responses</Label>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Custom Bot Names</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Add a custom bot name"
-                            value={botName}
-                            onChange={(e) => setBotName(e.target.value)}
-                          />
-                          <Button 
-                            type="button" 
-                            onClick={addBotName}
-                            variant="outline"
-                          >
-                            Add
-                          </Button>
-                        </div>
-                        {chatSettings.chatBotNames && chatSettings.chatBotNames.length > 0 ? (
-                          <div className="mt-2 space-y-2">
-                            {chatSettings.chatBotNames.map((name, index) => (
-                              <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                <span className="text-sm">{name}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => removeBotName(index)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-500 mt-2">No custom bot names added</p>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Custom Responses</Label>
-                        <div className="grid grid-cols-1 gap-2">
-                          <Input
-                            placeholder="Trigger phrase (e.g. !commands)"
-                            value={responseKey}
-                            onChange={(e) => setResponseKey(e.target.value)}
-                          />
-                          <Textarea
-                            placeholder="Bot response"
-                            value={responseValue}
-                            onChange={(e) => setResponseValue(e.target.value)}
-                            className="min-h-[80px]"
-                          />
-                          <Button 
-                            type="button" 
-                            onClick={addCustomResponse}
-                            variant="outline"
-                            disabled={!responseKey.trim() || !responseValue.trim()}
-                          >
-                            Add Response
-                          </Button>
-                        </div>
-                        
-                        {chatSettings.customResponses && Object.keys(chatSettings.customResponses).length > 0 ? (
-                          <div className="mt-2 space-y-2">
-                            {Object.entries(chatSettings.customResponses).map(([key, value]) => (
-                              <div key={key} className="border p-3 rounded-md bg-gray-50">
-                                <div className="flex justify-between items-center mb-1">
-                                  <span className="font-medium text-sm">{key}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() => removeCustomResponse(key)}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                <p className="text-sm text-gray-600">{value}</p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-500 mt-2">No custom responses added</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      onClick={() => updateChatSettingsMutation.mutate()}
-                      disabled={updateChatSettingsMutation.isPending}
-                      className="ml-auto"
-                    >
-                      {updateChatSettingsMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save Chat Settings
-                        </>
-                      )}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-              
-              {/* Followers Tab */}
-              <TabsContent value="followers">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-blue-500" />
-                      Follower Bot Settings
-                    </CardTitle>
-                    <CardDescription>
-                      Configure your follower bot settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label htmlFor="follower-count">Follower Count: {followerSettings.followerCount}</Label>
-                          <span className="text-sm text-gray-500">
-                            Max: {subscriptionDetail.plan.followerCount}
-                          </span>
-                        </div>
-                        <Slider
-                          id="follower-count"
-                          value={[followerSettings.followerCount]}
-                          max={subscriptionDetail.plan.followerCount}
-                          min={1}
-                          step={1}
-                          onValueChange={(values) => setFollowerSettings({
-                            ...followerSettings,
-                            followerCount: values[0]
-                          })}
-                        />
-                      </div>
-                      
-                      <div className="grid gap-2">
-                        <Label htmlFor="delivery-speed">Delivery Speed</Label>
-                        <Select
-                          value={followerSettings.deliverySpeed}
-                          onValueChange={(value) => setFollowerSettings({
-                            ...followerSettings,
-                            deliverySpeed: value
-                          })}
-                        >
-                          <SelectTrigger id="delivery-speed">
-                            <SelectValue placeholder="Select delivery speed" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="slow">Slow (Natural growth)</SelectItem>
-                            <SelectItem value="normal">Normal (Balanced delivery)</SelectItem>
-                            <SelectItem value="fast">Fast (Quick boost)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-sm text-gray-500">
-                          Controls how quickly followers will be added to your channel
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="schedule-delivery"
-                            checked={followerSettings.scheduleDelivery}
-                            onCheckedChange={(checked) => setFollowerSettings({
-                              ...followerSettings,
-                              scheduleDelivery: checked
-                            })}
-                          />
-                          <Label htmlFor="schedule-delivery">Schedule Delivery Time</Label>
-                        </div>
-                        
-                        {followerSettings.scheduleDelivery && (
-                          <div className="mt-2">
-                            <Input
-                              type="time"
-                              value={followerSettings.scheduleTime}
-                              onChange={(e) => setFollowerSettings({
-                                ...followerSettings,
-                                scheduleTime: e.target.value
-                              })}
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                              Followers will be delivered at this time (24-hour format, UTC time zone)
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      onClick={() => updateFollowerSettingsMutation.mutate()}
-                      disabled={updateFollowerSettingsMutation.isPending}
-                      className="ml-auto"
-                    >
-                      {updateFollowerSettingsMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save Follower Settings
-                        </>
-                      )}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-              
-              {/* Geographic Targeting Tab */}
-              {subscriptionDetail.plan.geographicTargeting && (
-                <TabsContent value="geo">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Globe className="h-5 w-5 text-blue-500" />
-                        Geographic Targeting
-                      </CardTitle>
-                      <CardDescription>
-                        Target specific countries for your viewer bots
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="space-y-4">
-                        <div className="bg-blue-50 p-4 rounded-md">
-                          <p className="text-sm text-blue-800">
-                            Geographic targeting allows you to make your viewers appear from specific countries.
-                            This helps simulate a more realistic audience from your target regions.
-                          </p>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Add Countries</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Enter country name (e.g., United States)"
-                              value={countryInput}
-                              onChange={(e) => setCountryInput(e.target.value)}
-                            />
-                            <Button 
-                              type="button" 
-                              onClick={addCountry}
-                              variant="outline"
-                              disabled={!countryInput.trim()}
-                            >
-                              Add
-                            </Button>
-                          </div>
-                          
-                          <div className="mt-4">
-                            <Label className="mb-2 block">Selected Countries</Label>
-                            {geoTargeting ? (
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {geoTargeting.split(',').map((country) => (
-                                  <div 
-                                    key={country.trim()} 
-                                    className="bg-blue-100 text-blue-800 rounded-full px-3 py-1 text-sm flex items-center"
-                                  >
-                                    <span>{country.trim()}</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-5 w-5 p-0 ml-1 hover:bg-blue-200 rounded-full"
-                                      onClick={() => removeCountry(country.trim())}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-gray-500">No countries selected. Viewers will appear from random locations.</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button 
-                        onClick={() => updateGeoTargetingMutation.mutate()}
-                        disabled={updateGeoTargetingMutation.isPending}
-                        className="ml-auto"
-                      >
-                        {updateGeoTargetingMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="mr-2 h-4 w-4" />
-                            Save Targeting Settings
-                          </>
-                        )}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-              )}
-            </Tabs>
-          )}
-        </div>
-      </div>
+                Stop All Services
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedSubscriptionId) return;
+                  // Turn all services on
+                  toggleServiceMutation.mutate({
+                    subscriptionId: selectedSubscriptionId,
+                    serviceType: "viewers",
+                    isActive: true,
+                  });
+                  toggleServiceMutation.mutate({
+                    subscriptionId: selectedSubscriptionId,
+                    serviceType: "chat",
+                    isActive: true,
+                  });
+                  toggleServiceMutation.mutate({
+                    subscriptionId: selectedSubscriptionId,
+                    serviceType: "followers",
+                    isActive: true,
+                  });
+                }}
+                disabled={
+                  toggleServiceMutation.isPending ||
+                  !selectedSubscription.subscription.isActive ||
+                  !selectedSubscription.subscription.twitchChannel ||
+                  (servicesStatus.viewers && servicesStatus.chat && servicesStatus.followers)
+                }
+              >
+                {toggleServiceMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <PlayCircle className="h-4 w-4 mr-2" />
+                )}
+                Start All Services
+              </Button>
+            </CardFooter>
+          </Card>
+        </>
+      )}
     </div>
   );
 };

@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import Stripe from "stripe";
 import { z } from "zod";
+import { db } from "./db";
+import { users, userSubscriptions, payments } from "@shared/schema";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('Missing STRIPE_SECRET_KEY. Stripe functionality will not work properly.');
@@ -339,6 +341,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error updating geographic targeting: " + error.message });
     }
   });
+  
+  // Toggle service status (viewers, chat, followers)
+  app.put("/api/user-subscriptions/:id/service/:serviceType", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const subscriptionId = parseInt(req.params.id);
+      const serviceType = req.params.serviceType;
+      const { isActive } = req.body;
+      
+      // Validate service type
+      if (!['viewers', 'chat', 'followers'].includes(serviceType)) {
+        return res.status(400).json({ message: "Invalid service type. Must be 'viewers', 'chat', or 'followers'." });
+      }
+      
+      // Get the subscription to verify ownership
+      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      
+      // Check if subscription belongs to the user
+      if (subscription.subscription.userId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Check if subscription is active before activating services
+      if (isActive && !subscription.subscription.isActive) {
+        return res.status(400).json({ message: "Subscription must be active to start services" });
+      }
+      
+      // Check if Twitch channel is set before activating services
+      if (isActive && !subscription.subscription.twitchChannel) {
+        return res.status(400).json({ message: "You must set a Twitch channel before activating services" });
+      }
+      
+      // Update the service status
+      const updated = await storage.updateServiceStatus(subscriptionId, serviceType, isActive);
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: `Error updating ${req.params.serviceType} service status: ${error.message}` });
+    }
+  });
 
   // Stripe payment route for one-time payments
   app.post("/api/create-payment-intent", async (req, res) => {
@@ -489,8 +538,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const users = Array.from(storage.userDb?.values() || []);
-      res.json(users);
+      // Get all users from the database
+      const allUsers = await db.select().from(users);
+      res.json(allUsers);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching users: " + error.message });
     }
@@ -502,8 +552,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const payments = Array.from(storage.paymentDb?.values() || []);
-      res.json(payments);
+      // Get all payments from the database
+      const allPayments = await db.select().from(payments);
+      res.json(allPayments);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching payments: " + error.message });
     }
@@ -515,7 +566,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const subscriptions = Array.from(storage.userSubscriptionDb?.values() || []);
+      // Get all user subscriptions from the database
+      const subscriptions = await db.select().from(userSubscriptions);
       res.json(subscriptions);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching subscriptions: " + error.message });
