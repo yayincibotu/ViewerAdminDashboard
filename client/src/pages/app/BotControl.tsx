@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import UserSidebar from "@/components/dashboard/UserSidebar";
 import {
   Card,
   CardContent,
@@ -138,86 +139,95 @@ const BotControl = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex h-screen overflow-hidden">
+        <UserSidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
 
   if (!subscriptions || subscriptions.length === 0) {
     return (
-      <Alert>
-        <AlertTitle>No Subscriptions Found</AlertTitle>
-        <AlertDescription>
-          You don't have any active subscriptions. Please purchase a subscription to access bot controls.
-        </AlertDescription>
-      </Alert>
+      <div className="flex h-screen overflow-hidden">
+        <UserSidebar />
+        <div className="flex-1 p-6">
+          <Alert>
+            <AlertTitle>No Subscriptions Found</AlertTitle>
+            <AlertDescription>
+              You don't have any active subscriptions. Please purchase a subscription to access bot controls.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold">Bot Control Panel</h1>
-        <p className="text-muted-foreground">
-          Control your Twitch bots and monitor their status
-        </p>
-      </div>
+    <div className="flex h-screen overflow-hidden">
+      <UserSidebar />
+      <div className="flex-1 overflow-y-auto space-y-6 p-6">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold">Bot Control Panel</h1>
+          <p className="text-muted-foreground">
+            Control your Twitch bots and monitor their status
+          </p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Select Subscription</CardTitle>
-            
-            {selectedSubscription && (
-              <Badge variant={selectedSubscription.subscription.isActive ? "default" : "destructive"}>
-                {selectedSubscription.subscription.isActive ? "Active" : "Inactive"}
-              </Badge>
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Select Subscription</CardTitle>
+              
+              {selectedSubscription && (
+                <Badge variant={selectedSubscription.subscription.isActive ? "default" : "destructive"}>
+                  {selectedSubscription.subscription.isActive ? "Active" : "Inactive"}
+                </Badge>
+              )}
+            </div>
+            <CardDescription>
+              Choose the subscription plan you want to control
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select
+              value={selectedSubscriptionId?.toString() || ""}
+              onValueChange={(value) => setSelectedSubscriptionId(parseInt(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a subscription plan" />
+              </SelectTrigger>
+              <SelectContent>
+                {subscriptions.map((sub) => (
+                  <SelectItem key={sub.subscription.id} value={sub.subscription.id.toString()}>
+                    {sub.plan.name} {sub.subscription.twitchChannel ? `(${sub.subscription.twitchChannel})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {selectedSubscription && !selectedSubscription.subscription.twitchChannel && (
+              <Alert className="mt-4" variant="destructive">
+                <AlertTitle>No Twitch Channel Set</AlertTitle>
+                <AlertDescription>
+                  Please set a Twitch channel for this subscription in the Subscriptions page.
+                </AlertDescription>
+              </Alert>
             )}
-          </div>
-          <CardDescription>
-            Choose the subscription plan you want to control
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select
-            value={selectedSubscriptionId?.toString() || ""}
-            onValueChange={(value) => setSelectedSubscriptionId(parseInt(value))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a subscription plan" />
-            </SelectTrigger>
-            <SelectContent>
-              {subscriptions.map((sub) => (
-                <SelectItem key={sub.subscription.id} value={sub.subscription.id.toString()}>
-                  {sub.plan.name} {sub.subscription.twitchChannel ? `(${sub.subscription.twitchChannel})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
 
-          {selectedSubscription && !selectedSubscription.subscription.twitchChannel && (
-            <Alert className="mt-4" variant="destructive">
-              <AlertTitle>No Twitch Channel Set</AlertTitle>
-              <AlertDescription>
-                Please set a Twitch channel for this subscription in the Subscriptions page.
-              </AlertDescription>
-            </Alert>
-          )}
+            {selectedSubscription && !selectedSubscription.subscription.isActive && (
+              <Alert className="mt-4" variant="destructive">
+                <AlertTitle>Subscription Inactive</AlertTitle>
+                <AlertDescription>
+                  This subscription is currently inactive. Please activate it in the Subscriptions page.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
 
-          {selectedSubscription && !selectedSubscription.subscription.isActive && (
-            <Alert className="mt-4" variant="destructive">
-              <AlertTitle>Subscription Inactive</AlertTitle>
-              <AlertDescription>
-                This subscription is currently inactive. Please activate it in the Subscriptions page.
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      {selectedSubscription && (
-        <>
+        {selectedSubscription && (
           <Card>
             <CardHeader>
               <CardTitle>Twitch Channel: {selectedSubscription.subscription.twitchChannel || "Not Set"}</CardTitle>
@@ -425,8 +435,8 @@ const BotControl = () => {
               </Button>
             </CardFooter>
           </Card>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 };
