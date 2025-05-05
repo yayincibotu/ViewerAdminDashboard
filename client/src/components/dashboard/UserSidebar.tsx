@@ -2,7 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import Logo from '../Logo';
-import { ChevronLeft, ChevronRight, Home, Layers, DollarSign, Bot, Settings, User, LogOut } from 'lucide-react';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Home, 
+  Layers, 
+  DollarSign, 
+  Bot, 
+  Settings, 
+  User, 
+  LogOut, 
+  CreditCard, 
+  UserCircle
+} from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -146,6 +158,22 @@ const UserSidebar: React.FC = () => {
             label="Subscriptions" 
             href="/app/subscriptions" 
             isActive={isActivePath('/app/subscriptions')} 
+            collapsed={collapsed}
+          />
+          
+          <NavItem 
+            icon={<CreditCard size={18} />} 
+            label="Billing" 
+            href="/app/billing" 
+            isActive={isActivePath('/app/billing')} 
+            collapsed={collapsed}
+          />
+
+          <NavItem 
+            icon={<UserCircle size={18} />} 
+            label="Profile" 
+            href="/app/profile" 
+            isActive={isActivePath('/app/profile')} 
             collapsed={collapsed}
           />
           

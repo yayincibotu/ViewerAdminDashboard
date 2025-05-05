@@ -12,6 +12,8 @@ import Services from "@/pages/app/Services";
 import Subscriptions from "@/pages/app/Subscriptions";
 import BotControl from "@/pages/app/BotControl";
 import Settings from "@/pages/app/Settings";
+import Billing from "@/pages/app/Billing";
+import Profile from "@/pages/app/Profile";
 import AdminDashboard from "@/pages/webadmin/Dashboard";
 import AdminUsers from "@/pages/webadmin/Users";
 import AdminPayments from "@/pages/webadmin/Payments";
@@ -35,6 +37,8 @@ function Router() {
       <ProtectedRoute path="/app/services" component={Services} />
       <ProtectedRoute path="/app/subscriptions" component={Subscriptions} />
       <ProtectedRoute path="/app/bot-control" component={BotControl} />
+      <ProtectedRoute path="/app/billing" component={Billing} />
+      <ProtectedRoute path="/app/profile" component={Profile} />
       <ProtectedRoute path="/app/settings" component={Settings} />
       
       {/* Payment Routes */}
