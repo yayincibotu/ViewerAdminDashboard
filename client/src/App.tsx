@@ -1,12 +1,9 @@
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/HomePage";
 import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { ProtectedAdminRoute } from "@/lib/protected-admin-route";
 import Dashboard from "@/pages/app/Dashboard";
 import Services from "@/pages/app/Services";
 import Subscriptions from "@/pages/app/Subscriptions";
@@ -20,13 +17,8 @@ import AdminPayments from "@/pages/webadmin/Payments";
 import AdminServices from "@/pages/webadmin/Services";
 import Checkout from "@/pages/payment/Checkout";
 import Subscribe from "@/pages/payment/Subscribe";
-import { useAuth } from "@/hooks/use-auth";
 
 function Router() {
-  const { user } = useAuth();
-  
-  const isAdmin = user?.role === "admin";
-  
   return (
     <Switch>
       <Route path="/" component={HomePage} />
@@ -46,14 +38,10 @@ function Router() {
       <ProtectedRoute path="/subscribe/:planId" component={Subscribe} noLayout={true} />
       
       {/* Admin Routes */}
-      {isAdmin && (
-        <>
-          <ProtectedRoute path="/webadmin" component={AdminDashboard} />
-          <ProtectedRoute path="/webadmin/users" component={AdminUsers} />
-          <ProtectedRoute path="/webadmin/payments" component={AdminPayments} />
-          <ProtectedRoute path="/webadmin/services" component={AdminServices} />
-        </>
-      )}
+      <ProtectedAdminRoute path="/webadmin" component={AdminDashboard} />
+      <ProtectedAdminRoute path="/webadmin/users" component={AdminUsers} />
+      <ProtectedAdminRoute path="/webadmin/payments" component={AdminPayments} />
+      <ProtectedAdminRoute path="/webadmin/services" component={AdminServices} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />
