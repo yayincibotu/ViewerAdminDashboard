@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import UserSidebar from '@/components/dashboard/UserSidebar';
 import Header from '@/components/dashboard/Header';
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Card, 
   CardContent, 
@@ -67,19 +68,110 @@ const Profile = () => {
     marketing: false,
   });
 
-  // Simulated profile update mutation
+  // Password change form state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  // Get profile data from API
+  const fetchProfileData = async () => {
+    if (user?.profileData) {
+      try {
+        const profileData = JSON.parse(user.profileData);
+        return profileData;
+      } catch (e) {
+        console.error("Error parsing profile data", e);
+      }
+    }
+    return null;
+  };
+
+  // Get security settings from API
+  const fetchSecuritySettings = async () => {
+    if (user?.securitySettings) {
+      try {
+        const securitySettings = JSON.parse(user.securitySettings);
+        return securitySettings;
+      } catch (e) {
+        console.error("Error parsing security settings", e);
+      }
+    }
+    return null;
+  };
+
+  // Get notification preferences from API
+  const fetchNotificationPreferences = async () => {
+    if (user?.notificationPreferences) {
+      try {
+        const notificationPreferences = JSON.parse(user.notificationPreferences);
+        return notificationPreferences;
+      } catch (e) {
+        console.error("Error parsing notification preferences", e);
+      }
+    }
+    return null;
+  };
+
+  // Load stored profile data when component mounts
+  useEffect(() => {
+    if (user) {
+      const loadUserData = async () => {
+        const profileData = await fetchProfileData();
+        const securityData = await fetchSecuritySettings();
+        const notificationData = await fetchNotificationPreferences();
+        
+        if (profileData) {
+          setProfile({
+            fullName: profileData.fullName || user.username || '',
+            displayName: profileData.displayName || user.username || '',
+            email: user.email || '',
+            bio: profileData.bio || 'Professional Twitch streamer with a passion for gaming and entertainment.',
+            location: profileData.location || 'San Francisco, CA',
+            website: profileData.website || 'https://twitch.tv/example',
+            twitterHandle: profileData.twitterHandle || '@example',
+            discordUsername: profileData.discordUsername || 'example#1234',
+          });
+        }
+        
+        if (securityData) {
+          setSecuritySettings({
+            twoFactorEnabled: securityData.twoFactorEnabled || false,
+            loginNotifications: securityData.loginNotifications || true,
+            sessionTimeout: securityData.sessionTimeout || '30',
+          });
+        }
+        
+        if (notificationData) {
+          setNotifications({
+            email: notificationData.email !== undefined ? notificationData.email : true,
+            sms: notificationData.sms !== undefined ? notificationData.sms : false,
+            browser: notificationData.browser !== undefined ? notificationData.browser : true,
+            payments: notificationData.payments !== undefined ? notificationData.payments : true,
+            updates: notificationData.updates !== undefined ? notificationData.updates : true,
+            marketing: notificationData.marketing !== undefined ? notificationData.marketing : false,
+          });
+        }
+      };
+      
+      loadUserData();
+    }
+  }, [user]);
+
+  // Real profile update mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData) => {
-      // Simulate API call
-      return new Promise((resolve) => {
-        setTimeout(() => resolve({ success: true }), 1500);
-      });
+      const res = await apiRequest("PUT", "/api/user/profile", profileData);
+      return res.json();
     },
     onSuccess: () => {
       toast({
         title: 'Profile updated',
         description: 'Your profile has been updated successfully.',
       });
+      // Refresh user data
+      queryClient.invalidateQueries(["/api/user"]);
     },
     onError: (error: Error) => {
       toast({
@@ -90,19 +182,19 @@ const Profile = () => {
     },
   });
 
-  // Simulated security settings update mutation
+  // Real security settings update mutation
   const updateSecurityMutation = useMutation({
     mutationFn: async (securityData) => {
-      // Simulate API call
-      return new Promise((resolve) => {
-        setTimeout(() => resolve({ success: true }), 1500);
-      });
+      const res = await apiRequest("PUT", "/api/user/security", securityData);
+      return res.json();
     },
     onSuccess: () => {
       toast({
         title: 'Security settings updated',
         description: 'Your security preferences have been updated successfully.',
       });
+      // Refresh user data
+      queryClient.invalidateQueries(["/api/user"]);
     },
     onError: (error: Error) => {
       toast({
@@ -113,19 +205,19 @@ const Profile = () => {
     },
   });
 
-  // Simulated notifications update mutation
+  // Real notifications update mutation
   const updateNotificationsMutation = useMutation({
     mutationFn: async (notificationsData) => {
-      // Simulate API call
-      return new Promise((resolve) => {
-        setTimeout(() => resolve({ success: true }), 1500);
-      });
+      const res = await apiRequest("PUT", "/api/user/notifications", notificationsData);
+      return res.json();
     },
     onSuccess: () => {
       toast({
         title: 'Notification preferences updated',
         description: 'Your notification preferences have been updated successfully.',
       });
+      // Refresh user data
+      queryClient.invalidateQueries(["/api/user"]);
     },
     onError: (error: Error) => {
       toast({
