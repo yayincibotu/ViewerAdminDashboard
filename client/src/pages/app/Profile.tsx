@@ -39,127 +39,81 @@ import { useToast } from '@/hooks/use-toast';
 const Profile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   
-  // Form states
+  // Profile form state
   const [profile, setProfile] = useState({
-    fullName: user?.username || '',
-    displayName: user?.username || '',
-    email: user?.email || '',
-    bio: 'Professional Twitch streamer with a passion for gaming and entertainment.',
-    location: 'San Francisco, CA',
-    website: 'https://twitch.tv/example',
-    twitterHandle: '@example',
-    discordUsername: 'example#1234',
+    fullName: '',
+    displayName: '',
+    email: '',
+    bio: '',
+    location: '',
+    website: '',
+    twitterHandle: '',
+    discordUsername: ''
   });
-
+  
+  // Security settings state
   const [securitySettings, setSecuritySettings] = useState({
     twoFactorEnabled: false,
     loginNotifications: true,
-    sessionTimeout: '30',
+    sessionTimeout: '30'
   });
-
+  
+  // Password change form state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  
+  // Notification preferences state
   const [notifications, setNotifications] = useState({
     email: true,
     sms: false,
     browser: true,
     payments: true,
     updates: true,
-    marketing: false,
+    marketing: false
   });
-
-  // Password change form state
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-
-  // Get profile data from API
-  const fetchProfileData = async () => {
-    if (user?.profileData) {
-      try {
-        const profileData = JSON.parse(user.profileData);
-        return profileData;
-      } catch (e) {
-        console.error("Error parsing profile data", e);
-      }
-    }
-    return null;
-  };
-
-  // Get security settings from API
-  const fetchSecuritySettings = async () => {
-    if (user?.securitySettings) {
-      try {
-        const securitySettings = JSON.parse(user.securitySettings);
-        return securitySettings;
-      } catch (e) {
-        console.error("Error parsing security settings", e);
-      }
-    }
-    return null;
-  };
-
-  // Get notification preferences from API
-  const fetchNotificationPreferences = async () => {
-    if (user?.notificationPreferences) {
-      try {
-        const notificationPreferences = JSON.parse(user.notificationPreferences);
-        return notificationPreferences;
-      } catch (e) {
-        console.error("Error parsing notification preferences", e);
-      }
-    }
-    return null;
-  };
-
-  // Load stored profile data when component mounts
+  
+  // Profile image state
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  
+  // Initialize form data with user data
   useEffect(() => {
     if (user) {
-      const loadUserData = async () => {
-        const profileData = await fetchProfileData();
-        const securityData = await fetchSecuritySettings();
-        const notificationData = await fetchNotificationPreferences();
-        
-        if (profileData) {
-          setProfile({
-            fullName: profileData.fullName || user.username || '',
-            displayName: profileData.displayName || user.username || '',
-            email: user.email || '',
-            bio: profileData.bio || 'Professional Twitch streamer with a passion for gaming and entertainment.',
-            location: profileData.location || 'San Francisco, CA',
-            website: profileData.website || 'https://twitch.tv/example',
-            twitterHandle: profileData.twitterHandle || '@example',
-            discordUsername: profileData.discordUsername || 'example#1234',
-          });
+      // Try to parse profile data from user object
+      try {
+        if (user.profileData) {
+          const profileData = JSON.parse(user.profileData);
+          setProfile(prevProfile => ({
+            ...prevProfile,
+            ...profileData
+          }));
         }
         
-        if (securityData) {
-          setSecuritySettings({
-            twoFactorEnabled: securityData.twoFactorEnabled || false,
-            loginNotifications: securityData.loginNotifications || true,
-            sessionTimeout: securityData.sessionTimeout || '30',
-          });
+        if (user.securitySettings) {
+          const security = JSON.parse(user.securitySettings);
+          setSecuritySettings(prevSettings => ({
+            ...prevSettings,
+            ...security
+          }));
         }
         
-        if (notificationData) {
-          setNotifications({
-            email: notificationData.email !== undefined ? notificationData.email : true,
-            sms: notificationData.sms !== undefined ? notificationData.sms : false,
-            browser: notificationData.browser !== undefined ? notificationData.browser : true,
-            payments: notificationData.payments !== undefined ? notificationData.payments : true,
-            updates: notificationData.updates !== undefined ? notificationData.updates : true,
-            marketing: notificationData.marketing !== undefined ? notificationData.marketing : false,
-          });
+        if (user.notificationPreferences) {
+          const prefs = JSON.parse(user.notificationPreferences);
+          setNotifications(prevNotifications => ({
+            ...prevNotifications,
+            ...prefs
+          }));
         }
-      };
-      
-      loadUserData();
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
     }
   }, [user]);
-
-  // Real profile update mutation
+  
+  // Profile update mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData) => {
       const res = await apiRequest("PUT", "/api/user/profile", profileData);
@@ -168,10 +122,10 @@ const Profile = () => {
     onSuccess: () => {
       toast({
         title: 'Profile updated',
-        description: 'Your profile has been updated successfully.',
+        description: 'Your profile information has been updated successfully.',
       });
       // Refresh user data
-      queryClient.invalidateQueries(["/api/user"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
       toast({
@@ -181,8 +135,8 @@ const Profile = () => {
       });
     },
   });
-
-  // Real security settings update mutation
+  
+  // Security settings update mutation
   const updateSecurityMutation = useMutation({
     mutationFn: async (securityData) => {
       const res = await apiRequest("PUT", "/api/user/security", securityData);
@@ -191,10 +145,10 @@ const Profile = () => {
     onSuccess: () => {
       toast({
         title: 'Security settings updated',
-        description: 'Your security preferences have been updated successfully.',
+        description: 'Your security settings have been updated successfully.',
       });
       // Refresh user data
-      queryClient.invalidateQueries(["/api/user"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
       toast({
@@ -204,7 +158,7 @@ const Profile = () => {
       });
     },
   });
-
+  
   // Real notifications update mutation
   const updateNotificationsMutation = useMutation({
     mutationFn: async (notificationsData) => {
@@ -217,7 +171,7 @@ const Profile = () => {
         description: 'Your notification preferences have been updated successfully.',
       });
       // Refresh user data
-      queryClient.invalidateQueries(["/api/user"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
       toast({
@@ -867,47 +821,39 @@ const Profile = () => {
                           <div className="space-y-0.5">
                             <Label htmlFor="payment-notifications">Payment Updates</Label>
                             <p className="text-sm text-gray-500">
-                              Get notified about payments and billing
+                              Notifications about your payments and subscriptions
                             </p>
                           </div>
                           <Switch
                             id="payment-notifications"
                             checked={notifications.payments}
                             onCheckedChange={(checked) =>
-                              setNotifications({
-                                ...notifications,
-                                payments: checked,
-                              })
+                              setNotifications({ ...notifications, payments: checked })
                             }
                           />
                         </div>
+
                         <div className="flex items-center justify-between">
                           <div className="space-y-0.5">
-                            <Label htmlFor="product-notifications">
-                              Product Updates
-                            </Label>
+                            <Label htmlFor="update-notifications">Product Updates</Label>
                             <p className="text-sm text-gray-500">
-                              Get notified about new features and improvements
+                              Notifications about new features and improvements
                             </p>
                           </div>
                           <Switch
-                            id="product-notifications"
+                            id="update-notifications"
                             checked={notifications.updates}
                             onCheckedChange={(checked) =>
-                              setNotifications({
-                                ...notifications,
-                                updates: checked,
-                              })
+                              setNotifications({ ...notifications, updates: checked })
                             }
                           />
                         </div>
+
                         <div className="flex items-center justify-between">
                           <div className="space-y-0.5">
-                            <Label htmlFor="marketing-notifications">
-                              Marketing Communications
-                            </Label>
+                            <Label htmlFor="marketing-notifications">Marketing</Label>
                             <p className="text-sm text-gray-500">
-                              Receive emails about new products, offers, and promotions
+                              Receive promotional emails and offers
                             </p>
                           </div>
                           <Switch
@@ -940,7 +886,7 @@ const Profile = () => {
                             Saved
                           </>
                         ) : (
-                          "Save Notification Preferences"
+                          "Save Notification Settings"
                         )}
                       </Button>
                     </div>
