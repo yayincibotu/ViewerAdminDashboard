@@ -81,6 +81,12 @@ const BotControl = () => {
   const [twitchChannelInput, setTwitchChannelInput] = useState('');
   const [showChannelChangeForm, setShowChannelChangeForm] = useState(false);
   
+  // Bot activation states
+  const [viewerBotActive, setViewerBotActive] = useState(false);
+  const [chatListActive, setChatListActive] = useState(false);
+  const [chatBotActive, setChatBotActive] = useState(false);
+  const [followerBotActive, setFollowerBotActive] = useState(false);
+  
   // Fetch user subscriptions
   const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery({
     queryKey: ['/api/user-subscriptions'],
@@ -633,7 +639,7 @@ const BotControl = () => {
                   <div className="border rounded-lg p-4 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-16 h-16">
                       <div className="absolute transform rotate-45 bg-blue-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
-                        {currentSubscription.isActive ? 'Running' : 'Inactive'}
+                        {currentSubscription.isActive && viewerBotActive ? 'Running' : 'Inactive'}
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -652,33 +658,98 @@ const BotControl = () => {
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
                           {currentSubscription.isActive ? 
-                            `${viewerSettings.viewerCount} viewers currently active` : 
+                            (viewerBotActive ? 
+                              `${viewerSettings.viewerCount} viewers currently active` : 
+                              'Viewer bot is ready to start') : 
                             'Waiting to be activated'}
                         </div>
                         <Switch 
-                          checked={currentSubscription.isActive} 
+                          checked={viewerBotActive}
                           disabled={!currentSubscription.isActive}
-                          aria-readonly="true"
+                          onCheckedChange={(checked) => {
+                            setViewerBotActive(checked);
+                            if (checked) {
+                              toast({
+                                title: 'Viewer Bot Activated',
+                                description: `${viewerSettings.viewerCount} viewers have been added to your stream.`,
+                              });
+                            } else {
+                              toast({
+                                title: 'Viewer Bot Deactivated',
+                                description: 'All viewers have been removed from your stream.',
+                              });
+                            }
+                          }}
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Chat Bot Control */}
+                  {/* Chat List Control */}
                   <div className="border rounded-lg p-4 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-16 h-16">
                       <div className="absolute transform rotate-45 bg-purple-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
-                        {currentSubscription.isActive ? 'Running' : 'Inactive'}
+                        {currentSubscription.isActive && chatListActive ? 'Running' : 'Inactive'}
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <MessageSquare className="h-5 w-5 text-purple-500" />
-                          <h3 className="font-medium">Chat Bot</h3>
+                          <h3 className="font-medium">Chat List</h3>
                         </div>
                         <div className="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-md font-medium">
                           {chatSettings.chatCount} / {subscriptionDetail.plan.chatCount}
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Displays a static chat list in your Twitch channel
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-500">
+                          {currentSubscription.isActive ? 
+                            (chatListActive ? 
+                              `${chatSettings.chatCount} chatters in list` : 
+                              'Chat list is ready to start') : 
+                            'Waiting to be activated'}
+                        </div>
+                        <Switch 
+                          checked={chatListActive}
+                          disabled={!currentSubscription.isActive}
+                          onCheckedChange={(checked) => {
+                            setChatListActive(checked);
+                            if (checked) {
+                              toast({
+                                title: 'Chat List Activated',
+                                description: `Chat list with ${chatSettings.chatCount} chatters has been activated.`,
+                              });
+                            } else {
+                              toast({
+                                title: 'Chat List Deactivated',
+                                description: 'Chat list has been turned off.',
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Chat Bot Control */}
+                  <div className="border rounded-lg p-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16">
+                      <div className="absolute transform rotate-45 bg-indigo-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
+                        {currentSubscription.isActive && chatBotActive ? 'Running' : 'Inactive'}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-indigo-500" />
+                          <h3 className="font-medium">Chat Bot</h3>
+                        </div>
+                        <div className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-md font-medium">
+                          {chatSettings.chatBotNames?.length || 0} bots
                         </div>
                       </div>
                       <div className="text-sm text-gray-500">
@@ -687,13 +758,28 @@ const BotControl = () => {
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
                           {currentSubscription.isActive ? 
-                            `${chatSettings.chatBotNames?.length || 0} bots active with ${chatSettings.messageFrequency} frequency` : 
+                            (chatBotActive ? 
+                              `Active with ${chatSettings.messageFrequency} frequency` : 
+                              'Chat bot is ready to start') : 
                             'Waiting to be activated'}
                         </div>
                         <Switch 
-                          checked={currentSubscription.isActive} 
+                          checked={chatBotActive}
                           disabled={!currentSubscription.isActive}
-                          aria-readonly="true"
+                          onCheckedChange={(checked) => {
+                            setChatBotActive(checked);
+                            if (checked) {
+                              toast({
+                                title: 'Chat Bot Activated',
+                                description: `Chat bot with ${chatSettings.messageFrequency} message frequency has been activated.`,
+                              });
+                            } else {
+                              toast({
+                                title: 'Chat Bot Deactivated',
+                                description: 'Chat bot has been turned off.',
+                              });
+                            }
+                          }}
                         />
                       </div>
                     </div>
@@ -703,7 +789,7 @@ const BotControl = () => {
                   <div className="border rounded-lg p-4 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-16 h-16">
                       <div className="absolute transform rotate-45 bg-green-500 text-xs text-white py-1 text-center right-[-35px] top-[12px] w-[120px]">
-                        {currentSubscription.isActive ? 'Running' : 'Inactive'}
+                        {currentSubscription.isActive && followerBotActive ? 'Running' : 'Inactive'}
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -722,13 +808,28 @@ const BotControl = () => {
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
                           {currentSubscription.isActive ? 
-                            `Delivering ${followerSettings.followerCount} followers at ${followerSettings.deliverySpeed} speed` : 
+                            (followerBotActive ? 
+                              `Delivering ${followerSettings.followerCount} followers at ${followerSettings.deliverySpeed} speed` : 
+                              'Follower bot is ready to start') :
                             'Waiting to be activated'}
                         </div>
                         <Switch 
-                          checked={currentSubscription.isActive} 
+                          checked={followerBotActive}
                           disabled={!currentSubscription.isActive}
-                          aria-readonly="true"
+                          onCheckedChange={(checked) => {
+                            setFollowerBotActive(checked);
+                            if (checked) {
+                              toast({
+                                title: 'Follower Bot Activated',
+                                description: `Follower bot delivering ${followerSettings.followerCount} followers at ${followerSettings.deliverySpeed} speed has been activated.`,
+                              });
+                            } else {
+                              toast({
+                                title: 'Follower Bot Deactivated',
+                                description: 'Follower bot has been turned off.',
+                              });
+                            }
+                          }}
                         />
                       </div>
                     </div>
