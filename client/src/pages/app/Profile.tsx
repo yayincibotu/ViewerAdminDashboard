@@ -185,7 +185,11 @@ const Profile = () => {
   // Password change mutation
   const changePasswordMutation = useMutation({
     mutationFn: async (passwordData) => {
-      const res = await apiRequest("PUT", "/api/user/change-password", passwordData);
+      // Send all password fields to match server expectations
+      const res = await apiRequest("PUT", "/api/user/change-password", {
+        ...passwordData,
+        confirmPassword: passwordForm.confirmPassword  // Add confirmPassword to request
+      });
       return res.json();
     },
     onSuccess: () => {

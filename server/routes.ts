@@ -646,10 +646,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordSchema = z.object({
         currentPassword: z.string().min(1, "Current password is required"),
         newPassword: z.string().min(6, "New password must be at least 6 characters"),
-        confirmPassword: z.string().min(6, "Confirm password must be at least 6 characters"),
-      }).refine(data => data.newPassword === data.confirmPassword, {
-        message: "Passwords do not match",
-        path: ["confirmPassword"],
+        confirmPassword: z.string().min(6, "Confirm password must be at least 6 characters").optional(),
+      }).superRefine((data, ctx) => {
+        // Only check password match if confirmPassword is provided
+        if (data.confirmPassword && data.newPassword !== data.confirmPassword) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Passwords do not match",
+            path: ["confirmPassword"],
+          });
+        }
       });
       
       const validData = passwordSchema.parse(req.body);
