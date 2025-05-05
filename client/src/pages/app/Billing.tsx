@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
+import UserSidebar from '@/components/dashboard/UserSidebar';
+import Header from '@/components/dashboard/Header';
 import { 
   Card, 
   CardContent, 
@@ -197,8 +199,10 @@ const Billing = () => {
   if (!user) return null;
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-8">
+    <div className="flex h-screen bg-gray-100">
+      <UserSidebar />
+      <div className="flex-1 overflow-auto flex flex-col">
+        <Header />
         <div className="container mx-auto py-6 px-4">
           <h1 className="text-2xl font-bold mb-6">Billing & Payments</h1>
 

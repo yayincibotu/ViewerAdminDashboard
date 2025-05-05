@@ -1,16 +1,13 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 
 export function ProtectedRoute({
   path,
   component: Component,
-  noLayout = false,
 }: {
   path: string;
   component: React.ComponentType<any>;
-  noLayout?: boolean;
 }) {
   const { user, isLoading } = useAuth();
 
@@ -32,15 +29,5 @@ export function ProtectedRoute({
     );
   }
 
-  if (noLayout) {
-    return <Route path={path} component={Component} />;
-  }
-
-  return (
-    <Route path={path}>
-      <DashboardLayout>
-        <Component />
-      </DashboardLayout>
-    </Route>
-  );
+  return <Route path={path} component={Component} />;
 }
