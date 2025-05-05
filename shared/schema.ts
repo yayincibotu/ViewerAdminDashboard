@@ -57,7 +57,6 @@ export const userSubscriptions = pgTable("user_subscriptions", {
   chatSettings: text("chat_settings").default("{}"), // JSON settings for chat bots
   followerSettings: text("follower_settings").default("{}"), // JSON settings for followers
   geographicTargeting: text("geographic_targeting"), // Countries targeted
-  servicesStatus: text("services_status").default('{"viewers":false,"chat":false,"followers":false}') // JSON for service statuses
 });
 
 export const insertSubscriptionSchema = createInsertSchema(userSubscriptions).omit({

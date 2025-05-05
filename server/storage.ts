@@ -299,46 +299,6 @@ export class DatabaseStorage implements IStorage {
   async updateGeographicTargeting(id: number, countries: string): Promise<UserSubscription | undefined> {
     return this.updateUserSubscription(id, { geographicTargeting: countries });
   }
-  
-  async updateServiceStatus(id: number, serviceType: string, isActive: boolean): Promise<UserSubscription | undefined> {
-    const subscription = await this.getUserSubscriptionWithPlan(id);
-    if (!subscription) return undefined;
-    
-    interface ServiceStatus {
-      viewers: boolean;
-      chat: boolean;
-      followers: boolean;
-      [key: string]: boolean;
-    }
-    
-    let services: ServiceStatus = {
-      viewers: false,
-      chat: false,
-      followers: false
-    };
-    
-    try {
-      // Parse existing services status or use the default
-      if (subscription.subscription.servicesStatus) {
-        services = JSON.parse(subscription.subscription.servicesStatus) as ServiceStatus;
-      }
-      
-      // Update the specified service status
-      services = {
-        ...services,
-        [serviceType]: isActive
-      };
-      
-    } catch (error) {
-      console.error('Error parsing services status:', error);
-      services[serviceType] = isActive;
-    }
-    
-    // Update the subscription with the new services status
-    return this.updateUserSubscription(id, { 
-      servicesStatus: JSON.stringify(services) 
-    });
-  }
 }
 
 export const storage = new DatabaseStorage();
