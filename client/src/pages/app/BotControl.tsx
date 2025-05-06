@@ -36,11 +36,17 @@ import { SubscriptionPlan, UserSubscription } from '@shared/schema';
 
 // Durum gösterge bileşeni
 const StatusIndicator = ({ active }: { active: boolean }) => (
-  <div className="flex items-center gap-1.5">
-    <div className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-green-500' : 'bg-red-500'}`} />
-    <span className={`text-xs font-medium ${active ? 'text-green-600' : 'text-red-600'}`}>
-      {active ? 'Active' : 'Inactive'}
-    </span>
+  <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full transition-all duration-300 ${
+    active 
+      ? 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border border-green-200' 
+      : 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border border-red-200'
+  }`}>
+    <div className={`h-2 w-2 rounded-full transition-all duration-300 ${
+      active 
+        ? 'bg-green-500 animate-pulse shadow-sm shadow-green-300' 
+        : 'bg-red-500 shadow-sm shadow-red-300'
+    }`} />
+    <span className="text-xs font-medium">{active ? 'Active' : 'Inactive'}</span>
   </div>
 );
 import { useLocation } from 'wouter';
@@ -607,22 +613,89 @@ const BotControl = () => {
             </div>
           </div>
           
-          {/* Status indicator */}
+          {/* Enhanced Status indicator */}
           {currentSubscription && (
-            <div className={`mb-6 p-4 rounded-lg ${currentSubscription?.isActive ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
-              <div className="flex items-center">
-                <div className={`w-2 h-2 rounded-full ${currentSubscription?.isActive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'} mr-2`}></div>
-                <p className={`text-sm font-medium ${currentSubscription?.isActive ? 'text-green-700' : 'text-yellow-700'}`}>
-                  {currentSubscription?.isActive 
-                    ? `Services are running for channel: ${currentSubscription?.twitchChannel}`
-                    : `Services are currently inactive. Configure your settings and activate your subscription.`}
-                </p>
+            <div className={`mb-6 p-5 rounded-xl shadow-sm relative overflow-hidden ${
+              currentSubscription?.isActive 
+              ? 'bg-gradient-to-r from-green-50 via-green-50 to-green-100 border border-green-200' 
+              : 'bg-gradient-to-r from-amber-50 via-amber-50 to-amber-100 border border-amber-200'
+            }`}>
+              {/* Background decorative elements */}
+              <div className="absolute right-0 top-0 w-32 h-32 -mt-10 -mr-10 opacity-10">
+                {currentSubscription?.isActive 
+                  ? <Sparkles className="w-full h-full text-green-500" />
+                  : <Twitch className="w-full h-full text-amber-500 rotate-12" />
+                }
               </div>
-              {!currentSubscription?.isActive && (
-                <div className="mt-2 text-xs text-yellow-600">
-                  You can activate your subscription using the "Activate Services" button from the bot control panel.
+              
+              <div className="flex items-start relative z-10">
+                <div className={`p-2 rounded-full ${
+                  currentSubscription?.isActive 
+                  ? 'bg-green-100 text-green-600' 
+                  : 'bg-amber-100 text-amber-600'
+                } mr-3`}>
+                  {currentSubscription?.isActive 
+                    ? <Sparkles className="h-5 w-5" />
+                    : <Twitch className="h-5 w-5" />
+                  }
                 </div>
-              )}
+                <div className="flex-1">
+                  <h3 className={`text-base font-semibold ${
+                    currentSubscription?.isActive 
+                    ? 'text-green-800' 
+                    : 'text-amber-800'
+                  }`}>
+                    {currentSubscription?.isActive 
+                      ? 'Active Services' 
+                      : 'Services Inactive'}
+                  </h3>
+                  <p className={`text-sm mt-1 ${
+                    currentSubscription?.isActive 
+                    ? 'text-green-700' 
+                    : 'text-amber-700'
+                  }`}>
+                    {currentSubscription?.isActive 
+                      ? `Your Twitch bots are currently running for channel: `
+                      : `Your Twitch services are inactive. Configure your settings and activate your subscription.`}
+                    {currentSubscription?.isActive && (
+                      <span className="font-medium">{currentSubscription?.twitchChannel}</span>
+                    )}
+                  </p>
+                  
+                  {!currentSubscription?.isActive && (
+                    <div className="mt-3 flex items-center">
+                      <Button 
+                        size="sm"
+                        variant="outline" 
+                        className={`h-8 text-sm bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-300`}
+                        onClick={() => {
+                          toggleSubscriptionMutation.mutate(true);
+                        }}
+                        disabled={toggleSubscriptionMutation.isPending}
+                      >
+                        {toggleSubscriptionMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5 mr-2" />
+                        )}
+                        Activate All Services
+                      </Button>
+                      <p className="ml-3 text-xs text-amber-600 opacity-90">
+                        Activating will enable all configured Twitch bot services.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                {currentSubscription?.isActive && (
+                  <div className="hidden md:flex items-center">
+                    <div className={`flex items-center gap-1 h-8 px-3 rounded-full bg-white border border-green-200 text-green-800 shadow-sm text-xs font-medium`}>
+                      <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                      <span>Live</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
           
@@ -668,15 +741,20 @@ const BotControl = () => {
                   Control all your Twitch bot services from a single dashboard
                 </CardDescription>
                 {currentSubscription?.twitchChannel && (
-                  <div className="flex items-center justify-between px-6 pt-4 pb-1 border-t mt-2">
+                  <div className="flex items-center justify-between px-6 pt-4 pb-2 border-t mt-2 bg-gradient-to-r from-purple-50 to-transparent">
                     <div className="flex items-center gap-2">
-                      <Twitch className="h-4 w-4 text-purple-500" />
-                      <span className="text-sm font-medium">Channel: <span className="text-purple-600">{currentSubscription.twitchChannel}</span></span>
+                      <div className="bg-purple-100 p-1.5 rounded-full">
+                        <Twitch className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-500 font-medium">Active Channel</span>
+                        <span className="text-sm font-semibold text-purple-700">{currentSubscription.twitchChannel}</span>
+                      </div>
                     </div>
                     <Button 
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="h-7 text-xs text-purple-600 hover:text-purple-700"
+                      className="h-7 text-xs border-purple-200 text-purple-600 hover:bg-purple-50 hover:text-purple-700 transition-colors"
                       onClick={() => {
                         setTwitchChannelInput(currentSubscription.twitchChannel || '');
                         setShowChannelChangeForm(!showChannelChangeForm);
@@ -719,27 +797,50 @@ const BotControl = () => {
                 )}
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Viewer Bot Control */}
-                  <div className="border rounded-lg p-4 relative overflow-hidden">
-                    <div className="space-y-3">
+                  <div className="rounded-xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md group">
+                    <div className="bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50 p-3 border-b border-blue-200">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Eye className="h-5 w-5 text-blue-500" />
-                          <h3 className="font-medium">Viewer Bot</h3>
+                        <div className="flex items-center gap-2.5">
+                          <div className="bg-white p-2 rounded-full shadow-sm">
+                            <Eye className="h-5 w-5 text-blue-500" />
+                          </div>
+                          <h3 className="font-semibold text-blue-800">Viewer Bot</h3>
                         </div>
-                        <div className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md font-medium">
+                        <div className="px-2.5 py-1 bg-white text-blue-700 text-xs rounded-md font-medium border border-blue-200 shadow-sm">
                           {viewerSettings.viewerCount} / {subscriptionDetail.plan.viewerCount}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-500">
+                    </div>
+                    <div className="p-4 bg-white border border-t-0 border-blue-100 rounded-b-xl space-y-3">
+                      <div className="flex items-center justify-between py-1">
+                        <div className="text-sm text-gray-700">
                           Adds simulated viewers to your Twitch stream
                         </div>
                         <StatusIndicator active={Boolean(currentSubscription?.isActive && viewerBotActive)} />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-gray-500">
+                      
+                      {/* Mini graph representation */}
+                      <div className="h-9 bg-gray-50 rounded-md overflow-hidden border border-gray-100">
+                        <div className="h-full flex items-end">
+                          {Array.from({ length: 12 }).map((_, index) => (
+                            <div 
+                              key={`viewer-${index}`} 
+                              className={`w-full h-${Math.floor(Math.random() * 8) + 1} bg-blue-${viewerBotActive ? '400' : '200'} mx-px transition-all duration-500 ease-in-out ${viewerBotActive ? 'group-hover:bg-blue-500' : ''}`}
+                              style={{ 
+                                height: `${viewerBotActive ? (Math.floor(Math.random() * 70) + 20) : 10}%`,
+                                marginLeft: '1px',
+                                marginRight: '1px',
+                                transition: 'height 0.5s ease-in-out'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="text-xs text-gray-600">
                           {currentSubscription?.isActive ? 
                             (viewerBotActive ? 
                               `${viewerSettings.viewerCount} viewers currently active` : 
@@ -769,25 +870,48 @@ const BotControl = () => {
                   </div>
 
                   {/* Chat List Control */}
-                  <div className="border rounded-lg p-4 relative overflow-hidden">
-                    <div className="space-y-3">
+                  <div className="rounded-xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md group">
+                    <div className="bg-gradient-to-br from-purple-50 via-purple-100 to-purple-50 p-3 border-b border-purple-200">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <MessageSquare className="h-5 w-5 text-purple-500" />
-                          <h3 className="font-medium">Chat List</h3>
+                        <div className="flex items-center gap-2.5">
+                          <div className="bg-white p-2 rounded-full shadow-sm">
+                            <MessageSquare className="h-5 w-5 text-purple-500" />
+                          </div>
+                          <h3 className="font-semibold text-purple-800">Chat List</h3>
                         </div>
-                        <div className="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-md font-medium">
+                        <div className="px-2.5 py-1 bg-white text-purple-700 text-xs rounded-md font-medium border border-purple-200 shadow-sm">
                           {chatSettings.chatCount} / {subscriptionDetail.plan.chatCount}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-500">
+                    </div>
+                    <div className="p-4 bg-white border border-t-0 border-purple-100 rounded-b-xl space-y-3">
+                      <div className="flex items-center justify-between py-1">
+                        <div className="text-sm text-gray-700">
                           Displays a static chat list in your Twitch channel
                         </div>
                         <StatusIndicator active={Boolean(currentSubscription?.isActive && chatListActive)} />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-gray-500">
+                      
+                      {/* Chat representation */}
+                      <div className="h-9 bg-gray-50 rounded-md overflow-hidden border border-gray-100 flex items-center justify-around px-2">
+                        {chatListActive && (
+                          <>
+                            {Array.from({ length: 5 }).map((_, index) => (
+                              <div 
+                                key={`chat-avatar-${index}`} 
+                                className={`w-5 h-5 rounded-full bg-purple-${300 + (index % 3) * 100} shadow-sm animate-pulse`}
+                                style={{ animationDelay: `${index * 0.2}s` }}
+                              />
+                            ))}
+                          </>
+                        )}
+                        {!chatListActive && (
+                          <div className="text-xs text-gray-400 italic">Chat list inactive</div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="text-xs text-gray-600">
                           {currentSubscription?.isActive ? 
                             (chatListActive ? 
                               `${chatSettings.chatCount} chatters in list` : 
@@ -817,25 +941,51 @@ const BotControl = () => {
                   </div>
                   
                   {/* Chat Bot Control */}
-                  <div className="border rounded-lg p-4 relative overflow-hidden">
-                    <div className="space-y-3">
+                  <div className="rounded-xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md group">
+                    <div className="bg-gradient-to-br from-indigo-50 via-indigo-100 to-indigo-50 p-3 border-b border-indigo-200">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-5 w-5 text-indigo-500" />
-                          <h3 className="font-medium">Chat Bot</h3>
+                        <div className="flex items-center gap-2.5">
+                          <div className="bg-white p-2 rounded-full shadow-sm">
+                            <Sparkles className="h-5 w-5 text-indigo-500" />
+                          </div>
+                          <h3 className="font-semibold text-indigo-800">Chat Bot</h3>
                         </div>
-                        <div className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-md font-medium">
+                        <div className="px-2.5 py-1 bg-white text-indigo-700 text-xs rounded-md font-medium border border-indigo-200 shadow-sm">
                           {chatSettings.chatBotNames?.length || 0} bots
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-500">
+                    </div>
+                    <div className="p-4 bg-white border border-t-0 border-indigo-100 rounded-b-xl space-y-3">
+                      <div className="flex items-center justify-between py-1">
+                        <div className="text-sm text-gray-700">
                           Simulates chat activity in your Twitch channel
                         </div>
                         <StatusIndicator active={Boolean(currentSubscription?.isActive && chatBotActive)} />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-gray-500">
+                      
+                      {/* Chat message representation */}
+                      <div className="h-9 bg-gray-50 rounded-md overflow-hidden border border-gray-100 relative">
+                        {chatBotActive && (
+                          <div className="absolute inset-0 flex items-center px-3">
+                            <div className="h-2 rounded-full bg-indigo-300 w-1/6 animate-pulse mr-1" 
+                                 style={{ animationDuration: '1.5s' }}></div>
+                            <div className="h-2 rounded-full bg-indigo-400 w-2/6 animate-pulse mr-1"
+                                 style={{ animationDuration: '1.8s', animationDelay: '0.2s' }}></div>
+                            <div className="h-2 rounded-full bg-indigo-300 w-2/6 animate-pulse mr-1"
+                                 style={{ animationDuration: '1.3s', animationDelay: '0.4s' }}></div>
+                            <div className="h-2 rounded-full bg-indigo-200 w-1/6 animate-pulse"
+                                 style={{ animationDuration: '2s', animationDelay: '0.3s' }}></div>
+                          </div>
+                        )}
+                        {!chatBotActive && (
+                          <div className="h-full flex items-center justify-center">
+                            <div className="text-xs text-gray-400 italic">Chat activity inactive</div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="text-xs text-gray-600">
                           {currentSubscription?.isActive ? 
                             (chatBotActive ? 
                               `Active with ${chatSettings.messageFrequency} frequency` : 
@@ -863,8 +1013,6 @@ const BotControl = () => {
                       </div>
                     </div>
                   </div>
-
-
                 </div>
 
                 {currentSubscription?.isActive && (
