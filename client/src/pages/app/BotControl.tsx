@@ -32,6 +32,7 @@ import {
   X,
   CircleDot
 } from 'lucide-react';
+import { SubscriptionPlan, UserSubscription } from '@shared/schema';
 
 // Durum gösterge bileşeni
 const StatusIndicator = ({ active }: { active: boolean }) => (
@@ -45,15 +46,43 @@ const StatusIndicator = ({ active }: { active: boolean }) => (
 import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
+// Define interfaces for settings
+interface ViewerSettings {
+  viewerCount: number;
+  chatMode: string;
+  autoMessages: boolean;
+  customMessages: string[];
+}
+
+interface ChatSettings {
+  chatCount: number;
+  messageFrequency: string;
+  autoRespond: boolean;
+  chatBotNames: string[];
+  customResponses: Record<string, string>;
+}
+
+interface FollowerSettings {
+  followerCount: number;
+  deliverySpeed: string;
+  scheduleDelivery: boolean;
+  scheduleTime: string;
+}
+
+interface SubscriptionDetailResponse {
+  subscription: UserSubscription;
+  plan: SubscriptionPlan;
+}
+
 // Define default settings
-const DEFAULT_VIEWER_SETTINGS = {
+const DEFAULT_VIEWER_SETTINGS: ViewerSettings = {
   viewerCount: 15,
   chatMode: 'moderate',
   autoMessages: true,
   customMessages: []
 };
 
-const DEFAULT_CHAT_SETTINGS = {
+const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   chatCount: 10,
   messageFrequency: 'medium',
   autoRespond: true,
@@ -61,7 +90,7 @@ const DEFAULT_CHAT_SETTINGS = {
   customResponses: {}
 };
 
-const DEFAULT_FOLLOWER_SETTINGS = {
+const DEFAULT_FOLLOWER_SETTINGS: FollowerSettings = {
   followerCount: 25,
   deliverySpeed: 'normal',
   scheduleDelivery: false,
@@ -100,12 +129,12 @@ const BotControl = () => {
   const [followerBotActive, setFollowerBotActive] = useState(false);
   
   // Fetch user subscriptions
-  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery({
+  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery<{subscription: UserSubscription; plan: SubscriptionPlan}[]>({
     queryKey: ['/api/user-subscriptions'],
   });
   
   // Fetch detailed subscription data when a subscription is selected
-  const { data: subscriptionDetail, isLoading: detailLoading } = useQuery({
+  const { data: subscriptionDetail, isLoading: detailLoading } = useQuery<SubscriptionDetailResponse>({
     queryKey: [`/api/user-subscriptions/${selectedSubscription}`],
     enabled: !!selectedSubscription,
   });
