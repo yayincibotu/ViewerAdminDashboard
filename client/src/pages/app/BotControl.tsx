@@ -339,6 +339,7 @@ const BotControl = () => {
     if (
       !selectedSubscription && 
       !subscriptionsLoading && 
+      subscriptions && 
       subscriptions.length > 0 && 
       !subscriptionId
     ) {
@@ -582,7 +583,7 @@ const BotControl = () => {
                       <SelectValue placeholder="Select a subscription" />
                     </SelectTrigger>
                     <SelectContent>
-                      {subscriptions.map((sub: any) => (
+                      {subscriptions.map((sub: {subscription: UserSubscription; plan: SubscriptionPlan}) => (
                         <SelectItem 
                           key={sub.subscription.id} 
                           value={sub.subscription.id.toString()}
@@ -782,11 +783,11 @@ const BotControl = () => {
                         <div className="text-sm text-gray-500">
                           Adds simulated viewers to your Twitch stream
                         </div>
-                        <StatusIndicator active={currentSubscription.isActive && viewerBotActive} />
+                        <StatusIndicator active={Boolean(currentSubscription?.isActive && viewerBotActive)} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
-                          {currentSubscription.isActive ? 
+                          {currentSubscription?.isActive ? 
                             (viewerBotActive ? 
                               `${viewerSettings.viewerCount} viewers currently active` : 
                               'Viewer bot is ready to start') : 
@@ -830,11 +831,11 @@ const BotControl = () => {
                         <div className="text-sm text-gray-500">
                           Displays a static chat list in your Twitch channel
                         </div>
-                        <StatusIndicator active={currentSubscription.isActive && chatListActive} />
+                        <StatusIndicator active={Boolean(currentSubscription?.isActive && chatListActive)} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
-                          {currentSubscription.isActive ? 
+                          {currentSubscription?.isActive ? 
                             (chatListActive ? 
                               `${chatSettings.chatCount} chatters in list` : 
                               'Chat list is ready to start') : 
@@ -878,7 +879,7 @@ const BotControl = () => {
                         <div className="text-sm text-gray-500">
                           Simulates chat activity in your Twitch channel
                         </div>
-                        <StatusIndicator active={currentSubscription.isActive && chatBotActive} />
+                        <StatusIndicator active={Boolean(currentSubscription?.isActive && chatBotActive)} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
