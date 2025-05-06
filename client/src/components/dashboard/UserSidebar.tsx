@@ -176,14 +176,6 @@ const UserSidebar: React.FC = () => {
             isActive={isActivePath('/app/profile')} 
             collapsed={collapsed}
           />
-          
-          <NavItem 
-            icon={<Settings size={18} />} 
-            label="Settings" 
-            href="/app/settings" 
-            isActive={isActivePath('/app/settings')} 
-            collapsed={collapsed}
-          />
         </nav>
       </div>
       
