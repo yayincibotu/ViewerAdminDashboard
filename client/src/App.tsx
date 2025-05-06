@@ -11,7 +11,7 @@ import Dashboard from "@/pages/app/Dashboard";
 import Services from "@/pages/app/Services";
 import Subscriptions from "@/pages/app/Subscriptions";
 import BotControl from "@/pages/app/BotControl";
-import Settings from "@/pages/app/Settings";
+
 import Billing from "@/pages/app/Billing";
 import Profile from "@/pages/app/Profile";
 import AdminDashboard from "@/pages/webadmin/Dashboard";
@@ -39,7 +39,6 @@ function Router() {
       <ProtectedRoute path="/app/bot-control" component={BotControl} />
       <ProtectedRoute path="/app/billing" component={Billing} />
       <ProtectedRoute path="/app/profile" component={Profile} />
-      <ProtectedRoute path="/app/settings" component={Settings} />
       
       {/* Payment Routes */}
       <ProtectedRoute path="/checkout" component={Checkout} />
