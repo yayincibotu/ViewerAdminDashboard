@@ -190,19 +190,19 @@ const Billing = () => {
   const [showEditBillingDialog, setShowEditBillingDialog] = useState(false);
   
   // Fetch real payment methods from the API
-  const { data: paymentMethods = [], isLoading: paymentMethodsLoading } = useQuery({
+  const { data: paymentMethods = [], isLoading: paymentMethodsLoading } = useQuery<any[]>({
     queryKey: ['/api/payment-methods'],
     enabled: !!user,
   });
 
   // Fetch real billing history from the API
-  const { data: billingHistory = [], isLoading: billingHistoryLoading } = useQuery({
+  const { data: billingHistory = [], isLoading: billingHistoryLoading } = useQuery<any[]>({
     queryKey: ['/api/billing-history'],
     enabled: !!user,
   });
   
   // Fetch user subscriptions from the API
-  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery({
+  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery<any[]>({
     queryKey: ['/api/user-subscriptions'],
     enabled: !!user,
   });
@@ -533,29 +533,54 @@ const Billing = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {billingHistory.map((invoice) => (
-                          <tr key={invoice.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-4">
-                              <div>{invoice.date.toLocaleDateString()}</div>
-                              <div className="text-xs text-gray-500">
-                                {formatDistance(invoice.date, new Date(), { addSuffix: true })}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">{invoice.description}</td>
-                            <td className="py-3 px-4 font-medium">${invoice.amount.toFixed(2)}</td>
-                            <td className="py-3 px-4">
-                              {getInvoiceStatusBadge(invoice.status)}
-                            </td>
-                            <td className="py-3 px-4 text-right">
-                              <Button size="sm" variant="ghost" asChild>
-                                <a href={invoice.invoice_url} target="_blank" rel="noopener noreferrer">
-                                  <Download className="h-4 w-4 mr-1" />
-                                  PDF
-                                </a>
-                              </Button>
+                        {billingHistory.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-gray-500">
+                              <ArrowDownCircle className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                              <p>No billing history found</p>
                             </td>
                           </tr>
-                        ))}
+                        ) : (
+                          billingHistory.map((invoice: any) => {
+                            // Format date from Stripe timestamp (seconds)
+                            const invoiceDate = invoice.created 
+                              ? new Date(invoice.created * 1000) 
+                              : new Date();
+                            
+                            // Format amount from Stripe (cents to dollars)
+                            const amount = invoice.amount_paid 
+                              ? (invoice.amount_paid / 100).toFixed(2) 
+                              : "0.00";
+                              
+                            return (
+                              <tr key={invoice.id} className="border-b hover:bg-gray-50">
+                                <td className="py-3 px-4">
+                                  <div>{invoiceDate.toLocaleDateString()}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {formatDistance(invoiceDate, new Date(), { addSuffix: true })}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  {invoice.lines?.data?.[0]?.description || "Subscription Payment"}
+                                </td>
+                                <td className="py-3 px-4 font-medium">${amount}</td>
+                                <td className="py-3 px-4">
+                                  {getInvoiceStatusBadge(invoice.status || "unknown")}
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  {invoice.hosted_invoice_url && (
+                                    <Button size="sm" variant="ghost" asChild>
+                                      <a href={invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer">
+                                        <Download className="h-4 w-4 mr-1" />
+                                        PDF
+                                      </a>
+                                    </Button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>
