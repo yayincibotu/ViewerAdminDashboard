@@ -236,6 +236,34 @@ const BotControl = () => {
     },
   });
   
+  // Toggle subscription status
+  const toggleSubscriptionMutation = useMutation({
+    mutationFn: async (isActive: boolean) => {
+      if (!selectedSubscription) return null;
+      
+      const res = await apiRequest('PUT', `/api/user-subscriptions/${selectedSubscription}/toggle-status`, {
+        isActive
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      const statusText = data.isActive ? 'activated' : 'deactivated';
+      toast({
+        title: `Subscription ${statusText}`,
+        description: `Your subscription has been ${statusText} successfully.`,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/user-subscriptions/${selectedSubscription}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user-subscriptions'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Status change failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+  
   // Parse settings when subscription detail loads
   useEffect(() => {
     if (subscriptionDetail) {
@@ -474,8 +502,14 @@ const BotControl = () => {
                 </div>
               </div>
               
-              <Button asChild variant="outline">
-                <a href="/app/subscriptions">Back to Subscriptions</a>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  // Go back to the main dashboard
+                  window.location.href = "/app";
+                }}
+              >
+                Back to Dashboard
               </Button>
             </div>
           </div>
@@ -653,7 +687,7 @@ const BotControl = () => {
               </div>
               {!currentSubscription.isActive && (
                 <div className="mt-2 text-xs text-yellow-600">
-                  You can activate your subscription from the Subscriptions page.
+                  You can activate your subscription using the "Activate Services" button from the bot control panel.
                 </div>
               )}
             </div>
