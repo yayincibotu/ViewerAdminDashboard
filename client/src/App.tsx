@@ -9,7 +9,7 @@ import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "@/lib/protected-route";
 import Dashboard from "@/pages/app/Dashboard";
 import Services from "@/pages/app/Services";
-import Subscriptions from "@/pages/app/Subscriptions";
+
 import BotControl from "@/pages/app/BotControl";
 
 import Billing from "@/pages/app/Billing";
@@ -35,7 +35,6 @@ function Router() {
       {/* User Dashboard Routes */}
       <ProtectedRoute path="/app" component={Dashboard} />
       <ProtectedRoute path="/app/services" component={Services} />
-      <ProtectedRoute path="/app/subscriptions" component={Subscriptions} />
       <ProtectedRoute path="/app/bot-control" component={BotControl} />
       <ProtectedRoute path="/app/billing" component={Billing} />
       <ProtectedRoute path="/app/profile" component={Profile} />

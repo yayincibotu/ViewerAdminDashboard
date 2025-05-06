@@ -154,14 +154,6 @@ const UserSidebar: React.FC = () => {
           />
           
           <NavItem 
-            icon={<DollarSign size={18} />} 
-            label="Subscriptions" 
-            href="/app/subscriptions" 
-            isActive={isActivePath('/app/subscriptions')} 
-            collapsed={collapsed}
-          />
-          
-          <NavItem 
             icon={<CreditCard size={18} />} 
             label="Billing" 
             href="/app/billing" 
