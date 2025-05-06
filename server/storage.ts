@@ -153,6 +153,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUser(id: number): Promise<User | undefined> {
+    console.log(`[DB] Fetching user with ID: ${id} from PostgreSQL database`);
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
