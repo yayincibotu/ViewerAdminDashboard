@@ -667,6 +667,56 @@ const BotControl = () => {
                 <CardDescription>
                   Control all your Twitch bot services from a single dashboard
                 </CardDescription>
+                {currentSubscription?.twitchChannel && (
+                  <div className="flex items-center justify-between px-6 pt-4 pb-1 border-t mt-2">
+                    <div className="flex items-center gap-2">
+                      <Twitch className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm font-medium">Channel: <span className="text-purple-600">{currentSubscription.twitchChannel}</span></span>
+                    </div>
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-purple-600 hover:text-purple-700"
+                      onClick={() => {
+                        setTwitchChannelInput(currentSubscription.twitchChannel || '');
+                        setShowChannelChangeForm(!showChannelChangeForm);
+                      }}
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Change
+                    </Button>
+                  </div>
+                )}
+                {showChannelChangeForm && (
+                  <div className="px-6 py-2 bg-gray-50 border-t border-b">
+                    <div className="flex gap-2 items-center">
+                      <Input 
+                        placeholder="Enter new channel name" 
+                        value={twitchChannelInput}
+                        onChange={(e) => setTwitchChannelInput(e.target.value)}
+                        className="h-8 text-sm flex-1"
+                      />
+                      <Button 
+                        size="sm"
+                        className="h-8"
+                        onClick={() => {
+                          if (twitchChannelInput.trim()) {
+                            updateTwitchChannelMutation.mutate(twitchChannelInput);
+                            setShowChannelChangeForm(false);
+                          }
+                        }}
+                        disabled={updateTwitchChannelMutation.isPending}
+                      >
+                        {updateTwitchChannelMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <Save className="h-3 w-3 mr-1" />
+                        )}
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
