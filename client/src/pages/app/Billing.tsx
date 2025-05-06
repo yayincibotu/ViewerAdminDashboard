@@ -202,7 +202,7 @@ const Billing = () => {
   });
   
   // Fetch user subscriptions from the API
-  const { data: subscriptions = [] } = useQuery({
+  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery({
     queryKey: ['/api/user-subscriptions'],
     enabled: !!user,
   });
@@ -251,6 +251,16 @@ const Billing = () => {
       });
     },
   });
+  
+  // Handle setting a card as default
+  const handleSetDefaultCard = (paymentMethodId: string) => {
+    setDefaultPaymentMethodMutation.mutate(paymentMethodId);
+  };
+  
+  // Handle removing a card
+  const handleRemoveCard = (paymentMethodId: string) => {
+    removePaymentMethodMutation.mutate(paymentMethodId);
+  };
 
   const getCardLogo = (brand: string) => {
     switch (brand.toLowerCase()) {
@@ -381,41 +391,77 @@ const Billing = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {paymentMethods.map((method) => (
-                      <div 
-                        key={method.id} 
-                        className={`border rounded-lg p-4 relative ${method.isDefault ? 'border-primary/50 bg-primary/5' : ''}`}
-                      >
-                        {method.isDefault && (
-                          <div className="absolute top-3 right-3 text-xs font-medium text-primary">
-                            Default
-                          </div>
-                        )}
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 mr-3 text-xl">
-                            {getCardLogo(method.cardBrand)}
-                          </div>
-                          <div>
-                            <div className="font-medium">
-                              {method.cardBrand.charAt(0).toUpperCase() + method.cardBrand.slice(1)} •••• {method.last4}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              Expires {method.expMonth}/{method.expYear}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex justify-end space-x-2">
-                          {!method.isDefault && (
-                            <Button size="sm" variant="ghost" className="h-8">
-                              Set as default
-                            </Button>
-                          )}
-                          <Button size="sm" variant="ghost" className="h-8 text-destructive">
-                            Remove
-                          </Button>
-                        </div>
+                    {paymentMethods.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                        <p>No payment methods found</p>
+                        <p className="text-sm mt-1">Add a card to manage your subscriptions</p>
                       </div>
-                    ))}
+                    ) : (
+                      paymentMethods.map((method: any) => (
+                        <div 
+                          key={method.id} 
+                          className={`border rounded-lg p-4 relative ${method.billing_details?.name ? 'border-primary/50 bg-primary/5' : ''}`}
+                        >
+                          {method.billing_details?.name && (
+                            <div className="absolute top-3 right-3 text-xs font-medium text-primary">
+                              <div className="flex items-center gap-1">
+                                <Star className="h-3 w-3" />
+                                <span>Default</span>
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 mr-3 text-xl">
+                              {getCardLogo(method.card?.brand || '')}
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {method.card?.brand?.charAt(0).toUpperCase() + method.card?.brand?.slice(1) || 'Card'} •••• {method.card?.last4}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Expires {method.card?.exp_month}/{method.card?.exp_year}
+                              </div>
+                              {method.billing_details?.name && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {method.billing_details.name}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="mt-3 flex justify-end space-x-2">
+                            {!method.billing_details?.name && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-8"
+                                onClick={() => handleSetDefaultCard(method.id)}
+                                disabled={setDefaultPaymentMethodMutation.isPending}
+                              >
+                                {setDefaultPaymentMethodMutation.isPending && method.id === setDefaultPaymentMethodMutation.variables ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : null}
+                                Set as default
+                              </Button>
+                            )}
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-8 text-destructive"
+                              onClick={() => handleRemoveCard(method.id)}
+                              disabled={removePaymentMethodMutation.isPending}
+                            >
+                              {removePaymentMethodMutation.isPending && method.id === removePaymentMethodMutation.variables ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3 w-3 mr-1" />
+                              )}
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -529,64 +575,17 @@ const Billing = () => {
               Enter your card details to add a new payment method.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="cardName">Name on Card</Label>
-              <Input
-                id="cardName"
-                value={newCardDetails.cardName}
-                onChange={(e) => setNewCardDetails({ ...newCardDetails, cardName: e.target.value })}
-                placeholder="John Doe"
-              />
+          {stripePromise ? (
+            <Elements stripe={stripePromise}>
+              <AddCardForm onClose={() => setShowAddCardDialog(false)} />
+            </Elements>
+          ) : (
+            <div className="p-6 text-center text-red-500">
+              <AlertTriangle className="h-10 w-10 mx-auto mb-2" />
+              <p>Stripe is not configured properly.</p>
+              <p className="text-sm">Please check your environment variables.</p>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="cardNumber">Card Number</Label>
-              <Input
-                id="cardNumber"
-                value={newCardDetails.cardNumber}
-                onChange={(e) => setNewCardDetails({ ...newCardDetails, cardNumber: e.target.value })}
-                placeholder="4242 4242 4242 4242"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="cardExpiry">Expiry Date</Label>
-                <Input
-                  id="cardExpiry"
-                  value={newCardDetails.cardExpiry}
-                  onChange={(e) => setNewCardDetails({ ...newCardDetails, cardExpiry: e.target.value })}
-                  placeholder="MM/YY"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="cardCvc">CVC</Label>
-                <Input
-                  id="cardCvc"
-                  value={newCardDetails.cardCvc}
-                  onChange={(e) => setNewCardDetails({ ...newCardDetails, cardCvc: e.target.value })}
-                  placeholder="123"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddCardDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleAddCard} 
-              disabled={addPaymentMethodMutation.isPending}
-            >
-              {addPaymentMethodMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                "Add Card"
-              )}
-            </Button>
-          </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
 
