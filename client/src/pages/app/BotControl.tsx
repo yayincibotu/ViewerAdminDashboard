@@ -706,16 +706,16 @@ const BotControl = () => {
           
           {/* Status indicator */}
           {currentSubscription && (
-            <div className={`mb-6 p-4 rounded-lg ${currentSubscription.isActive ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+            <div className={`mb-6 p-4 rounded-lg ${currentSubscription?.isActive ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
               <div className="flex items-center">
-                <div className={`w-2 h-2 rounded-full ${currentSubscription.isActive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'} mr-2`}></div>
-                <p className={`text-sm font-medium ${currentSubscription.isActive ? 'text-green-700' : 'text-yellow-700'}`}>
-                  {currentSubscription.isActive 
-                    ? `Services are running for channel: ${currentSubscription.twitchChannel}`
+                <div className={`w-2 h-2 rounded-full ${currentSubscription?.isActive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'} mr-2`}></div>
+                <p className={`text-sm font-medium ${currentSubscription?.isActive ? 'text-green-700' : 'text-yellow-700'}`}>
+                  {currentSubscription?.isActive 
+                    ? `Services are running for channel: ${currentSubscription?.twitchChannel}`
                     : `Services are currently inactive. Configure your settings and activate your subscription.`}
                 </p>
               </div>
-              {!currentSubscription.isActive && (
+              {!currentSubscription?.isActive && (
                 <div className="mt-2 text-xs text-yellow-600">
                   You can activate your subscription using the "Activate Services" button from the bot control panel.
                 </div>
@@ -736,12 +736,12 @@ const BotControl = () => {
                   </div>
                   <div className="flex gap-3 items-center">
                     <div className="flex items-center gap-1 text-xs font-medium">
-                      <div className={`w-2 h-2 rounded-full ${currentSubscription.isActive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                      <span className={`${currentSubscription.isActive ? 'text-green-600' : 'text-red-600'}`}>
-                        {currentSubscription.isActive ? 'Services Active' : 'Services Inactive'}
+                      <div className={`w-2 h-2 rounded-full ${currentSubscription?.isActive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                      <span className={`${currentSubscription?.isActive ? 'text-green-600' : 'text-red-600'}`}>
+                        {currentSubscription?.isActive ? 'Services Active' : 'Services Inactive'}
                       </span>
                     </div>
-                    {!currentSubscription.isActive && (
+                    {!currentSubscription?.isActive && (
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -795,7 +795,7 @@ const BotControl = () => {
                         </div>
                         <Switch 
                           checked={viewerBotActive}
-                          disabled={!currentSubscription.isActive}
+                          disabled={!currentSubscription?.isActive}
                           onCheckedChange={(checked) => {
                             setViewerBotActive(checked);
                             if (checked) {
@@ -843,7 +843,7 @@ const BotControl = () => {
                         </div>
                         <Switch 
                           checked={chatListActive}
-                          disabled={!currentSubscription.isActive}
+                          disabled={!currentSubscription?.isActive}
                           onCheckedChange={(checked) => {
                             setChatListActive(checked);
                             if (checked) {
@@ -883,7 +883,7 @@ const BotControl = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">
-                          {currentSubscription.isActive ? 
+                          {currentSubscription?.isActive ? 
                             (chatBotActive ? 
                               `Active with ${chatSettings.messageFrequency} frequency` : 
                               'Chat bot is ready to start') : 
@@ -891,7 +891,7 @@ const BotControl = () => {
                         </div>
                         <Switch 
                           checked={chatBotActive}
-                          disabled={!currentSubscription.isActive}
+                          disabled={!currentSubscription?.isActive}
                           onCheckedChange={(checked) => {
                             setChatBotActive(checked);
                             if (checked) {
@@ -914,13 +914,13 @@ const BotControl = () => {
 
                 </div>
 
-                {currentSubscription.isActive && (
+                {currentSubscription?.isActive && (
                   <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm text-blue-800 flex items-start gap-2">
                     <div className="mt-0.5">
                       <Sparkles className="h-4 w-4 text-blue-500" />
                     </div>
                     <div>
-                      <p>Your bots are currently active and running on <strong>{currentSubscription.twitchChannel}</strong>. 
+                      <p>Your bots are currently active and running on <strong>{currentSubscription?.twitchChannel}</strong>. 
                       Configure specific settings for each bot type in the tabs below.</p>
                     </div>
                   </div>
