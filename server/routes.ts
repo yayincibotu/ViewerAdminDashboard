@@ -743,6 +743,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error creating subscription plan: " + error.message });
     }
   });
+  
+  // Stripe Payment Methods API
+  
+  // Get user payment methods
+  app.get("/api/payment-methods", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured." });
+    }
+    
+    try {
+      const user = req.user;
+      
+      if (!user.stripeCustomerId) {
+        return res.json([]);
+      }
+      
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: user.stripeCustomerId,
+        type: 'card',
+      });
+      
+      res.json(paymentMethods.data);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching payment methods: " + error.message });
+    }
+  });
+  
+  // Add a new payment method
+  app.post("/api/payment-methods", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured." });
+    }
+    
+    try {
+      const { paymentMethodId } = req.body;
+      
+      if (!paymentMethodId) {
+        return res.status(400).json({ message: "Payment method ID is required" });
+      }
+      
+      let user = req.user;
+      let customerId = user.stripeCustomerId;
+      
+      // Create customer if it doesn't exist
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: user.username,
+        });
+        
+        customerId = customer.id;
+        user = await storage.updateStripeCustomerId(user.id, customerId);
+      }
+      
+      // Attach payment method to customer
+      await stripe.paymentMethods.attach(paymentMethodId, {
+        customer: customerId,
+      });
+      
+      // Set as default payment method
+      await stripe.customers.update(customerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error adding payment method: " + error.message });
+    }
+  });
+  
+  // Delete a payment method
+  app.delete("/api/payment-methods/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured." });
+    }
+    
+    try {
+      const paymentMethodId = req.params.id;
+      
+      // Get the payment method to check ownership
+      const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+      
+      if (paymentMethod.customer !== req.user.stripeCustomerId) {
+        return res.status(403).json({ message: "This payment method does not belong to your account" });
+      }
+      
+      // Detach the payment method
+      await stripe.paymentMethods.detach(paymentMethodId);
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error removing payment method: " + error.message });
+    }
+  });
+  
+  // Set default payment method
+  app.post("/api/payment-methods/:id/set-default", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured." });
+    }
+    
+    try {
+      const paymentMethodId = req.params.id;
+      const customerId = req.user.stripeCustomerId;
+      
+      if (!customerId) {
+        return res.status(400).json({ message: "No Stripe customer found for this user" });
+      }
+      
+      // Get the payment method to check ownership
+      const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+      
+      if (paymentMethod.customer !== customerId) {
+        return res.status(403).json({ message: "This payment method does not belong to your account" });
+      }
+      
+      // Set as default payment method
+      await stripe.customers.update(customerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error setting default payment method: " + error.message });
+    }
+  });
+  
+  // Setup Intent for adding new cards
+  app.post("/api/setup-intent", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured." });
+    }
+    
+    try {
+      let user = req.user;
+      let customerId = user.stripeCustomerId;
+      
+      // Create customer if it doesn't exist
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: user.username,
+        });
+        
+        customerId = customer.id;
+        user = await storage.updateStripeCustomerId(user.id, customerId);
+      }
+      
+      // Create setup intent
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+      });
+      
+      res.json({
+        clientSecret: setupIntent.client_secret,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error creating setup intent: " + error.message });
+    }
+  });
+  
+  // Get billing history (invoices)
+  app.get("/api/billing-history", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured." });
+    }
+    
+    try {
+      const user = req.user;
+      
+      if (!user.stripeCustomerId) {
+        return res.json([]);
+      }
+      
+      const invoices = await stripe.invoices.list({
+        customer: user.stripeCustomerId,
+        limit: 10,
+      });
+      
+      res.json(invoices.data);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching billing history: " + error.message });
+    }
+  });
 
   const httpServer = createServer(app);
 

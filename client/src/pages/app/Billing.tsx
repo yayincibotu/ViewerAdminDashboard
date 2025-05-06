@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import UserSidebar from '@/components/dashboard/UserSidebar';
@@ -28,114 +28,71 @@ import {
   CheckCircle,
   AlertCircle,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  Trash2,
+  Star
 } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistance } from 'date-fns';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  CardElement,
+  Elements,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js';
 
-// Mock data - in production, this would come from the API
-const PAYMENT_METHODS = [
-  {
-    id: 'card-1',
-    type: 'credit_card',
-    cardBrand: 'visa',
-    last4: '4242',
-    expMonth: 12,
-    expYear: 2024,
-    isDefault: true
-  },
-  {
-    id: 'card-2',
-    type: 'credit_card',
-    cardBrand: 'mastercard',
-    last4: '8210',
-    expMonth: 8,
-    expYear: 2025,
-    isDefault: false
-  }
-];
+// Load stripe outside of the component for better performance
+if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
+  console.error('Missing VITE_STRIPE_PUBLIC_KEY. Stripe functionality will not work properly.');
+}
 
-const BILLING_HISTORY = [
-  {
-    id: 'inv-001',
-    date: new Date(2023, 0, 15),
-    amount: 49.99,
-    status: 'paid',
-    description: '25 Live Viewers Plan - Monthly',
-    invoice_url: '#'
-  },
-  {
-    id: 'inv-002',
-    date: new Date(2023, 1, 15),
-    amount: 49.99,
-    status: 'paid',
-    description: '25 Live Viewers Plan - Monthly',
-    invoice_url: '#'
-  },
-  {
-    id: 'inv-003',
-    date: new Date(2023, 2, 15),
-    amount: 49.99,
-    status: 'failed',
-    description: '25 Live Viewers Plan - Monthly',
-    invoice_url: '#'
-  },
-  {
-    id: 'inv-004',
-    date: new Date(2023, 3, 15),
-    amount: 99.99,
-    status: 'paid',
-    description: '50 Live Viewers Plan - Monthly',
-    invoice_url: '#'
-  },
-  {
-    id: 'inv-005',
-    date: new Date(2023, 4, 15),
-    amount: 99.99,
-    status: 'paid',
-    description: '50 Live Viewers Plan - Monthly',
-    invoice_url: '#'
-  }
-];
+const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY 
+  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY) 
+  : null;
 
-const Billing = () => {
+// Card input styles
+const cardElementOptions = {
+  style: {
+    base: {
+      color: '#32325d',
+      fontFamily: 'Arial, sans-serif',
+      fontSmoothing: 'antialiased',
+      fontSize: '16px',
+      '::placeholder': {
+        color: '#aab7c4',
+      },
+    },
+    invalid: {
+      color: '#fa755a',
+      iconColor: '#fa755a',
+    },
+  },
+  hidePostalCode: true,
+};
+
+// AddCardForm component with Stripe Elements
+const AddCardForm = ({ onClose }: { onClose: () => void }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [showAddCardDialog, setShowAddCardDialog] = useState(false);
-  const [showEditBillingDialog, setShowEditBillingDialog] = useState(false);
-  const [newCardDetails, setNewCardDetails] = useState({
-    cardNumber: '',
-    cardExpiry: '',
-    cardCvc: '',
-    cardName: '',
-  });
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+  const [cardholderName, setCardholderName] = useState('');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  // This would be a real API query in production
-  const { data: paymentMethods = PAYMENT_METHODS, isLoading: paymentMethodsLoading } = useQuery({
-    queryKey: ['/api/payment-methods'],
-    enabled: false, // Disable actual API call since we're using mock data
-  });
-
-  // This would be a real API query in production
-  const { data: billingHistory = BILLING_HISTORY, isLoading: billingHistoryLoading } = useQuery({
-    queryKey: ['/api/billing-history'],
-    enabled: false, // Disable actual API call since we're using mock data
-  });
-
-  const addPaymentMethodMutation = useMutation({
-    mutationFn: async (cardDetails) => {
-      // Simulate API call
-      return new Promise(resolve => setTimeout(() => resolve({ success: true }), 1000));
+  const setupIntentMutation = useMutation({
+    mutationFn: async (paymentMethodId: string) => {
+      return apiRequest('POST', '/api/payment-methods', { paymentMethodId });
     },
     onSuccess: () => {
       toast({
         title: 'Payment method added',
-        description: 'Your payment method has been added successfully.',
+        description: 'Your card has been added successfully.',
       });
-      setShowAddCardDialog(false);
-      // In a real app, we would invalidate the payment methods query
-      // queryClient.invalidateQueries({ queryKey: ['/api/payment-methods'] });
+      onClose();
+      queryClient.invalidateQueries({ queryKey: ['/api/payment-methods'] });
     },
     onError: (error: Error) => {
       toast({
@@ -143,12 +100,157 @@ const Billing = () => {
         description: error.message,
         variant: 'destructive',
       });
+      setLoading(false);
     },
   });
 
-  const handleAddCard = () => {
-    addPaymentMethodMutation.mutate(newCardDetails);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!stripe || !elements) {
+      return;
+    }
+    
+    setLoading(true);
+    setPaymentError(null);
+    
+    const cardElement = elements.getElement(CardElement);
+    
+    if (!cardElement) {
+      setLoading(false);
+      setPaymentError('Card element not found. Please refresh and try again.');
+      return;
+    }
+    
+    // Create payment method
+    const { error, paymentMethod } = await stripe.createPaymentMethod({
+      type: 'card',
+      card: cardElement,
+      billing_details: {
+        name: cardholderName || user?.username || '',
+        email: user?.email || '',
+      },
+    });
+    
+    if (error) {
+      setPaymentError(error.message || 'Something went wrong. Please try again.');
+      setLoading(false);
+      return;
+    }
+    
+    // Add payment method to customer
+    setupIntentMutation.mutate(paymentMethod.id);
   };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="grid gap-4 py-4">
+        <div className="grid gap-2">
+          <Label htmlFor="cardName">Name on Card</Label>
+          <Input
+            id="cardName"
+            value={cardholderName}
+            onChange={(e) => setCardholderName(e.target.value)}
+            placeholder="John Doe"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label>Card Details</Label>
+          <div className="border rounded-md p-3">
+            <CardElement options={cardElementOptions} />
+          </div>
+          {paymentError && (
+            <div className="text-sm text-red-500 mt-1">{paymentError}</div>
+          )}
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={!stripe || loading}>
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            "Add Card"
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+};
+
+const Billing = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [showAddCardDialog, setShowAddCardDialog] = useState(false);
+  const [showEditBillingDialog, setShowEditBillingDialog] = useState(false);
+  
+  // Fetch real payment methods from the API
+  const { data: paymentMethods = [], isLoading: paymentMethodsLoading } = useQuery({
+    queryKey: ['/api/payment-methods'],
+    enabled: !!user,
+  });
+
+  // Fetch real billing history from the API
+  const { data: billingHistory = [], isLoading: billingHistoryLoading } = useQuery({
+    queryKey: ['/api/billing-history'],
+    enabled: !!user,
+  });
+  
+  // Fetch user subscriptions from the API
+  const { data: subscriptions = [] } = useQuery({
+    queryKey: ['/api/user-subscriptions'],
+    enabled: !!user,
+  });
+  
+  // Get the active subscription
+  const activeSubscription = subscriptions.length > 0 ? subscriptions[0] : null;
+  
+  // Set default payment method mutation
+  const setDefaultPaymentMethodMutation = useMutation({
+    mutationFn: async (paymentMethodId: string) => {
+      return apiRequest('POST', `/api/payment-methods/${paymentMethodId}/set-default`);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Default payment method updated',
+        description: 'Your default payment method has been updated.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/payment-methods'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to update default payment method',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Remove payment method mutation
+  const removePaymentMethodMutation = useMutation({
+    mutationFn: async (paymentMethodId: string) => {
+      return apiRequest('DELETE', `/api/payment-methods/${paymentMethodId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Payment method removed',
+        description: 'Your payment method has been removed.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/payment-methods'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to remove payment method',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   const getCardLogo = (brand: string) => {
     switch (brand.toLowerCase()) {
