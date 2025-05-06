@@ -538,63 +538,101 @@ const BotControl = () => {
                   </Select>
                 </div>
                 
+                {/* Twitch Channel Management Section */}
                 {currentSubscription && (
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="text-gray-500">
-                      Twitch Channel: 
-                    </div>
-                    <div className="font-medium flex items-center">
-                      {currentSubscription.twitchChannel ? (
-                        <div className="flex items-center gap-1">
-                          <Twitch className="h-3 w-3 text-purple-600" />
-                          <span className="text-purple-600">{currentSubscription.twitchChannel}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-5 w-5 p-0 hover:bg-gray-100 rounded-full"
-                            onClick={() => {
-                              setTwitchChannelInput('');
-                              setShowChannelChangeForm(!showChannelChangeForm);
-                            }}
-                          >
-                            <RefreshCw className="h-3 w-3 text-gray-500" />
-                          </Button>
+                  <div className="flex flex-col space-y-2 pt-3 mt-2 border-t">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-gray-700">Twitch Channel Configuration</div>
+                      {currentSubscription.twitchChannel && (
+                        <div className="px-2 py-1 rounded bg-purple-50 text-purple-700 text-xs font-medium flex items-center gap-1">
+                          <Twitch className="h-3 w-3" />
+                          {currentSubscription.twitchChannel}
                         </div>
-                      ) : (
-                        <span className="text-yellow-600">Not set</span>
                       )}
                     </div>
-                  </div>
-                )}
-                
-                {/* Channel change form */}
-                {showChannelChangeForm && currentSubscription && (
-                  <div className="pt-2 border-t mt-2">
-                    <div className="text-xs font-medium mb-1 text-gray-700">Change Twitch Channel</div>
-                    <div className="flex gap-1">
-                      <Input 
-                        placeholder="New channel name" 
-                        value={twitchChannelInput}
-                        onChange={(e) => setTwitchChannelInput(e.target.value)}
-                        className="h-7 text-xs"
-                      />
-                      <Button 
-                        size="sm"
-                        className="h-7 text-xs px-2"
-                        onClick={() => {
-                          if (twitchChannelInput.trim()) {
-                            updateTwitchChannelMutation.mutate(twitchChannelInput);
-                            setShowChannelChangeForm(false);
-                          }
-                        }}
-                        disabled={updateTwitchChannelMutation.isPending}
-                      >
-                        {updateTwitchChannelMutation.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          'Save'
-                        )}
-                      </Button>
+                    <div className="bg-purple-50 p-3 rounded-md border border-purple-100">
+                      {currentSubscription.twitchChannel ? (
+                        <div className="flex flex-col">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <CircleDot className="h-3 w-3 text-green-500" />
+                              <span className="text-sm font-medium">Channel configured: <span className="text-purple-600 font-bold">{currentSubscription.twitchChannel}</span></span>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-7 text-xs border-purple-200 text-purple-700 hover:bg-purple-100"
+                              onClick={() => {
+                                setTwitchChannelInput(currentSubscription.twitchChannel || '');
+                                setShowChannelChangeForm(!showChannelChangeForm);
+                              }}
+                            >
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              Change Channel
+                            </Button>
+                          </div>
+                          {showChannelChangeForm && (
+                            <div className="mt-3 py-2 border-t border-purple-200">
+                              <div className="text-xs font-medium mb-2 text-gray-700">Update your Twitch channel name</div>
+                              <div className="flex gap-2">
+                                <Input 
+                                  placeholder="Enter new channel name" 
+                                  value={twitchChannelInput}
+                                  onChange={(e) => setTwitchChannelInput(e.target.value)}
+                                  className="h-8 text-sm"
+                                />
+                                <Button 
+                                  size="sm"
+                                  className="h-8 px-3 bg-purple-600 hover:bg-purple-700"
+                                  onClick={() => {
+                                    if (twitchChannelInput.trim()) {
+                                      updateTwitchChannelMutation.mutate(twitchChannelInput);
+                                      setShowChannelChangeForm(false);
+                                    }
+                                  }}
+                                  disabled={updateTwitchChannelMutation.isPending}
+                                >
+                                  {updateTwitchChannelMutation.isPending ? (
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                  ) : (
+                                    <Save className="h-3 w-3 mr-1" />
+                                  )}
+                                  Save
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col">
+                          <div className="text-sm mb-2">Please configure a Twitch channel for this subscription</div>
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="Enter your Twitch channel name" 
+                              value={twitchChannelInput}
+                              onChange={(e) => setTwitchChannelInput(e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                            <Button 
+                              size="sm"
+                              className="h-8 px-3 bg-purple-600 hover:bg-purple-700"
+                              onClick={() => {
+                                if (twitchChannelInput.trim()) {
+                                  updateTwitchChannelMutation.mutate(twitchChannelInput);
+                                }
+                              }}
+                              disabled={updateTwitchChannelMutation.isPending}
+                            >
+                              {updateTwitchChannelMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : (
+                                <Save className="h-3 w-3 mr-1" />
+                              )}
+                              Save
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -644,9 +682,17 @@ const BotControl = () => {
                         variant="outline" 
                         size="sm" 
                         className="text-xs h-7 bg-green-50 text-green-600 hover:bg-green-100 border-green-200"
-                        asChild
+                        onClick={() => {
+                          // Toggle subscription activation directly from here
+                          toggleSubscriptionMutation.mutate(true);
+                        }}
+                        disabled={toggleSubscriptionMutation.isPending}
                       >
-                        <a href="/app/subscriptions">Activate Services</a>
+                        {toggleSubscriptionMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          "Activate Services"
+                        )}
                       </Button>
                     )}
                   </div>
