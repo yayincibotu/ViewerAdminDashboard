@@ -82,13 +82,20 @@ const Profile = () => {
   // Initialize form data with user data
   useEffect(() => {
     if (user) {
+      // Always set email directly from user object first
+      setProfile(prevProfile => ({
+        ...prevProfile,
+        email: user.email // Use email from database user object
+      }));
+      
       // Try to parse profile data from user object
       try {
         if (user.profileData) {
           const profileData = JSON.parse(user.profileData);
           setProfile(prevProfile => ({
             ...prevProfile,
-            ...profileData
+            ...profileData,
+            email: user.email // Ensure email always comes from user object, not profile data
           }));
         }
         
