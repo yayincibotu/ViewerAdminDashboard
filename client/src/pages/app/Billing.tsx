@@ -363,11 +363,7 @@ const Billing = () => {
                         {billingInfo.zip}
                       </div>
                       <div>
-                        {billingInfo.country === 'US' ? 'United States' :
-                         billingInfo.country === 'CA' ? 'Canada' :
-                         billingInfo.country === 'UK' ? 'United Kingdom' :
-                         billingInfo.country === 'AU' ? 'Australia' :
-                         billingInfo.country === 'DE' ? 'Germany' : billingInfo.country}
+                        {getName(billingInfo.country) || billingInfo.country}
                       </div>
                     </div>
                   )}
