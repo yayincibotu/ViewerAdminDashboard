@@ -7,13 +7,7 @@ import {
   ChevronRight, 
   Home, 
   Layers, 
-  DollarSign, 
-  Bot, 
-  Settings, 
-  User, 
-  LogOut, 
-  CreditCard, 
-  UserCircle
+  Bot
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -150,22 +144,6 @@ const UserSidebar: React.FC = () => {
             label="Services" 
             href="/app/services" 
             isActive={isActivePath('/app/services')} 
-            collapsed={collapsed}
-          />
-          
-          <NavItem 
-            icon={<CreditCard size={18} />} 
-            label="Billing" 
-            href="/app/billing" 
-            isActive={isActivePath('/app/billing')} 
-            collapsed={collapsed}
-          />
-
-          <NavItem 
-            icon={<UserCircle size={18} />} 
-            label="Profile" 
-            href="/app/profile" 
-            isActive={isActivePath('/app/profile')} 
             collapsed={collapsed}
           />
         </nav>
