@@ -189,6 +189,12 @@ const Billing = () => {
   const [showAddCardDialog, setShowAddCardDialog] = useState(false);
   const [showEditBillingDialog, setShowEditBillingDialog] = useState(false);
   
+  // Fetch billing info from the server
+  const { data: billingInfo = {} } = useQuery({
+    queryKey: ['/api/billing-info'],
+    enabled: !!user,
+  });
+  
   // Fetch real payment methods from the API
   const { data: paymentMethods = [], isLoading: paymentMethodsLoading } = useQuery<any[]>({
     queryKey: ['/api/payment-methods'],
@@ -319,6 +325,66 @@ const Billing = () => {
           <h1 className="text-2xl font-bold mb-6">Billing & Payments</h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Billing Info Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-lg">Billing Information</CardTitle>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => setShowEditBillingDialog(true)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
+                <CardDescription>Your billing address and details</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <div className="font-semibold">Name:</div>
+                    <div>{billingInfo?.fullName || user.username}</div>
+                  </div>
+                  <div>
+                    <div className="font-semibold">Email:</div>
+                    <div>{billingInfo?.email || user.email}</div>
+                  </div>
+                  {billingInfo?.address1 && (
+                    <div>
+                      <div className="font-semibold">Address:</div>
+                      <div>{billingInfo.address1}</div>
+                      {billingInfo.address2 && <div>{billingInfo.address2}</div>}
+                      <div>
+                        {billingInfo.city && `${billingInfo.city}, `}
+                        {billingInfo.state && `${billingInfo.state} `}
+                        {billingInfo.zip}
+                      </div>
+                      <div>
+                        {billingInfo.country === 'US' ? 'United States' :
+                         billingInfo.country === 'CA' ? 'Canada' :
+                         billingInfo.country === 'UK' ? 'United Kingdom' :
+                         billingInfo.country === 'AU' ? 'Australia' :
+                         billingInfo.country === 'DE' ? 'Germany' : billingInfo.country}
+                      </div>
+                    </div>
+                  )}
+                  {billingInfo?.taxId && (
+                    <div>
+                      <div className="font-semibold">Tax ID:</div>
+                      <div>{billingInfo.taxId}</div>
+                    </div>
+                  )}
+                  {!billingInfo?.address1 && (
+                    <div className="text-gray-500 italic">
+                      No billing address on file. Add your billing information for invoices.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            
             {/* Current Plan Card */}
             <Card>
               <CardHeader className="pb-4">
@@ -623,104 +689,188 @@ const Billing = () => {
               Update your billing information for invoices.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="billingName">Full Name</Label>
-              <Input
-                id="billingName"
-                defaultValue={user.username}
-                placeholder="Full Name"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="billingEmail">Email</Label>
-              <Input
-                id="billingEmail"
-                defaultValue={user.email}
-                placeholder="email@example.com"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="billingAddress1">Address Line 1</Label>
-              <Input
-                id="billingAddress1"
-                defaultValue="123 Streaming Ave"
-                placeholder="Street address"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="billingAddress2">Address Line 2</Label>
-              <Input
-                id="billingAddress2"
-                placeholder="Apt, Suite, etc. (optional)"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="billingCity">City</Label>
-                <Input
-                  id="billingCity"
-                  defaultValue="San Francisco"
-                  placeholder="City"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="billingState">State / Province</Label>
-                <Input
-                  id="billingState"
-                  defaultValue="CA"
-                  placeholder="State/Province"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="billingZip">ZIP / Postal</Label>
-                <Input
-                  id="billingZip"
-                  defaultValue="94103"
-                  placeholder="ZIP/Postal Code"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="billingCountry">Country</Label>
-                <Select defaultValue="US">
-                  <SelectTrigger id="billingCountry">
-                    <SelectValue placeholder="Select a country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="US">United States</SelectItem>
-                    <SelectItem value="CA">Canada</SelectItem>
-                    <SelectItem value="UK">United Kingdom</SelectItem>
-                    <SelectItem value="AU">Australia</SelectItem>
-                    <SelectItem value="DE">Germany</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="taxId">Tax ID (Optional)</Label>
-              <Input
-                id="taxId"
-                defaultValue="US123456789"
-                placeholder="Tax ID Number"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditBillingDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              toast({
-                title: 'Billing information updated',
-                description: 'Your billing information has been updated successfully.',
-              });
-              setShowEditBillingDialog(false);
-            }}>
-              Save Changes
-            </Button>
-          </DialogFooter>
+          {/* Define billing info mutation */}
+          {(() => {
+            // Form state for billing info
+            const [formState, setFormState] = useState({
+              fullName: billingInfo?.fullName || user?.username || '',
+              email: billingInfo?.email || user?.email || '',
+              address1: billingInfo?.address1 || '',
+              address2: billingInfo?.address2 || '',
+              city: billingInfo?.city || '',
+              state: billingInfo?.state || '',
+              zip: billingInfo?.zip || '',
+              country: billingInfo?.country || 'US',
+              taxId: billingInfo?.taxId || '',
+            });
+            
+            // Update billing info mutation
+            const updateBillingInfoMutation = useMutation({
+              mutationFn: async (data: any) => {
+                return apiRequest('POST', '/api/billing-info', data);
+              },
+              onSuccess: () => {
+                toast({
+                  title: 'Billing information updated',
+                  description: 'Your billing information has been updated successfully.',
+                });
+                setShowEditBillingDialog(false);
+                // Invalidate billing info query to refresh data
+                queryClient.invalidateQueries({ queryKey: ['/api/billing-info'] });
+              },
+              onError: (error: Error) => {
+                toast({
+                  title: 'Failed to update billing information',
+                  description: error.message,
+                  variant: 'destructive',
+                });
+              },
+            });
+            
+            // Handle form submission
+            const handleSubmit = (e: React.FormEvent) => {
+              e.preventDefault();
+              updateBillingInfoMutation.mutate(formState);
+            };
+            
+            // Handle form input changes
+            const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+              const { id, value } = e.target;
+              // Remove 'billing' prefix from id to match backend field names
+              const field = id.replace('billing', '').toLowerCase();
+              setFormState(prev => ({
+                ...prev,
+                [field]: value,
+              }));
+            };
+            
+            // Handle select changes
+            const handleSelectChange = (value: string) => {
+              setFormState(prev => ({
+                ...prev,
+                country: value,
+              }));
+            };
+            
+            return (
+              <form onSubmit={handleSubmit}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="billingName">Full Name</Label>
+                    <Input
+                      id="billingName"
+                      value={formState.fullName}
+                      onChange={handleInputChange}
+                      placeholder="Full Name"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="billingEmail">Email</Label>
+                    <Input
+                      id="billingEmail"
+                      value={formState.email}
+                      onChange={handleInputChange}
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="billingAddress1">Address Line 1</Label>
+                    <Input
+                      id="billingAddress1"
+                      value={formState.address1}
+                      onChange={handleInputChange}
+                      placeholder="Street address"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="billingAddress2">Address Line 2</Label>
+                    <Input
+                      id="billingAddress2"
+                      value={formState.address2}
+                      onChange={handleInputChange}
+                      placeholder="Apt, Suite, etc. (optional)"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="billingCity">City</Label>
+                      <Input
+                        id="billingCity"
+                        value={formState.city}
+                        onChange={handleInputChange}
+                        placeholder="City"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="billingState">State / Province</Label>
+                      <Input
+                        id="billingState"
+                        value={formState.state}
+                        onChange={handleInputChange}
+                        placeholder="State/Province"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="billingZip">ZIP / Postal</Label>
+                      <Input
+                        id="billingZip"
+                        value={formState.zip}
+                        onChange={handleInputChange}
+                        placeholder="ZIP/Postal Code"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="billingCountry">Country</Label>
+                      <Select 
+                        value={formState.country} 
+                        onValueChange={handleSelectChange}
+                      >
+                        <SelectTrigger id="billingCountry">
+                          <SelectValue placeholder="Select a country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="US">United States</SelectItem>
+                          <SelectItem value="CA">Canada</SelectItem>
+                          <SelectItem value="UK">United Kingdom</SelectItem>
+                          <SelectItem value="AU">Australia</SelectItem>
+                          <SelectItem value="DE">Germany</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="billingTaxId">Tax ID (Optional)</Label>
+                    <Input
+                      id="billingTaxId"
+                      value={formState.taxId}
+                      onChange={handleInputChange}
+                      placeholder="Tax ID Number"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setShowEditBillingDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={updateBillingInfoMutation.isPending}
+                  >
+                    {updateBillingInfoMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

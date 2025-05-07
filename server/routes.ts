@@ -744,6 +744,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Billing Info API Endpoints
+  
   // Stripe Payment Methods API
   
   // Get user payment methods
