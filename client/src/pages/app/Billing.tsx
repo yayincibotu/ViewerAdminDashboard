@@ -667,6 +667,9 @@ const Billing = () => {
               taxId: billingInfo?.taxId || '',
             });
             
+            // For debugging
+            console.log('Current billingInfo:', billingInfo);
+            
             // Update billing info mutation
             const updateBillingInfoMutation = useMutation({
               mutationFn: async (data: any) => {
