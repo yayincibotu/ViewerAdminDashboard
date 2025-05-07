@@ -31,7 +31,8 @@ import {
   Instagram, 
   Upload, 
   Loader2, 
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -92,11 +93,23 @@ const Profile = () => {
       try {
         if (user.profileData) {
           const profileData = JSON.parse(user.profileData);
+          
+          // Check if profileData has avatarUrl and set it
+          if (profileData.avatarUrl) {
+            setProfileImage(profileData.avatarUrl);
+          } else {
+            // Generate a default avatar if none exists
+            generateDefaultAvatar();
+          }
+          
           setProfile(prevProfile => ({
             ...prevProfile,
             ...profileData,
             email: user.email // Ensure email always comes from user object, not profile data
           }));
+        } else {
+          // Generate a default avatar if no profile data exists
+          generateDefaultAvatar();
         }
         
         if (user.securitySettings) {
@@ -116,9 +129,24 @@ const Profile = () => {
         }
       } catch (error) {
         console.error('Error parsing user data:', error);
+        // If there's an error, still generate a default avatar
+        generateDefaultAvatar();
       }
     }
   }, [user]);
+  
+  // Generate a default avatar using the user's username
+  const generateDefaultAvatar = () => {
+    if (!user) return;
+    
+    // Use a consistent style for default avatars
+    const defaultStyle = 'avataaars';
+    const seed = user.username || 'user';
+    const avatarUrl = `https://api.dicebear.com/7.x/${defaultStyle}/svg?seed=${seed}&size=200&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+    
+    // Set the profile image
+    setProfileImage(avatarUrl);
+  };
   
   // Profile update mutation
   const updateProfileMutation = useMutation({
@@ -223,7 +251,14 @@ const Profile = () => {
   // Handle profile form submission
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfileMutation.mutate(profile);
+    
+    // Include avatar URL in the profile update
+    const profileData = {
+      ...profile,
+      avatarUrl: profileImage // Include the avatar URL in the profile update
+    };
+    
+    updateProfileMutation.mutate(profileData);
   };
 
   // Handle security form submission
@@ -268,16 +303,33 @@ const Profile = () => {
     });
   };
 
-  // Handle profile image change
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfileImage(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  // Generate a random avatar using DiceBear API
+  const generateRandomAvatar = () => {
+    // List of available avatar styles from DiceBear
+    const styles = [
+      'avataaars', 'bottts', 'identicon', 'initials', 
+      'micah', 'miniavs', 'open-peeps', 'pixel-art', 
+      'adventurer', 'adventurer-neutral', 'big-ears', 
+      'big-smile', 'croodles', 'thumbs'
+    ];
+    
+    // Randomly select a style
+    const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+    
+    // Generate a random seed based on timestamp and random number
+    const seed = `${user.username}-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+    
+    // Create the avatar URL
+    const avatarUrl = `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${seed}&size=200&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+    
+    // Update profile image state
+    setProfileImage(avatarUrl);
+    
+    // Show a toast notification
+    toast({
+      title: 'New Avatar Generated',
+      description: 'Your profile avatar has been updated.',
+    });
   };
 
   if (!user) return null;
@@ -323,27 +375,22 @@ const Profile = () => {
                         <div className="flex flex-col items-center gap-4">
                           <Avatar className="h-24 w-24">
                             <AvatarImage src={profileImage || undefined} />
-                            <AvatarFallback className="text-lg">
+                            <AvatarFallback className="text-lg bg-gradient-to-br from-blue-400 to-indigo-600">
                               {user.username.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex flex-col items-center">
-                            <Label
-                              htmlFor="picture"
-                              className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 rounded-md py-2 px-4 text-sm font-medium flex items-center gap-2"
+                          <div className="flex flex-col items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 rounded-md py-2 px-4 text-sm font-medium flex items-center gap-2"
+                              onClick={generateRandomAvatar}
                             >
-                              <Upload className="h-4 w-4" />
-                              Upload new image
-                            </Label>
-                            <Input
-                              id="picture"
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={handleImageChange}
-                            />
+                              <RefreshCw className="h-4 w-4" />
+                              Generate New Avatar
+                            </Button>
                             <p className="text-xs text-gray-500 mt-1">
-                              JPG, GIF or PNG. Max size of 2MB
+                              Click to randomly generate a new avatar
                             </p>
                           </div>
                         </div>
