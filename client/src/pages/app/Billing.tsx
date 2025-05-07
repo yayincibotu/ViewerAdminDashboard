@@ -533,45 +533,7 @@ const Billing = () => {
               </CardContent>
             </Card>
 
-            {/* Billing Info Card */}
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Billing Information</CardTitle>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => setShowEditBillingDialog(true)}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </div>
-                <CardDescription>Your billing details</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm font-medium text-gray-500">Name</div>
-                    <div>{user.username}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-500">Email</div>
-                    <div>{user.email}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-500">Billing Address</div>
-                    <div>123 Streaming Ave</div>
-                    <div>San Francisco, CA 94103</div>
-                    <div>United States</div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-500">Tax ID</div>
-                    <div>US123456789</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
 
           {/* Billing History */}
