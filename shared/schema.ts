@@ -15,6 +15,7 @@ export const users = pgTable("users", {
   profileData: text("profile_data"),
   securitySettings: text("security_settings"),
   notificationPreferences: text("notification_preferences"),
+  billingInfo: text("billing_info"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
