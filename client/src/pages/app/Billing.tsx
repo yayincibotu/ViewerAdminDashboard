@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import UserSidebar from '@/components/dashboard/UserSidebar';
 import Header from '@/components/dashboard/Header';
+import { getName, getNames, getCode } from 'country-list';
 import { 
   Card, 
   CardContent, 
@@ -792,12 +793,15 @@ const Billing = () => {
                         <SelectTrigger id="billingCountry">
                           <SelectValue placeholder="Select a country" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="US">United States</SelectItem>
-                          <SelectItem value="CA">Canada</SelectItem>
-                          <SelectItem value="UK">United Kingdom</SelectItem>
-                          <SelectItem value="AU">Australia</SelectItem>
-                          <SelectItem value="DE">Germany</SelectItem>
+                        <SelectContent className="max-h-[200px] overflow-y-auto">
+                          {Object.entries(getNames())
+                            .sort((a, b) => a[1].localeCompare(b[1]))
+                            .map(([code, name]) => (
+                              <SelectItem key={code} value={code}>
+                                {name}
+                              </SelectItem>
+                            ))
+                          }
                         </SelectContent>
                       </Select>
                     </div>
