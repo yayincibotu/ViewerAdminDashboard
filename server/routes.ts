@@ -957,6 +957,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Billing information routes
+  app.get("/api/billing-info", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Parse billing info from JSON or return default empty object
+      const billingInfo = user.billingInfo ? JSON.parse(user.billingInfo) : {};
+      res.json(billingInfo);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching billing information: " + error.message });
+    }
+  });
+
+  app.post("/api/billing-info", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const billingInfoSchema = z.object({
+        fullName: z.string().optional(),
+        email: z.string().email().optional(),
+        address1: z.string().optional(),
+        address2: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zip: z.string().optional(),
+        country: z.string().optional(),
+        taxId: z.string().optional(),
+      });
+
+      const validatedData = billingInfoSchema.parse(req.body);
+      
+      // Store billing info as JSON string
+      const updatedUser = await storage.updateUser(req.user.id, {
+        billingInfo: JSON.stringify(validatedData)
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Billing information updated successfully", 
+        billingInfo: validatedData 
+      });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid billing information format", errors: error.errors });
+      }
+      res.status(500).json({ message: "Error updating billing information: " + error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
