@@ -27,7 +27,6 @@ import {
 } from '@/components/ui/navigation-menu';
 import { 
   CreditCard, 
-  Settings, 
   UserCircle, 
   Bot, 
   LogOut, 
@@ -173,15 +172,6 @@ const Header = () => {
                 </NavigationMenuItem>
                 
                 <NavigationMenuItem>
-                  <Link href="/app/settings">
-                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
-                
-                <NavigationMenuItem>
                   <Link href="/app/profile">
                     <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                       <UserCircle className="mr-2 h-4 w-4" />
@@ -223,10 +213,6 @@ const Header = () => {
                 <DropdownMenuItem>
                   <CreditCard className="mr-2 h-4 w-4" />
                   <Link href="/app/billing">Billing</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <Link href="/app/settings">Settings</Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
