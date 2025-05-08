@@ -3,7 +3,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import UserSidebar from '@/components/dashboard/UserSidebar';
 import Header from '@/components/dashboard/Header';
-import { getName, getNames, getCode } from 'country-list';
+import ReactCountryFlag from "react-country-flag";
+import { Country, State, City } from 'country-state-city';
 import { 
   Card, 
   CardContent, 
@@ -206,12 +207,7 @@ const Billing = () => {
   // Fetch billing info from the server
   const { data: billingInfo = {} as BillingInfoType } = useQuery<BillingInfoType>({
     queryKey: ['/api/billing-info'],
-    enabled: !!user,
-    onSuccess: (data: any) => {
-      if (data && data.country) {
-        console.log(`Country code: "${data.country}", Country name: "${getName(data.country)}"`);
-      }
-    }
+    enabled: !!user
   });
   
   // Fetch real payment methods from the API
@@ -380,11 +376,20 @@ const Billing = () => {
                         {billingInfo.state && `${billingInfo.state} `}
                         {billingInfo.zip}
                       </div>
-                      <div>
+                      <div className="flex items-center">
                         {billingInfo.country && (
-                          typeof billingInfo.country === 'string' && billingInfo.country.length === 2 
-                            ? getName(billingInfo.country) 
-                            : billingInfo.country
+                          <>
+                            <ReactCountryFlag 
+                              countryCode={billingInfo.country}
+                              svg
+                              style={{
+                                width: '1.2em',
+                                height: '1.2em',
+                                marginRight: '0.5em'
+                              }}
+                            />
+                            {Country.getCountryByCode(billingInfo.country)?.name || billingInfo.country}
+                          </>
                         )}
                       </div>
                     </div>
@@ -736,15 +741,62 @@ const Billing = () => {
               });
             };
             
+            // States and cities data
+            const [selectedStates, setSelectedStates] = useState<any[]>([]);
+            const [selectedCities, setSelectedCities] = useState<any[]>([]);
+            
             // Handle select changes for country field
             const handleSelectChange = (value: string) => {
-              console.log("Country selected:", value, "Name:", getName(value));
+              const countryData = Country.getCountryByCode(value);
+              console.log("Country selected:", value, "Name:", countryData?.name);
+              
+              // Get states for this country
+              const states = State.getStatesOfCountry(value);
+              setSelectedStates(states);
+              
+              // Clear cities when country changes
+              setSelectedCities([]);
+              
               // Use callback form to ensure we're working with the latest state
               setFormState(prev => {
-                const updated = { ...prev, country: value };
+                const updated = { 
+                  ...prev, 
+                  country: value,
+                  // Reset state and city when country changes
+                  state: '',
+                  city: '' 
+                };
                 console.log("Updated form state with country:", updated);
                 return updated;
               });
+            };
+            
+            // Handle state selection
+            const handleStateChange = (value: string) => {
+              console.log("State selected:", value);
+              
+              // Get cities for this state
+              const cities = City.getCitiesOfState(formState.country, value);
+              setSelectedCities(cities);
+              
+              setFormState(prev => {
+                const updated = { 
+                  ...prev, 
+                  state: value,
+                  // Reset city when state changes
+                  city: '' 
+                };
+                return updated;
+              });
+            };
+            
+            // Handle city selection
+            const handleCityChange = (value: string) => {
+              console.log("City selected:", value);
+              setFormState(prev => ({
+                ...prev,
+                city: value
+              }));
             };
             
             return (
@@ -788,22 +840,58 @@ const Billing = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="billingCity">City</Label>
-                      <Input
-                        id="billingCity"
-                        value={formState.city}
-                        onChange={handleInputChange}
-                        placeholder="City"
-                      />
+                      <Label htmlFor="billingState">State / Province</Label>
+                      {selectedStates.length > 0 ? (
+                        <Select 
+                          value={formState.state || ''} 
+                          onValueChange={handleStateChange}
+                        >
+                          <SelectTrigger id="billingState">
+                            <SelectValue placeholder="Select a state" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[200px] overflow-y-auto">
+                            {selectedStates.map((state) => (
+                              <SelectItem key={state.isoCode} value={state.isoCode}>
+                                {state.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          id="billingState"
+                          value={formState.state}
+                          onChange={handleInputChange}
+                          placeholder="Enter state/province"
+                        />
+                      )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="billingState">State / Province</Label>
-                      <Input
-                        id="billingState"
-                        value={formState.state}
-                        onChange={handleInputChange}
-                        placeholder="State/Province"
-                      />
+                      <Label htmlFor="billingCity">City</Label>
+                      {selectedCities.length > 0 ? (
+                        <Select 
+                          value={formState.city || ''} 
+                          onValueChange={handleCityChange}
+                        >
+                          <SelectTrigger id="billingCity">
+                            <SelectValue placeholder="Select a city" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[200px] overflow-y-auto">
+                            {selectedCities.map((city) => (
+                              <SelectItem key={city.name} value={city.name}>
+                                {city.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          id="billingCity"
+                          value={formState.city}
+                          onChange={handleInputChange}
+                          placeholder="Enter city"
+                        />
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -826,11 +914,21 @@ const Billing = () => {
                           <SelectValue placeholder="Select a country" />
                         </SelectTrigger>
                         <SelectContent className="max-h-[200px] overflow-y-auto">
-                          {Object.entries(getNames())
-                            .sort((a, b) => a[1].localeCompare(b[1]))
-                            .map(([code, name]) => (
-                              <SelectItem key={code} value={code}>
-                                {name}
+                          {Country.getAllCountries()
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((country) => (
+                              <SelectItem key={country.isoCode} value={country.isoCode}>
+                                <div className="flex items-center gap-2">
+                                  <ReactCountryFlag 
+                                    countryCode={country.isoCode}
+                                    svg
+                                    style={{
+                                      width: '1.2em',
+                                      height: '1.2em',
+                                    }}
+                                  />
+                                  {country.name}
+                                </div>
                               </SelectItem>
                             ))
                           }
