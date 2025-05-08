@@ -715,4 +715,293 @@ const Billing = () => {
   );
 };
 
+// EditBillingForm component
+interface EditBillingFormProps {
+  initialData: any;
+  user: any;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingFormProps) {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    fullName: initialData?.fullName || user?.username || '',
+    email: initialData?.email || user?.email || '',
+    address1: initialData?.address1 || '',
+    address2: initialData?.address2 || '',
+    city: initialData?.city || '',
+    state: initialData?.state || '',
+    zip: initialData?.zip || '',
+    country: initialData?.country || '',
+    taxId: initialData?.taxId || '',
+  });
+  
+  const [states, setStates] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Initial setup of states and cities based on country and state
+  useEffect(() => {
+    console.log("Initial form data:", formData);
+    if (formData.country) {
+      const countryStates = State.getStatesOfCountry(formData.country);
+      setStates(countryStates);
+      console.log(`Found ${countryStates.length} states for country ${formData.country}`);
+      
+      if (formData.state && countryStates.length > 0) {
+        const stateCities = City.getCitiesOfState(formData.country, formData.state);
+        setCities(stateCities);
+        console.log(`Found ${stateCities.length} cities for state ${formData.state}`);
+      }
+    }
+  }, []);
+  
+  // Form submission handler
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      console.log("Submitting billing info:", formData);
+      const response = await apiRequest('POST', '/api/billing-info', formData);
+      const data = await response.json();
+      
+      toast({
+        title: 'Billing information updated',
+        description: 'Your billing information has been updated successfully.',
+      });
+      
+      onSuccess();
+    } catch (error: any) {
+      console.error("Error updating billing info:", error);
+      toast({
+        title: 'Error updating billing information',
+        description: error.message || 'An unknown error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Handle input change
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    const field = id.replace('billing', '').toLowerCase();
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
+  // Handle country selection
+  const handleCountryChange = (value: string) => {
+    const countryStates = State.getStatesOfCountry(value);
+    setStates(countryStates);
+    setCities([]);
+    
+    setFormData(prev => ({
+      ...prev,
+      country: value,
+      state: '',
+      city: ''
+    }));
+  };
+  
+  // Handle state selection
+  const handleStateChange = (value: string) => {
+    const stateCities = City.getCitiesOfState(formData.country, value);
+    setCities(stateCities);
+    
+    setFormData(prev => ({
+      ...prev,
+      state: value,
+      city: ''
+    }));
+  };
+  
+  // Handle city selection
+  const handleCityChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      city: value
+    }));
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="grid gap-4 py-4">
+        <div className="grid gap-2">
+          <Label htmlFor="billingFullName">Full Name</Label>
+          <Input
+            id="billingFullName"
+            value={formData.fullName}
+            onChange={handleChange}
+            placeholder="Full Name"
+          />
+        </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="billingEmail">Email</Label>
+          <Input
+            id="billingEmail"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="email@example.com"
+          />
+        </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="billingAddress1">Address Line 1</Label>
+          <Input
+            id="billingAddress1"
+            value={formData.address1}
+            onChange={handleChange}
+            placeholder="Street address"
+          />
+        </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="billingAddress2">Address Line 2</Label>
+          <Input
+            id="billingAddress2"
+            value={formData.address2}
+            onChange={handleChange}
+            placeholder="Apt, Suite, etc. (optional)"
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="billingCountry">Country</Label>
+            <Select 
+              value={formData.country}
+              onValueChange={handleCountryChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a country" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[200px] overflow-y-auto">
+                {Country.getAllCountries()
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((country) => (
+                    <SelectItem key={country.isoCode} value={country.isoCode}>
+                      <div className="flex items-center gap-2">
+                        <ReactCountryFlag 
+                          countryCode={country.isoCode}
+                          svg
+                          style={{
+                            width: '1.2em',
+                            height: '1.2em',
+                          }}
+                        />
+                        {country.name}
+                      </div>
+                    </SelectItem>
+                  ))
+                }
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="billingState">State / Province</Label>
+            {states.length > 0 ? (
+              <Select 
+                value={formData.state}
+                onValueChange={handleStateChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a state" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
+                  {states.map((state) => (
+                    <SelectItem key={state.isoCode} value={state.isoCode}>
+                      {state.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="billingState"
+                value={formData.state}
+                onChange={handleChange}
+                placeholder="Enter state/province"
+              />
+            )}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="billingCity">City</Label>
+            {cities.length > 0 ? (
+              <Select 
+                value={formData.city}
+                onValueChange={handleCityChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a city" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
+                  {cities.map((city) => (
+                    <SelectItem key={city.name} value={city.name}>
+                      {city.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="billingCity"
+                value={formData.city}
+                onChange={handleChange}
+                placeholder="Enter city"
+              />
+            )}
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="billingZip">ZIP / Postal</Label>
+            <Input
+              id="billingZip"
+              value={formData.zip}
+              onChange={handleChange}
+              placeholder="ZIP/Postal Code"
+            />
+          </div>
+        </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="billingTaxId">Tax ID (Optional)</Label>
+          <Input
+            id="billingTaxId"
+            value={formData.taxId}
+            onChange={handleChange}
+            placeholder="Tax ID Number"
+          />
+        </div>
+      </div>
+      
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
 export default Billing;
