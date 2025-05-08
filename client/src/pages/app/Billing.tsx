@@ -962,7 +962,14 @@ interface EditBillingFormProps {
 
 function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingFormProps) {
   const { toast } = useToast();
-  const [isCompany, setIsCompany] = useState(!!initialData?.companyName);
+  // isCompany değişkenini initialData.isCompany'den almak daha doğru olacaktır
+  // eğer bu değer yoksa, ancak companyName varsa şirket modunu açık kabul edelim
+  const [isCompany, setIsCompany] = useState(
+    initialData?.isCompany === true || 
+    (initialData?.isCompany !== false && !!initialData?.companyName)
+  );
+  
+  // Form verilerindeki isCompany değeri de aynı mantıkla belirlensin
   const [formData, setFormData] = useState({
     fullName: initialData?.fullName || user?.username || '',
     email: initialData?.email || user?.email || '',
@@ -972,7 +979,9 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
     state: initialData?.state || '',
     zip: initialData?.zip || '',
     country: initialData?.country || '',
-    isCompany: !!initialData?.companyName,
+    // isCompany değeri doğrudan initialData'dan gelsin
+    isCompany: initialData?.isCompany === true || 
+               (initialData?.isCompany !== false && !!initialData?.companyName),
     companyName: initialData?.companyName || '',
     companyRegistrationNumber: initialData?.companyRegistrationNumber || '',
     companyVatNumber: initialData?.companyVatNumber || '',
@@ -1001,10 +1010,16 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
     setIsLoading(true);
     
     try {
-      // Log the data being sent to verify company info is included
-      console.log("Sending form data to server:", formData);
+      // İstek gitmeden önce şirket durum bilgisinin güncel olduğundan emin olalım
+      const dataToSend = {
+        ...formData,
+        isCompany: isCompany // UI state ile senkronize et
+      };
       
-      const response = await apiRequest('POST', '/api/billing-info', formData);
+      // Log the data being sent to verify company info is included
+      console.log("Sending form data to server:", dataToSend);
+      
+      const response = await apiRequest('POST', '/api/billing-info', dataToSend);
       const data = await response.json();
       
       console.log("Server response:", data);
@@ -1028,10 +1043,13 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
   
   // Toggle company info
   const handleCompanyToggle = (checked: boolean) => {
+    console.log("Company toggle changed to:", checked);
     setIsCompany(checked);
     setFormData(prev => ({
       ...prev,
-      isCompany: checked
+      isCompany: checked,
+      // Eğer şirket modu kapatılıyorsa, şirket alanlarını boşaltmadan koru
+      // Bu sayede kullanıcı şirket modunu tekrar açtığında bilgiler korunur
     }));
   };
 
