@@ -32,7 +32,9 @@ import {
   Info,
   AlertTriangle,
   Trash2,
-  Star
+  Star,
+  Building2,
+  SwitchCamera
 } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -722,6 +724,7 @@ interface EditBillingFormProps {
 
 function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingFormProps) {
   const { toast } = useToast();
+  const [isCompany, setIsCompany] = useState(!!initialData?.companyName);
   const [formData, setFormData] = useState({
     fullName: initialData?.fullName || user?.username || '',
     email: initialData?.email || user?.email || '',
@@ -732,6 +735,10 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
     zip: initialData?.zip || '',
     country: initialData?.country || '',
     taxId: initialData?.taxId || '',
+    isCompany: !!initialData?.companyName,
+    companyName: initialData?.companyName || '',
+    companyRegistrationNumber: initialData?.companyRegistrationNumber || '',
+    companyVatNumber: initialData?.companyVatNumber || '',
   });
   
   const [states, setStates] = useState<any[]>([]);
