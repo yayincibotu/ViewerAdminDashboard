@@ -373,22 +373,33 @@ const Billing = () => {
                       {billingInfo.address2 && <div>{billingInfo.address2}</div>}
                       <div>
                         {billingInfo.city && `${billingInfo.city}, `}
-                        {billingInfo.state && `${billingInfo.state} `}
+                        {billingInfo.state && (
+                          billingInfo.state.length === 2 && billingInfo.country?.length === 2 
+                            ? `${State.getStateByCodeAndCountry(billingInfo.state, billingInfo.country)?.name || billingInfo.state} `
+                            : `${billingInfo.state} `
+                        )}
                         {billingInfo.zip}
                       </div>
                       <div className="flex items-center">
                         {billingInfo.country && (
                           <>
-                            <ReactCountryFlag 
-                              countryCode={billingInfo.country}
-                              svg
-                              style={{
-                                width: '1.2em',
-                                height: '1.2em',
-                                marginRight: '0.5em'
-                              }}
-                            />
-                            {Country.getCountryByCode(billingInfo.country)?.name || billingInfo.country}
+                            {billingInfo.country.length === 2 ? (
+                              <>
+                                <ReactCountryFlag 
+                                  countryCode={billingInfo.country}
+                                  svg
+                                  style={{
+                                    width: '1.2em',
+                                    height: '1.2em',
+                                    marginRight: '0.5em'
+                                  }}
+                                />
+                                {Country.getCountryByCode(billingInfo.country)?.name || billingInfo.country}
+                              </>
+                            ) : (
+                              // Handle legacy country format
+                              billingInfo.country
+                            )}
                           </>
                         )}
                       </div>
