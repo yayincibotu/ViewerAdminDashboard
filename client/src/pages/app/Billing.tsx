@@ -444,12 +444,7 @@ const Billing = () => {
                       </div>
                     </div>
                   )}
-                  {billingInfo?.taxId && (
-                    <div>
-                      <div className="font-semibold">Tax ID:</div>
-                      <div>{billingInfo.taxId}</div>
-                    </div>
-                  )}
+
                   {!billingInfo?.address1 && (
                     <div className="text-gray-500 italic">
                       No billing address on file. Add your billing information for invoices.
@@ -760,7 +755,6 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
     state: initialData?.state || '',
     zip: initialData?.zip || '',
     country: initialData?.country || '',
-    taxId: initialData?.taxId || '',
     isCompany: !!initialData?.companyName,
     companyName: initialData?.companyName || '',
     companyRegistrationNumber: initialData?.companyRegistrationNumber || '',
@@ -1058,16 +1052,6 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
             </div>
           </>
         )}
-        
-        <div className="grid gap-2">
-          <Label htmlFor="billingTaxId">Tax ID {!isCompany && "(Optional)"}</Label>
-          <Input
-            id="billingTaxId"
-            value={formData.taxId}
-            onChange={handleChange}
-            placeholder="Tax ID Number"
-          />
-        </div>
       </div>
       
       <DialogFooter>

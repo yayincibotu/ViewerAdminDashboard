@@ -1005,7 +1005,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         state: z.string().optional(),
         zip: z.string().optional(),
         country: z.string().optional(),
-        taxId: z.string().optional(),
         isCompany: z.boolean().optional(),
         companyName: z.string().optional(),
         companyRegistrationNumber: z.string().optional(),
