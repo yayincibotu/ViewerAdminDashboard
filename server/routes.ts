@@ -1012,9 +1012,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Received billing info update:", validatedData);
       
+      // Get current user data before update
+      const currentUser = await storage.getUser(req.user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get current billing info if it exists
+      let currentBillingInfo = {};
+      try {
+        if (currentUser.billingInfo) {
+          currentBillingInfo = JSON.parse(currentUser.billingInfo);
+        }
+      } catch (e) {
+        console.error("Failed to parse existing billing info:", e);
+      }
+      
+      // Merge existing billing info with new data
+      const mergedBillingInfo = { ...currentBillingInfo, ...validatedData };
+      console.log("Merged billing info to save:", mergedBillingInfo);
+      
       // Store billing info as JSON string
       const updatedUser = await storage.updateUser(req.user.id, {
-        billingInfo: JSON.stringify(validatedData)
+        billingInfo: JSON.stringify(mergedBillingInfo)
       });
 
       if (!updatedUser) {
@@ -1024,7 +1044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         message: "Billing information updated successfully", 
-        billingInfo: validatedData 
+        billingInfo: mergedBillingInfo 
       });
     } catch (error: any) {
       if (error.name === "ZodError") {

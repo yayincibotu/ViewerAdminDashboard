@@ -190,8 +190,21 @@ const Billing = () => {
   const [showAddCardDialog, setShowAddCardDialog] = useState(false);
   const [showEditBillingDialog, setShowEditBillingDialog] = useState(false);
   
+  // Define billing info type for TypeScript
+  interface BillingInfoType {
+    fullName: string;
+    email: string;
+    address1: string;
+    address2: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+    taxId: string;
+  }
+  
   // Fetch billing info from the server
-  const { data: billingInfo = {} } = useQuery({
+  const { data: billingInfo = {} as BillingInfoType } = useQuery<BillingInfoType>({
     queryKey: ['/api/billing-info'],
     enabled: !!user,
   });
@@ -722,6 +735,11 @@ const Billing = () => {
                 ...prev,
                 country: value, // Store the country code, not the name
               }));
+              
+              // Log current form state after update
+              setTimeout(() => {
+                console.log("Form state after country selection:", formState);
+              }, 0);
             };
             
             return (
