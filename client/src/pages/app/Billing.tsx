@@ -207,7 +207,7 @@ const Billing = () => {
   const { data: billingInfo = {} as BillingInfoType } = useQuery<BillingInfoType>({
     queryKey: ['/api/billing-info'],
     enabled: !!user,
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data && data.country) {
         console.log(`Country code: "${data.country}", Country name: "${getName(data.country)}"`);
       }
@@ -681,7 +681,7 @@ const Billing = () => {
               city: billingInfo?.city || '',
               state: billingInfo?.state || '',
               zip: billingInfo?.zip || '',
-              country: billingInfo?.country || 'US',
+              country: billingInfo?.country || '',
               taxId: billingInfo?.taxId || '',
             });
             
@@ -729,24 +729,22 @@ const Billing = () => {
               const { id, value } = e.target;
               // Remove 'billing' prefix from id to match backend field names
               const field = id.replace('billing', '').toLowerCase();
-              setFormState(prev => ({
-                ...prev,
-                [field]: value,
-              }));
+              setFormState(prev => {
+                const updated = { ...prev, [field]: value };
+                console.log(`Updated form state after input change (${field}):`, updated);
+                return updated;
+              });
             };
             
             // Handle select changes for country field
             const handleSelectChange = (value: string) => {
               console.log("Country selected:", value, "Name:", getName(value));
-              setFormState(prev => ({
-                ...prev,
-                country: value, // Store the country code, not the name
-              }));
-              
-              // Log current form state after update
-              setTimeout(() => {
-                console.log("Form state after country selection:", formState);
-              }, 0);
+              // Use callback form to ensure we're working with the latest state
+              setFormState(prev => {
+                const updated = { ...prev, country: value };
+                console.log("Updated form state with country:", updated);
+                return updated;
+              });
             };
             
             return (
@@ -821,7 +819,7 @@ const Billing = () => {
                     <div className="grid gap-2">
                       <Label htmlFor="billingCountry">Country</Label>
                       <Select 
-                        value={formState.country} 
+                        value={formState.country || ''} 
                         onValueChange={handleSelectChange}
                       >
                         <SelectTrigger id="billingCountry">
