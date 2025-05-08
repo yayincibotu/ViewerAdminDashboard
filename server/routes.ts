@@ -972,9 +972,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Parse billing info from JSON or return default empty object
-      const billingInfo = user.billingInfo ? JSON.parse(user.billingInfo) : {};
+      let billingInfo = {};
+      try {
+        if (user.billingInfo) {
+          billingInfo = JSON.parse(user.billingInfo);
+          console.log("Successfully parsed billing info:", billingInfo);
+        }
+      } catch (parseError) {
+        console.error("Failed to parse billing info JSON:", parseError);
+        // Continue with empty billing info
+      }
+      
       res.json(billingInfo);
     } catch (error: any) {
+      console.error("Error fetching billing info:", error);
       res.status(500).json({ message: "Error fetching billing information: " + error.message });
     }
   });

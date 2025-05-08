@@ -363,7 +363,9 @@ const Billing = () => {
                         {billingInfo.zip}
                       </div>
                       <div>
-                        {getName(billingInfo.country) || billingInfo.country}
+                        {billingInfo.country && (
+                          getName(billingInfo.country) || billingInfo.country
+                        )}
                       </div>
                     </div>
                   )}
