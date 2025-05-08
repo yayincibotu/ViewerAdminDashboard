@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -370,8 +371,33 @@ const Billing = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 text-sm">
+                  {billingInfo?.companyName ? (
+                    <>
+                      <div className="flex items-center gap-1.5 text-primary font-medium pb-1 mb-1 border-b">
+                        <Building2 className="h-4 w-4" />
+                        <span>Company Billing</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold">Company:</div>
+                        <div>{billingInfo.companyName}</div>
+                      </div>
+                      {billingInfo.companyRegistrationNumber && (
+                        <div>
+                          <div className="font-semibold">Registration Number:</div>
+                          <div>{billingInfo.companyRegistrationNumber}</div>
+                        </div>
+                      )}
+                      {billingInfo.companyVatNumber && (
+                        <div>
+                          <div className="font-semibold">VAT Number:</div>
+                          <div>{billingInfo.companyVatNumber}</div>
+                        </div>
+                      )}
+                    </>
+                  ) : null}
+                  
                   <div>
-                    <div className="font-semibold">Name:</div>
+                    <div className="font-semibold">Contact Name:</div>
                     <div>{billingInfo?.fullName || user.username}</div>
                   </div>
                   <div>
@@ -784,6 +810,15 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
     }
   };
   
+  // Toggle company info
+  const handleCompanyToggle = (checked: boolean) => {
+    setIsCompany(checked);
+    setFormData(prev => ({
+      ...prev,
+      isCompany: checked
+    }));
+  };
+
   // Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -973,8 +1008,59 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
           </div>
         </div>
         
+        <div className="flex items-center space-x-2 py-2 border-t border-b my-2">
+          <Switch 
+            id="company-mode" 
+            checked={isCompany}
+            onCheckedChange={handleCompanyToggle}
+          />
+          <div className="grid gap-0.5">
+            <Label htmlFor="company-mode" className="text-sm font-medium flex items-center gap-1">
+              <Building2 className="h-4 w-4 text-primary" />
+              Company Billing
+            </Label>
+            <span className="text-xs text-gray-500">Purchase as a company/business</span>
+          </div>
+        </div>
+        
+        {isCompany && (
+          <>
+            <div className="grid gap-2">
+              <Label htmlFor="billingCompanyName">Company Name</Label>
+              <Input
+                id="billingCompanyName"
+                value={formData.companyName}
+                onChange={handleChange}
+                placeholder="Company Name"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="billingCompanyRegistrationNumber">Registration Number</Label>
+                <Input
+                  id="billingCompanyRegistrationNumber"
+                  value={formData.companyRegistrationNumber}
+                  onChange={handleChange}
+                  placeholder="Company Registration Number"
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="billingCompanyVatNumber">VAT Number</Label>
+                <Input
+                  id="billingCompanyVatNumber"
+                  value={formData.companyVatNumber}
+                  onChange={handleChange}
+                  placeholder="VAT/GST Number"
+                />
+              </div>
+            </div>
+          </>
+        )}
+        
         <div className="grid gap-2">
-          <Label htmlFor="billingTaxId">Tax ID (Optional)</Label>
+          <Label htmlFor="billingTaxId">Tax ID {!isCompany && "(Optional)"}</Label>
           <Input
             id="billingTaxId"
             value={formData.taxId}
