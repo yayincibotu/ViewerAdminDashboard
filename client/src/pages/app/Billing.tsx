@@ -193,22 +193,30 @@ const Billing = () => {
   
   // Define billing info type for TypeScript
   interface BillingInfoType {
-    fullName: string;
-    email: string;
-    address1: string;
-    address2: string;
-    city: string;
-    state: string;
-    zip: string;
-    country: string;
-    taxId: string;
+    fullName?: string;
+    email?: string;
+    address1?: string;
+    address2?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+    taxId?: string;
+    [key: string]: any; // Allow any other properties that might come from the API
   }
   
   // Fetch billing info from the server
-  const { data: billingInfo = {} as BillingInfoType } = useQuery<BillingInfoType>({
+  const { data: billingInfo = {} as BillingInfoType, isSuccess: billingInfoLoaded } = useQuery<BillingInfoType>({
     queryKey: ['/api/billing-info'],
     enabled: !!user
   });
+  
+  // Debug: log billing info to console
+  useEffect(() => {
+    if (billingInfo) {
+      console.log('Billing info loaded:', billingInfo);
+    }
+  }, [billingInfo]);
   
   // Fetch real payment methods from the API
   const { data: paymentMethods = [], isLoading: paymentMethodsLoading } = useQuery<any[]>({
@@ -338,6 +346,11 @@ const Billing = () => {
         <Header />
         <div className="container mx-auto py-6 px-4">
           <h1 className="text-2xl font-bold mb-6">Billing & Payments</h1>
+          {/* Debug info */}
+          <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
+            <p>Debug - Raw billing info:</p>
+            <pre className="overflow-auto max-h-20">{JSON.stringify(billingInfo, null, 2)}</pre>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Billing Info Card */}
@@ -374,7 +387,8 @@ const Billing = () => {
                       <div>
                         {billingInfo.city && `${billingInfo.city}, `}
                         {billingInfo.state && (
-                          billingInfo.state.length === 2 && billingInfo.country?.length === 2 
+                          typeof billingInfo.state === 'string' && billingInfo.state.length === 2 && 
+                          typeof billingInfo.country === 'string' && billingInfo.country.length === 2 
                             ? `${State.getStateByCodeAndCountry(billingInfo.state, billingInfo.country)?.name || billingInfo.state} `
                             : `${billingInfo.state} `
                         )}
@@ -383,7 +397,7 @@ const Billing = () => {
                       <div className="flex items-center">
                         {billingInfo.country && (
                           <>
-                            {billingInfo.country.length === 2 ? (
+                            {typeof billingInfo.country === 'string' && billingInfo.country.length === 2 ? (
                               <>
                                 <ReactCountryFlag 
                                   countryCode={billingInfo.country}
@@ -397,8 +411,8 @@ const Billing = () => {
                                 {Country.getCountryByCode(billingInfo.country)?.name || billingInfo.country}
                               </>
                             ) : (
-                              // Handle legacy country format
-                              billingInfo.country
+                              // Handle legacy country format or numeric values
+                              <>{billingInfo.country}</>
                             )}
                           </>
                         )}
