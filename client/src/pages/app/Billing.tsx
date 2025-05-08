@@ -773,8 +773,179 @@ const Billing = () => {
             onSuccess={() => {
               setShowEditBillingDialog(false);
               queryClient.invalidateQueries({ queryKey: ['/api/billing-info'] });
+              
+              // Sync billing information with Stripe
+              if (user.stripeCustomerId) {
+                apiRequest('POST', '/api/sync-billing-with-stripe')
+                  .then(() => {
+                    toast({
+                      title: 'Billing information synced',
+                      description: 'Your billing information has been synced with payment provider.',
+                    });
+                  })
+                  .catch(error => {
+                    console.error('Failed to sync billing info with Stripe:', error);
+                  });
+              }
             }}
           />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Invoice Details Dialog */}
+      <Dialog open={showInvoiceDetailsDialog} onOpenChange={setShowInvoiceDetailsDialog}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Invoice Details</DialogTitle>
+            <DialogDescription>
+              Complete information about this invoice
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedInvoice ? (
+            <div className="space-y-6">
+              {/* Invoice Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Invoice #{selectedInvoice.number}</h3>
+                  <p className="text-sm text-gray-500">
+                    {new Date(selectedInvoice.created * 1000).toLocaleDateString()} ({formatDistance(new Date(selectedInvoice.created * 1000), new Date(), { addSuffix: true })})
+                  </p>
+                </div>
+                <div className="flex items-center mt-2 sm:mt-0">
+                  {getInvoiceStatusBadge(selectedInvoice.status)}
+                </div>
+              </div>
+              
+              {/* Invoice Summary */}
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium">Bill To</h4>
+                  <p className="text-sm">{selectedInvoice.customer_name || user.username}</p>
+                  <p className="text-sm">{selectedInvoice.customer_email || user.email}</p>
+                  {selectedInvoice.customer_address?.line1 && (
+                    <>
+                      <p className="text-sm">{selectedInvoice.customer_address.line1}</p>
+                      {selectedInvoice.customer_address.line2 && (
+                        <p className="text-sm">{selectedInvoice.customer_address.line2}</p>
+                      )}
+                      <p className="text-sm">
+                        {selectedInvoice.customer_address.city}, {selectedInvoice.customer_address.state} {selectedInvoice.customer_address.postal_code}
+                      </p>
+                      <p className="text-sm">{selectedInvoice.customer_address.country}</p>
+                    </>
+                  )}
+                </div>
+                
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium">Payment Details</h4>
+                  <div className="flex items-center gap-1.5">
+                    <CreditCardIcon className="h-4 w-4 text-gray-500" />
+                    <p className="text-sm">
+                      {selectedInvoice.payment_intent?.payment_method_details?.card?.brand
+                        ? `${selectedInvoice.payment_intent.payment_method_details.card.brand.toUpperCase()} •••• ${selectedInvoice.payment_intent.payment_method_details.card.last4}`
+                        : "Payment method information not available"}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5">
+                    <CalendarIcon className="h-4 w-4 text-gray-500" />
+                    <p className="text-sm">
+                      {selectedInvoice.payment_intent?.created 
+                        ? `Paid on ${new Date(selectedInvoice.payment_intent.created * 1000).toLocaleDateString()}`
+                        : "Payment date not available"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Invoice Line Items */}
+              <div>
+                <h4 className="text-sm font-medium mb-2">Invoice Items</h4>
+                <div className="rounded-md border">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {selectedInvoice.lines?.data?.map((item: any, index: number) => (
+                        <tr key={index}>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            <div className="font-medium">{item.description}</div>
+                            {item.period?.start && item.period?.end && (
+                              <div className="text-xs text-gray-500">
+                                {new Date(item.period.start * 1000).toLocaleDateString()} - {new Date(item.period.end * 1000).toLocaleDateString()}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right font-medium">${(item.amount / 100).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">Subtotal</td>
+                        <td className="px-4 py-3 text-sm text-right font-medium">${(selectedInvoice.subtotal / 100).toFixed(2)}</td>
+                      </tr>
+                      {selectedInvoice.tax && (
+                        <tr>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">Tax</td>
+                          <td className="px-4 py-3 text-sm text-right font-medium">${(selectedInvoice.tax / 100).toFixed(2)}</td>
+                        </tr>
+                      )}
+                      {selectedInvoice.total_discount_amounts && selectedInvoice.total_discount_amounts > 0 && (
+                        <tr>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">Discounts</td>
+                          <td className="px-4 py-3 text-sm text-right font-medium text-green-600">-${(selectedInvoice.total_discount_amounts / 100).toFixed(2)}</td>
+                        </tr>
+                      )}
+                      <tr className="border-t">
+                        <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
+                        <td className="px-4 py-3 text-sm text-right font-bold">${(selectedInvoice.total / 100).toFixed(2)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+              
+              {/* Download and View Actions */}
+              <div className="flex justify-end gap-3">
+                {selectedInvoice.hosted_invoice_url && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => window.open(selectedInvoice.hosted_invoice_url, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View in Browser
+                  </Button>
+                )}
+                <Button 
+                  variant="default"
+                  onClick={() => window.open(`/api/invoice/${selectedInvoice.id}/pdf`, '_blank')}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p>Loading invoice details...</p>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowInvoiceDetailsDialog(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
