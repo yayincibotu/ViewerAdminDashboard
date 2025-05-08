@@ -669,9 +669,14 @@ const Billing = () => {
             // Update billing info mutation
             const updateBillingInfoMutation = useMutation({
               mutationFn: async (data: any) => {
-                return apiRequest('POST', '/api/billing-info', data);
+                console.log("Sending billing info update:", data);
+                const response = await apiRequest('POST', '/api/billing-info', data);
+                const responseJson = await response.json();
+                console.log("Billing info update response:", responseJson);
+                return responseJson;
               },
-              onSuccess: () => {
+              onSuccess: (data) => {
+                console.log("Mutation success:", data);
                 toast({
                   title: 'Billing information updated',
                   description: 'Your billing information has been updated successfully.',
@@ -681,6 +686,7 @@ const Billing = () => {
                 queryClient.invalidateQueries({ queryKey: ['/api/billing-info'] });
               },
               onError: (error: Error) => {
+                console.error("Mutation error:", error);
                 toast({
                   title: 'Failed to update billing information',
                   description: error.message,
