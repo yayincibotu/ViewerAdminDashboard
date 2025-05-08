@@ -816,7 +816,13 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
   // Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    const field = id.replace('billing', '').toLowerCase();
+    // Extract field name from ID by removing billing prefix
+    let field = id.startsWith('billing') ? id.slice(7) : id;
+    // Convert first letter to lowercase for camelCase
+    field = field.charAt(0).toLowerCase() + field.slice(1);
+    
+    console.log(`Input change: ID=${id}, field=${field}, value=${value}`);
+    
     setFormData(prev => ({
       ...prev,
       [field]: value
