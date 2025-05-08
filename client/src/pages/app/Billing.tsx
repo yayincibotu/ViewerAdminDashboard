@@ -207,6 +207,11 @@ const Billing = () => {
   const { data: billingInfo = {} as BillingInfoType } = useQuery<BillingInfoType>({
     queryKey: ['/api/billing-info'],
     enabled: !!user,
+    onSuccess: (data) => {
+      if (data && data.country) {
+        console.log(`Country code: "${data.country}", Country name: "${getName(data.country)}"`);
+      }
+    }
   });
   
   // Fetch real payment methods from the API
@@ -377,7 +382,9 @@ const Billing = () => {
                       </div>
                       <div>
                         {billingInfo.country && (
-                          getName(billingInfo.country) || billingInfo.country
+                          typeof billingInfo.country === 'string' && billingInfo.country.length === 2 
+                            ? getName(billingInfo.country) 
+                            : billingInfo.country
                         )}
                       </div>
                     </div>
