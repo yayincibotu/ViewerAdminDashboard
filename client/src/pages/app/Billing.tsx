@@ -205,6 +205,11 @@ const Billing = () => {
     zip?: string;
     country?: string;
     taxId?: string;
+    // Şirket bilgileri eklenmiştir
+    isCompany?: boolean;
+    companyName?: string;
+    companyRegistrationNumber?: string;
+    companyVatNumber?: string;
     [key: string]: any; // Allow any other properties that might come from the API
   }
   
