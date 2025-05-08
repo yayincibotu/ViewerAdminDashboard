@@ -88,7 +88,8 @@ export default function AuthPage() {
       onSuccess: () => {
         toast({
           title: "Account Created!",
-          description: "Your account has been successfully created. Welcome to ViewerApps!",
+          description: "Your account has been created. Please check your email for a verification link to complete the registration process.",
+          duration: 6000,
         });
       },
       onError: (error) => {
@@ -337,12 +338,20 @@ export default function AuthPage() {
                       )}
                     />
 
-                    <p className="text-xs text-gray-500 mt-4">
-                      By creating an account, you agree to our{" "}
-                      <a href="#" className="text-blue-600 hover:underline">Terms of Service</a>{" "}
-                      and{" "}
-                      <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>.
-                    </p>
+                    <div className="space-y-2 mt-4">
+                      <div className="flex items-start space-x-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-md border border-amber-200">
+                        <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <p>
+                          You'll need to verify your email address after registering. Please make sure you provide a valid email address.
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        By creating an account, you agree to our{" "}
+                        <a href="#" className="text-blue-600 hover:underline">Terms of Service</a>{" "}
+                        and{" "}
+                        <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>.
+                      </p>
+                    </div>
 
                     <Button
                       type="submit"

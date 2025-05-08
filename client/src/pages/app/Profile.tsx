@@ -90,8 +90,11 @@ const Profile = () => {
       toast({
         title: "Verification email sent",
         description: "Please check your inbox for the verification link.",
+        duration: 6000,
       });
-      console.log("Verification info (dev only):", data.debug);
+      if (data.debug) {
+        console.log("Verification info (dev only):", data.debug);
+      }
     },
     onError: (error: Error) => {
       toast({
