@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true })); // İç içe nesneleri desteklemesi için true yapıldı
 
 app.use((req, res, next) => {
   const start = Date.now();

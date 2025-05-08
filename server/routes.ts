@@ -1011,7 +1011,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyVatNumber: z.string().optional(),
       });
 
-      console.log("Raw billing info received:", req.body);
+      console.log("Raw billing info received (stringified):", JSON.stringify(req.body));
+      console.log("Raw billing info received (direct):", req.body);
+      
       const validatedData = billingInfoSchema.parse(req.body);
       
       console.log("Validated billing info update:", validatedData);
