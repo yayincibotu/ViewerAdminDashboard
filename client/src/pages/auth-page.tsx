@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Logo from "@/components/Logo";
-import { Loader2, EyeIcon, EyeOffIcon, AtSign, Lock, User, Key, Facebook, ArrowRight } from "lucide-react";
+import { Loader2, EyeIcon, EyeOffIcon, AtSign, Lock, User, Key, Facebook, ArrowRight, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
