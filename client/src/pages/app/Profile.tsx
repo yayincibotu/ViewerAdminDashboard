@@ -80,6 +80,28 @@ const Profile = () => {
   // Profile image state
   const [profileImage, setProfileImage] = useState<string | null>(null);
   
+  // Email verification mutation
+  const resendVerificationMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/resend-verification");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Verification email sent",
+        description: "Please check your inbox for the verification link.",
+      });
+      console.log("Verification info (dev only):", data.debug);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to send verification email",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Initialize form data with user data
   useEffect(() => {
     if (user) {
@@ -419,14 +441,44 @@ const Profile = () => {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={profile.email}
-                              onChange={(e) =>
-                                setProfile({ ...profile, email: e.target.value })
-                              }
-                            />
+                            <div className="flex flex-col space-y-2">
+                              <div className="flex space-x-2">
+                                <Input
+                                  id="email"
+                                  type="email"
+                                  value={profile.email}
+                                  onChange={(e) =>
+                                    setProfile({ ...profile, email: e.target.value })
+                                  }
+                                  className="flex-1"
+                                />
+                                {user.isEmailVerified ? (
+                                  <div className="flex items-center px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-md">
+                                    <Check className="h-4 w-4 mr-1" />
+                                    <span className="text-sm">Verified</span>
+                                  </div>
+                                ) : (
+                                  <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    className="border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                                    onClick={() => resendVerificationMutation.mutate()}
+                                    disabled={resendVerificationMutation.isPending}
+                                  >
+                                    {resendVerificationMutation.isPending ? (
+                                      <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sending...</>
+                                    ) : (
+                                      <>Verify Email</>
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
+                              {!user.isEmailVerified && (
+                                <p className="text-sm text-amber-600">
+                                  Your email is not verified. Please check your inbox or click the button to resend verification email.
+                                </p>
+                              )}
+                            </div>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="bio">Bio</Label>

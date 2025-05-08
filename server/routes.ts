@@ -18,6 +18,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { hashPassword, comparePasswords } = await import('./auth');
   // Sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
+  
+  // Email verification routes
+  app.get("/api/verify-email", async (req, res) => {
+    try {
+      const token = req.query.token as string;
+      if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+      }
+      
+      const user = await storage.verifyEmail(token);
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired verification token" });
+      }
+      
+      return res.json({ message: "Email verified successfully" });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Error verifying email: " + error.message });
+    }
+  });
+  
+  app.post("/api/resend-verification", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      const result = await storage.resendVerificationEmail(userId);
+      
+      if (!result) {
+        return res.status(400).json({ message: "Failed to generate verification token" });
+      }
+      
+      // In a real application, you would send an email with a link containing the token
+      // For development, we'll just return the token directly in the response
+      const verificationUrl = `${req.protocol}://${req.get('host')}/api/verify-email?token=${result.token}`;
+      
+      return res.json({ 
+        message: "Verification email resent successfully",
+        // Only include these details in development
+        debug: { 
+          token: result.token,
+          url: verificationUrl 
+        }
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Error resending verification email: " + error.message });
+    }
+  });
 
   // Platform routes
   app.get("/api/platforms", async (req, res) => {

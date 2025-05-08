@@ -16,6 +16,10 @@ export const users = pgTable("users", {
   securitySettings: text("security_settings"),
   notificationPreferences: text("notification_preferences"),
   billingInfo: text("billing_info"),
+  // Email verification fields
+  isEmailVerified: boolean("is_email_verified").default(false).notNull(),
+  verificationToken: text("verification_token"),
+  verificationTokenExpiry: timestamp("verification_token_expiry"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

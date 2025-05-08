@@ -4,6 +4,7 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import crypto from "crypto";
 
 // Session store setup
 const PostgresSessionStore = connectPg(session);
@@ -13,10 +14,16 @@ export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, data: Partial<User>): Promise<User | undefined>;
   updateStripeCustomerId(id: number, customerId: string): Promise<User | undefined>;
   updateUserStripeInfo(id: number, data: { customerId: string, subscriptionId: string }): Promise<User | undefined>;
+  
+  // Email verification operations
+  setVerificationToken(userId: number, token: string, expiryHours?: number): Promise<User | undefined>;
+  verifyEmail(token: string): Promise<User | undefined>;
+  resendVerificationEmail(userId: number): Promise<{ user: User, token: string } | undefined>;
   
   // Subscription plan operations
   getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
@@ -162,10 +169,67 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
 
   async createUser(user: InsertUser): Promise<User> {
     const [newUser] = await db.insert(users).values(user).returning();
     return newUser;
+  }
+  
+  // Email verification methods
+  async setVerificationToken(userId: number, token: string, expiryHours: number = 24): Promise<User | undefined> {
+    const expiry = new Date();
+    expiry.setHours(expiry.getHours() + expiryHours);
+    
+    return this.updateUser(userId, {
+      verificationToken: token,
+      verificationTokenExpiry: expiry
+    });
+  }
+  
+  async verifyEmail(token: string): Promise<User | undefined> {
+    // Find user with this token
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.verificationToken, token));
+    
+    if (!user) {
+      return undefined;
+    }
+    
+    // Check if token is expired
+    if (user.verificationTokenExpiry && new Date(user.verificationTokenExpiry) < new Date()) {
+      return undefined;
+    }
+    
+    // Update user to mark email as verified and clear token
+    return this.updateUser(user.id, {
+      isEmailVerified: true,
+      verificationToken: null,
+      verificationTokenExpiry: null
+    });
+  }
+  
+  async resendVerificationEmail(userId: number): Promise<{ user: User, token: string } | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      return undefined;
+    }
+    
+    // Generate a new token (we'll do this in the routes.ts file)
+    const token = crypto.randomBytes(32).toString('hex');
+    
+    // Update user with new token
+    const updatedUser = await this.setVerificationToken(userId, token);
+    if (!updatedUser) {
+      return undefined;
+    }
+    
+    return { user: updatedUser, token };
   }
 
   async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
