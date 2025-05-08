@@ -692,6 +692,7 @@ const Billing = () => {
             // Handle form submission
             const handleSubmit = (e: React.FormEvent) => {
               e.preventDefault();
+              console.log("Submitting form with data:", formState);
               updateBillingInfoMutation.mutate(formState);
             };
             
@@ -706,11 +707,12 @@ const Billing = () => {
               }));
             };
             
-            // Handle select changes
+            // Handle select changes for country field
             const handleSelectChange = (value: string) => {
+              console.log("Country selected:", value, "Name:", getName(value));
               setFormState(prev => ({
                 ...prev,
-                country: value,
+                country: value, // Store the country code, not the name
               }));
             };
             

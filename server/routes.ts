@@ -999,6 +999,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = billingInfoSchema.parse(req.body);
       
+      console.log("Received billing info update:", validatedData);
+      
       // Store billing info as JSON string
       const updatedUser = await storage.updateUser(req.user.id, {
         billingInfo: JSON.stringify(validatedData)
