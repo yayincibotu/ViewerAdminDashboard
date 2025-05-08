@@ -211,12 +211,7 @@ const Billing = () => {
     enabled: !!user
   });
   
-  // Debug: log billing info to console
-  useEffect(() => {
-    if (billingInfo) {
-      console.log('Billing info loaded:', billingInfo);
-    }
-  }, [billingInfo]);
+  // Debug log removed for production
   
   // Fetch real payment methods from the API
   const { data: paymentMethods = [], isLoading: paymentMethodsLoading } = useQuery<any[]>({
@@ -346,11 +341,13 @@ const Billing = () => {
         <Header />
         <div className="container mx-auto py-6 px-4">
           <h1 className="text-2xl font-bold mb-6">Billing & Payments</h1>
-          {/* Debug info */}
-          <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
-            <p>Debug - Raw billing info:</p>
-            <pre className="overflow-auto max-h-20">{JSON.stringify(billingInfo, null, 2)}</pre>
-          </div>
+          {/* Debug info - Hidden in production */}
+          {false && (
+            <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
+              <p>Debug - Raw billing info:</p>
+              <pre className="overflow-auto max-h-20">{JSON.stringify(billingInfo, null, 2)}</pre>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Billing Info Card */}
@@ -743,16 +740,13 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
   
   // Initial setup of states and cities based on country and state
   useEffect(() => {
-    console.log("Initial form data:", formData);
     if (formData.country) {
       const countryStates = State.getStatesOfCountry(formData.country);
       setStates(countryStates);
-      console.log(`Found ${countryStates.length} states for country ${formData.country}`);
       
       if (formData.state && countryStates.length > 0) {
         const stateCities = City.getCitiesOfState(formData.country, formData.state);
         setCities(stateCities);
-        console.log(`Found ${stateCities.length} cities for state ${formData.state}`);
       }
     }
   }, []);
@@ -763,7 +757,6 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
     setIsLoading(true);
     
     try {
-      console.log("Submitting billing info:", formData);
       const response = await apiRequest('POST', '/api/billing-info', formData);
       const data = await response.json();
       
@@ -774,7 +767,6 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
       
       onSuccess();
     } catch (error: any) {
-      console.error("Error updating billing info:", error);
       toast({
         title: 'Error updating billing information',
         description: error.message || 'An unknown error occurred',
