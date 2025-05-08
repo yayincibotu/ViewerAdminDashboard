@@ -951,11 +951,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const invoices = await stripe.invoices.list({
         customer: user.stripeCustomerId,
         limit: 10,
+        expand: ['data.charge', 'data.payment_intent']
       });
       
       res.json(invoices.data);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching billing history: " + error.message });
+    }
+  });
+  
+  // Sync customer billing details with Stripe
+  app.post("/api/sync-billing-with-stripe", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const user = req.user;
+      
+      if (!user.stripeCustomerId) {
+        return res.status(404).json({ message: "No Stripe customer found" });
+      }
+      
+      // Get current billing info
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser || !currentUser.billingInfo) {
+        return res.status(400).json({ message: "No billing information to sync" });
+      }
+      
+      const billingInfo = JSON.parse(currentUser.billingInfo);
+      
+      // Update customer in Stripe
+      await stripe.customers.update(user.stripeCustomerId, {
+        name: billingInfo.fullName || user.username,
+        email: billingInfo.email || user.email,
+        address: billingInfo.address1 ? {
+          line1: billingInfo.address1,
+          line2: billingInfo.address2 || '',
+          city: billingInfo.city || '',
+          state: billingInfo.state || '',
+          postal_code: billingInfo.zip || '',
+          country: billingInfo.country || '',
+        } : undefined,
+        metadata: {
+          isCompany: billingInfo.isCompany ? 'true' : 'false',
+          companyName: billingInfo.companyName || '',
+          companyRegistrationNumber: billingInfo.companyRegistrationNumber || '',
+          companyVatNumber: billingInfo.companyVatNumber || '',
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: "Billing information synchronized with Stripe"
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error syncing billing data with Stripe: " + error.message });
+    }
+  });
+  
+  // Endpoint to generate a new invoice PDF
+  app.get("/api/invoice/:invoiceId/pdf", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const { invoiceId } = req.params;
+      const user = req.user;
+      
+      // Verify the invoice belongs to this user
+      const invoice = await stripe.invoices.retrieve(invoiceId);
+      if (invoice.customer !== user.stripeCustomerId) {
+        return res.status(403).json({ message: "Access denied to this invoice" });
+      }
+      
+      // Get PDF
+      const invoicePdf = await stripe.invoices.retrievePdf(invoiceId);
+      
+      // Set appropriate headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoiceId}.pdf"`);
+      
+      // Stream the PDF to the response
+      invoicePdf.pipe(res);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error generating invoice PDF: " + error.message });
+    }
+  });
+  
+  // Get upcoming invoice
+  app.get("/api/upcoming-invoice", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const user = req.user;
+      
+      if (!user.stripeSubscriptionId) {
+        return res.status(404).json({ message: "No active subscription found" });
+      }
+      
+      if (!user.stripeCustomerId) {
+        return res.status(404).json({ message: "No customer ID found" });
+      }
+      
+      const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+        customer: user.stripeCustomerId,
+        subscription: user.stripeSubscriptionId,
+      });
+      
+      res.json(upcomingInvoice);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error retrieving upcoming invoice: " + error.message });
+    }
+  });
+  
+  // Get invoice details by ID
+  app.get("/api/billing-history/:invoiceId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured." });
+    }
+    
+    try {
+      const user = req.user;
+      const { invoiceId } = req.params;
+      
+      if (!user.stripeCustomerId) {
+        return res.status(404).json({ message: "No billing account found." });
+      }
+      
+      // Fetch the invoice and verify it belongs to this customer
+      const invoice = await stripe.invoices.retrieve(invoiceId, {
+        expand: ['charge', 'payment_intent', 'customer', 'subscription']
+      });
+      
+      if (invoice.customer.id !== user.stripeCustomerId) {
+        return res.status(403).json({ message: "Access denied to this invoice." });
+      }
+      
+      res.json(invoice);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching invoice details: " + error.message });
     }
   });
 

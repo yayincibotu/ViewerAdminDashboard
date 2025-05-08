@@ -35,7 +35,12 @@ import {
   Trash2,
   Star,
   Building2,
-  SwitchCamera
+  SwitchCamera,
+  Eye,
+  FileText,
+  Receipt,
+  CreditCard as CreditCardIcon,
+  ExternalLink
 } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -193,6 +198,8 @@ const Billing = () => {
   const { toast } = useToast();
   const [showAddCardDialog, setShowAddCardDialog] = useState(false);
   const [showEditBillingDialog, setShowEditBillingDialog] = useState(false);
+  const [showInvoiceDetailsDialog, setShowInvoiceDetailsDialog] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   
   // Define billing info type for TypeScript
   interface BillingInfoType {
@@ -670,14 +677,48 @@ const Billing = () => {
                                   {getInvoiceStatusBadge(invoice.status || "unknown")}
                                 </td>
                                 <td className="py-3 px-4 text-right">
-                                  {invoice.hosted_invoice_url && (
-                                    <Button size="sm" variant="ghost" asChild>
-                                      <a href={invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer">
-                                        <Download className="h-4 w-4 mr-1" />
-                                        PDF
-                                      </a>
+                                  <div className="flex justify-end gap-2">
+                                    {invoice.hosted_invoice_url && (
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        onClick={() => window.open(invoice.hosted_invoice_url, '_blank')}
+                                        title="View invoice in Stripe"
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => window.open(`/api/invoice/${invoice.id}/pdf`, '_blank')}
+                                      title="Download invoice PDF"
+                                    >
+                                      <Download className="h-4 w-4" />
                                     </Button>
-                                  )}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        apiRequest('GET', `/api/billing-history/${invoice.id}`)
+                                          .then(res => res.json())
+                                          .then(data => {
+                                            setSelectedInvoice(data);
+                                            setShowInvoiceDetailsDialog(true);
+                                          })
+                                          .catch(error => {
+                                            toast({
+                                              title: "Error fetching invoice details",
+                                              description: error.message,
+                                              variant: "destructive"
+                                            });
+                                          });
+                                      }}
+                                    >
+                                      <Info className="h-4 w-4 mr-2" />
+                                      Details
+                                    </Button>
+                                  </div>
                                 </td>
                               </tr>
                             );
