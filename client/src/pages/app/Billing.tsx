@@ -784,8 +784,13 @@ function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingF
     setIsLoading(true);
     
     try {
+      // Log the data being sent to verify company info is included
+      console.log("Sending form data to server:", formData);
+      
       const response = await apiRequest('POST', '/api/billing-info', formData);
       const data = await response.json();
+      
+      console.log("Server response:", data);
       
       toast({
         title: 'Billing information updated',

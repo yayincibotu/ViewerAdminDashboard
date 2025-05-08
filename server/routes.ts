@@ -1011,9 +1011,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyVatNumber: z.string().optional(),
       });
 
+      console.log("Raw billing info received:", req.body);
       const validatedData = billingInfoSchema.parse(req.body);
       
-      console.log("Received billing info update:", validatedData);
+      console.log("Validated billing info update:", validatedData);
       
       // Get current user data before update
       const currentUser = await storage.getUser(req.user.id);
