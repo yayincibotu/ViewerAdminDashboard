@@ -58,9 +58,9 @@ const EmailVerificationTopbar = () => {
               <AlertTriangle className="h-5 w-5 text-red-500" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-md">DİKKAT: E-posta adresiniz doğrulanmamış!</h3>
+              <h3 className="font-bold text-white text-md">ATTENTION: Your email is not verified!</h3>
               <AlertDescription className="text-white text-sm">
-                Hesabınızın güvenliği ve önemli bildirimleri alabilmeniz için e-postanızı doğrulayın.
+                Verify your email address to ensure account security and receive important notifications.
               </AlertDescription>
             </div>
           </div>
@@ -74,12 +74,12 @@ const EmailVerificationTopbar = () => {
             >
               {resendVerificationMutation.isPending ? (
                 <>
-                  <span className="animate-pulse">Gönderiliyor...</span>
+                  <span className="animate-pulse">Sending...</span>
                 </>
               ) : (
                 <>
                   <Mail className="h-4 w-4 mr-1" />
-                  Doğrulama Bağlantısı Gönder
+                  Send Verification Link
                 </>
               )}
             </Button>
@@ -90,7 +90,7 @@ const EmailVerificationTopbar = () => {
               onClick={() => setDismissed(true)}
             >
               <X className="h-4 w-4" />
-              <span className="sr-only">Kapat</span>
+              <span className="sr-only">Dismiss</span>
             </Button>
           </div>
         </div>
