@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import Stripe from "stripe";
 import { z } from "zod";
+import { mailService } from "./mail";
+import crypto from "crypto";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('Missing STRIPE_SECRET_KEY. Stripe functionality will not work properly.');
@@ -32,6 +34,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid or expired verification token" });
       }
       
+      // Send welcome email after successful verification
+      if (user.email) {
+        await mailService.sendWelcomeEmail(user.email, user.username);
+      }
+      
       return res.json({ message: "Email verified successfully" });
     } catch (error: any) {
       return res.status(500).json({ message: "Error verifying email: " + error.message });
@@ -51,12 +58,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Failed to generate verification token" });
       }
       
-      // In a real application, you would send an email with a link containing the token
-      // For development, we'll just return the token directly in the response
-      const verificationUrl = `${req.protocol}://${req.get('host')}/api/verify-email?token=${result.token}`;
+      // Generate verification URL and send email
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const verificationUrl = `${baseUrl}/verify-email?token=${result.token}`;
+      
+      // Send verification email
+      let emailSent = false;
+      if (result.user.email) {
+        emailSent = await mailService.sendVerificationEmail(
+          result.user.email,
+          result.user.username,
+          result.token
+        );
+      }
       
       return res.json({ 
-        message: "Verification email resent successfully",
+        message: emailSent 
+          ? "Verification email sent successfully" 
+          : "Verification token generated, but email could not be sent",
+        success: emailSent,
         // Only include these details in development
         debug: { 
           token: result.token,

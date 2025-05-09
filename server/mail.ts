@@ -123,7 +123,7 @@ export class MailjetService implements MailService {
         ]
       });
       
-      return response.status === 200;
+      return true; // If we got here, the email was sent successfully
     } catch (error) {
       console.error("Error sending verification email:", error);
       return false;
@@ -150,7 +150,7 @@ export class MailjetService implements MailService {
         ]
       });
       
-      return response.status === 200;
+      return true; // If we got here, the email was sent successfully
     } catch (error) {
       console.error("Error sending welcome email:", error);
       return false;

@@ -6,6 +6,8 @@ import bcrypt from "bcrypt";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { z } from "zod";
+import { mailService } from "./mail";
+import crypto from "crypto";
 
 declare global {
   namespace Express {
