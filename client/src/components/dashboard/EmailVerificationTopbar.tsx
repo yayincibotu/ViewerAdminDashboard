@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { AlertCircle, Mail, AlertTriangle, X, Bell } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertCircle, Mail, AlertTriangle, X, Bell, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/use-auth';
@@ -7,11 +7,52 @@ import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
+// Constants for timeout mechanism
+const COOLDOWN_PERIOD_MS = 60000; // 1 minute cooldown
+const STORAGE_KEY = 'email_verification_last_sent';
+
 const EmailVerificationTopbar = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [dismissed, setDismissed] = React.useState(false);
-  const [isAnimating, setIsAnimating] = React.useState(true);
+  const [dismissed, setDismissed] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(true);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState<number>(0);
+
+  // Check if user is in cooldown period
+  useEffect(() => {
+    const checkCooldown = () => {
+      const lastSentTime = localStorage.getItem(STORAGE_KEY);
+      if (lastSentTime) {
+        const elapsed = Date.now() - parseInt(lastSentTime, 10);
+        if (elapsed < COOLDOWN_PERIOD_MS) {
+          const remaining = Math.ceil((COOLDOWN_PERIOD_MS - elapsed) / 1000);
+          setTimeRemaining(remaining);
+          setCountdown(remaining);
+        } else {
+          setTimeRemaining(null);
+          setCountdown(0);
+        }
+      }
+    };
+
+    checkCooldown();
+    const interval = setInterval(checkCooldown, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Countdown timer for cooldown period
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    } else if (countdown === 0 && timeRemaining !== null) {
+      setTimeRemaining(null);
+    }
+  }, [countdown, timeRemaining]);
 
   // Animation effect
   useEffect(() => {
@@ -30,6 +71,11 @@ const EmailVerificationTopbar = () => {
   // Email verification mutation
   const resendVerificationMutation = useMutation({
     mutationFn: async () => {
+      // Set the last sent timestamp
+      localStorage.setItem(STORAGE_KEY, Date.now().toString());
+      setTimeRemaining(COOLDOWN_PERIOD_MS / 1000);
+      setCountdown(COOLDOWN_PERIOD_MS / 1000);
+      
       const res = await apiRequest("POST", "/api/resend-verification");
       return res.json();
     },
@@ -41,6 +87,11 @@ const EmailVerificationTopbar = () => {
       });
     },
     onError: (error: Error) => {
+      // If there's an error, reset the cooldown
+      localStorage.removeItem(STORAGE_KEY);
+      setTimeRemaining(null);
+      setCountdown(0);
+      
       toast({
         title: "Failed to send verification email",
         description: error.message,
@@ -70,11 +121,16 @@ const EmailVerificationTopbar = () => {
               size="sm"
               className="h-9 bg-white text-red-600 hover:bg-gray-100 hover:text-red-700 font-bold shadow-sm"
               onClick={() => resendVerificationMutation.mutate()}
-              disabled={resendVerificationMutation.isPending}
+              disabled={resendVerificationMutation.isPending || timeRemaining !== null}
             >
               {resendVerificationMutation.isPending ? (
                 <>
                   <span className="animate-pulse">Sending...</span>
+                </>
+              ) : timeRemaining !== null ? (
+                <>
+                  <Clock className="h-4 w-4 mr-1" />
+                  Wait {countdown}s
                 </>
               ) : (
                 <>
