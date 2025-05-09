@@ -7,9 +7,13 @@ import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
-// Constants for timeout mechanism
-const COOLDOWN_PERIOD_MS = 60000; // 1 minute cooldown
-const STORAGE_KEY = 'email_verification_last_sent';
+// Constants for timeout mechanism - match server-side values
+const EMAIL_VERIFICATION = {
+  COOLDOWN_PERIOD_MS: 60000, // 1 minute cooldown
+  RESET_PERIOD_MS: 3600000,  // 1 hour reset period
+  MAX_ATTEMPTS: 5,           // 5 attempts maximum
+  STORAGE_KEY: 'email_verification_last_sent'
+};
 
 const EmailVerificationTopbar = () => {
   const { user } = useAuth();
@@ -23,18 +27,18 @@ const EmailVerificationTopbar = () => {
   useEffect(() => {
     const checkCooldown = () => {
       // Check client-side timestamp
-      const lastSentTime = localStorage.getItem(STORAGE_KEY);
+      const lastSentTime = localStorage.getItem(EMAIL_VERIFICATION.STORAGE_KEY);
       
       if (lastSentTime) {
         const elapsed = Date.now() - parseInt(lastSentTime, 10);
-        if (elapsed < COOLDOWN_PERIOD_MS) {
-          const remaining = Math.ceil((COOLDOWN_PERIOD_MS - elapsed) / 1000);
+        if (elapsed < EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS) {
+          const remaining = Math.ceil((EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - elapsed) / 1000);
           setTimeRemaining(remaining);
           setCountdown(remaining);
         } else {
           // Also check if there's a server restriction before removing local cooldown
           // Only reset the client state if both client and server cooldowns are expired
-          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(EMAIL_VERIFICATION.STORAGE_KEY);
           setTimeRemaining(null);
           setCountdown(0);
         }
@@ -61,8 +65,8 @@ const EmailVerificationTopbar = () => {
                 setCountdown(data.remainingSeconds);
                 // Update localStorage to match server state
                 localStorage.setItem(
-                  STORAGE_KEY, 
-                  (Date.now() - (COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString()
+                  EMAIL_VERIFICATION.STORAGE_KEY, 
+                  (Date.now() - (EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString()
                 );
               }
             });
@@ -106,9 +110,9 @@ const EmailVerificationTopbar = () => {
   const resendVerificationMutation = useMutation({
     mutationFn: async () => {
       // Set the last sent timestamp
-      localStorage.setItem(STORAGE_KEY, Date.now().toString());
-      setTimeRemaining(COOLDOWN_PERIOD_MS / 1000);
-      setCountdown(COOLDOWN_PERIOD_MS / 1000);
+      localStorage.setItem(EMAIL_VERIFICATION.STORAGE_KEY, Date.now().toString());
+      setTimeRemaining(EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS / 1000);
+      setCountdown(EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS / 1000);
       
       const res = await apiRequest("POST", "/api/resend-verification");
       return res.json();
@@ -143,7 +147,8 @@ const EmailVerificationTopbar = () => {
             // Set the countdown based on server response
             setTimeRemaining(data.remainingSeconds);
             setCountdown(data.remainingSeconds);
-            localStorage.setItem(STORAGE_KEY, (Date.now() - (COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString());
+            localStorage.setItem(EMAIL_VERIFICATION.STORAGE_KEY, 
+              (Date.now() - (EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString());
             
             toast({
               title: "Rate limited",
@@ -170,7 +175,7 @@ const EmailVerificationTopbar = () => {
       }
       
       // Default error handling
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(EMAIL_VERIFICATION.STORAGE_KEY);
       setTimeRemaining(null);
       setCountdown(0);
       
