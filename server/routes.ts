@@ -894,6 +894,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching users: " + error.message });
     }
   });
+  
+  // Admin user creation endpoint
+  app.post("/api/admin/users", isAdmin, async (req, res) => {
+    try {
+      // Validate the user data
+      const userSchema = z.object({
+        username: z.string().min(3),
+        email: z.string().email(),
+        password: z.string().min(8),
+        role: z.enum(["user", "admin"]).default("user")
+      });
+      
+      const validatedData = userSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(validatedData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      const existingEmail = await storage.getUserByEmail(validatedData.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      
+      // Hash the password
+      const hashedPassword = await hashPassword(validatedData.password);
+      
+      // Create the user with admin-specified role
+      const user = await storage.createUser({
+        ...validatedData,
+        password: hashedPassword,
+        isEmailVerified: true // Admins create pre-verified users
+      });
+      
+      // Remove sensitive data before sending response
+      const { password, ...userWithoutPassword } = user;
+      
+      res.status(201).json(userWithoutPassword);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors.map(e => ({
+            path: e.path.join("."),
+            message: e.message
+          }))
+        });
+      }
+      res.status(500).json({ message: "Error creating user: " + error.message });
+    }
+  });
 
   app.get("/api/admin/users/:id", isAdmin, async (req, res) => {
     try {

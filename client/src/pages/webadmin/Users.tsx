@@ -48,6 +48,54 @@ const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> =
     }
   });
   
+  // Toggle admin role mutation
+  const toggleAdminMutation = useMutation({
+    mutationFn: async () => {
+      const newRole = user.role === 'admin' ? 'user' : 'admin';
+      const res = await apiRequest('PUT', `/api/admin/users/${user.id}`, { role: newRole });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      const actionType = user.role === 'admin' ? 'removed from' : 'added to';
+      toast({
+        title: 'Admin role updated',
+        description: `Admin privileges ${actionType} ${user.username}.`,
+      });
+      setShowActions(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error updating role',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Delete user mutation (not yet implemented in the API)
+  const deleteUserMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('DELETE', `/api/admin/users/${user.id}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: 'User deleted',
+        description: `User ${user.username} has been deleted.`,
+      });
+      setShowActions(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error deleting user',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
   const getUserRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
@@ -205,7 +253,7 @@ const AdminUsers: React.FC = () => {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      const res = await apiRequest('POST', '/api/register', userData);
+      const res = await apiRequest('POST', '/api/admin/users', userData);
       return res.json();
     },
     onSuccess: () => {
@@ -302,7 +350,7 @@ const AdminUsers: React.FC = () => {
   };
   
   // Filter users based on search query and role filter
-  const filteredUsers = users.filter((user: any) => {
+  const filteredUsers = Array.isArray(users) ? users.filter((user: any) => {
     const matchesSearch = searchQuery
       ? user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -311,7 +359,7 @@ const AdminUsers: React.FC = () => {
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     
     return matchesSearch && matchesRole;
-  });
+  }) : [];
   
   return (
     <div className="flex h-screen bg-gray-100">

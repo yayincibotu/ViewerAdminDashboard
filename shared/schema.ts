@@ -28,6 +28,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   email: true,
   role: true,
+  isEmailVerified: true,
 });
 
 // Subscription Plans
