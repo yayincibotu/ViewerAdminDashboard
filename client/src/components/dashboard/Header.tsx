@@ -41,6 +41,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import EmailVerificationTopbar from './EmailVerificationTopbar';
 
 const ListItem = React.forwardRef<
   React.ElementRef<"a">,
@@ -104,6 +105,7 @@ const Header = () => {
 
   return (
     <header className="border-b bg-white sticky top-0 z-50 w-full">
+      <EmailVerificationTopbar />
       <div className="flex h-16 items-center px-4 md:px-6">
         <div className="ml-auto flex items-center space-x-4">
           {!isMobile && (
