@@ -872,39 +872,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin API routes
-  app.get("/api/admin/users", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
+  // Admin middleware to check admin permissions
+  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
-    
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden - Admin access required" });
+    }
+    next();
+  };
+
+  // Admin User Management APIs
+  app.get("/api/admin/users", isAdmin, async (req, res) => {
     try {
-      const users = Array.from(storage.userDb?.values() || []);
+      const users = await db.select().from(users);
       res.json(users);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching users: " + error.message });
     }
   });
 
-  app.get("/api/admin/payments", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    
+  app.get("/api/admin/users/:id", isAdmin, async (req, res) => {
     try {
-      const payments = Array.from(storage.paymentDb?.values() || []);
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Fetch additional user data
+      const userSubscriptions = await storage.getUserSubscriptions(userId);
+      const userPayments = await storage.getUserPayments(userId);
+      
+      // Create comprehensive user profile
+      const userProfile = {
+        ...user,
+        subscriptions: userSubscriptions,
+        payments: userPayments
+      };
+      
+      res.json(userProfile);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching user details: " + error.message });
+    }
+  });
+
+  app.put("/api/admin/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Update user data with validation
+      const updateSchema = z.object({
+        username: z.string().optional(),
+        email: z.string().email().optional(),
+        role: z.enum(["user", "admin"]).optional(),
+        isEmailVerified: z.boolean().optional()
+      });
+      
+      const validatedData = updateSchema.parse(req.body);
+      const updatedUser = await storage.updateUser(userId, validatedData);
+      
+      res.json(updatedUser);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors.map(e => ({
+            path: e.path.join("."),
+            message: e.message
+          })) 
+        });
+      }
+      res.status(500).json({ message: "Error updating user: " + error.message });
+    }
+  });
+
+  // Manual email verification by admin
+  app.post("/api/admin/users/:id/verify-email", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const updatedUser = await storage.updateUser(userId, { isEmailVerified: true });
+      res.json({ 
+        message: "User email manually verified by admin", 
+        user: updatedUser 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error verifying user email: " + error.message });
+    }
+  });
+
+  // Reset user password (admin function)
+  app.post("/api/admin/users/:id/reset-password", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Validate new password
+      const resetSchema = z.object({
+        newPassword: z.string().min(8)
+      });
+      
+      const { newPassword } = resetSchema.parse(req.body);
+      const hashedPassword = await hashPassword(newPassword);
+      
+      const updatedUser = await storage.updateUser(userId, { password: hashedPassword });
+      res.json({ 
+        message: "User password reset successfully",
+        success: true
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors.map(e => ({
+            path: e.path.join("."),
+            message: e.message
+          }))
+        });
+      }
+      res.status(500).json({ message: "Error resetting password: " + error.message });
+    }
+  });
+
+  // Admin Payment APIs
+  app.get("/api/admin/payments", isAdmin, async (req, res) => {
+    try {
+      const payments = await db.select().from(payments);
       res.json(payments);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching payments: " + error.message });
     }
   });
 
-  app.get("/api/admin/subscriptions", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    
+  // Admin Subscription APIs
+  app.get("/api/admin/subscriptions", isAdmin, async (req, res) => {
     try {
-      const subscriptions = Array.from(storage.userSubscriptionDb?.values() || []);
+      const subscriptions = await db.select().from(userSubscriptions);
       res.json(subscriptions);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching subscriptions: " + error.message });

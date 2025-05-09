@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import AdminSidebar from '@/components/dashboard/AdminSidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,11 +12,41 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { MoreVertical, Search, Download, UserPlus, Filter, X, Edit, Trash2, CheckCircle, ShieldAlert, ExternalLink } from 'lucide-react';
+import { 
+  MoreVertical, Search, Download, UserPlus, Filter, X, Edit, Trash2, 
+  CheckCircle, ShieldAlert, ExternalLink, Eye, Loader2, Mail, Key, AlertTriangle 
+} from 'lucide-react';
 import { format } from 'date-fns';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
-const UserRow: React.FC<{ user: any }> = ({ user }) => {
+const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> = ({ user, onManageUser }) => {
   const [showActions, setShowActions] = useState(false);
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  // Email verification mutation
+  const verifyEmailMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/admin/users/${user.id}/verify-email`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: 'Email verified',
+        description: `User email for ${user.username} has been manually verified.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error verifying email',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
   
   const getUserRoleBadge = (role: string) => {
     switch (role) {
@@ -24,6 +55,13 @@ const UserRow: React.FC<{ user: any }> = ({ user }) => {
       default:
         return <Badge className="bg-blue-500 hover:bg-blue-600">User</Badge>;
     }
+  };
+  
+  const getUserVerificationBadge = (isVerified: boolean) => {
+    if (isVerified) {
+      return <Badge className="ml-2 bg-green-500 hover:bg-green-600">Verified</Badge>;
+    }
+    return <Badge className="ml-2 bg-yellow-500 hover:bg-yellow-600">Unverified</Badge>;
   };
   
   return (
@@ -36,18 +74,27 @@ const UserRow: React.FC<{ user: any }> = ({ user }) => {
           <div>
             <p className="font-medium">{user.username}</p>
             <p className="text-sm text-gray-500">{user.email}</p>
+            <div className="mt-1 flex">
+              {getUserRoleBadge(user.role)}
+              {getUserVerificationBadge(user.isEmailVerified)}
+            </div>
           </div>
         </div>
       </TableCell>
-      <TableCell>{getUserRoleBadge(user.role)}</TableCell>
       <TableCell>
         <span className="text-sm">{format(new Date(user.createdAt), 'MMM d, yyyy')}</span>
       </TableCell>
       <TableCell>
-        <span className={`flex h-2.5 w-2.5 rounded-full ${user.stripeCustomerId ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+        <div className="flex items-center">
+          <span className={`h-2.5 w-2.5 rounded-full ${user.stripeCustomerId ? 'bg-green-500' : 'bg-gray-300'} mr-2`}></span>
+          <span className="text-sm">{user.stripeCustomerId ? 'Yes' : 'No'}</span>
+        </div>
       </TableCell>
       <TableCell>
-        <span className={`flex h-2.5 w-2.5 rounded-full ${user.stripeSubscriptionId ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+        <div className="flex items-center">
+          <span className={`h-2.5 w-2.5 rounded-full ${user.stripeSubscriptionId ? 'bg-green-500' : 'bg-gray-300'} mr-2`}></span>
+          <span className="text-sm">{user.stripeSubscriptionId ? 'Active' : 'None'}</span>
+        </div>
       </TableCell>
       <TableCell>
         <div className="relative">
@@ -62,30 +109,59 @@ const UserRow: React.FC<{ user: any }> = ({ user }) => {
                 <button
                   className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   onClick={() => {
-                    // Edit user action
                     setShowActions(false);
+                    navigate(`/webadmin/users/${user.id}`);
                   }}
                 >
-                  <Edit className="mr-2 h-4 w-4" /> Edit User
+                  <Eye className="mr-2 h-4 w-4" /> View Full Details
                 </button>
                 <button
                   className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   onClick={() => {
-                    // View activity action
                     setShowActions(false);
+                    onManageUser(user.id);
                   }}
                 >
-                  <ExternalLink className="mr-2 h-4 w-4" /> View Activity
+                  <Edit className="mr-2 h-4 w-4" /> Manage User
                 </button>
-                <button
-                  className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  onClick={() => {
-                    // Add to admin action
-                    setShowActions(false);
-                  }}
-                >
-                  <ShieldAlert className="mr-2 h-4 w-4" /> Add to Admin
-                </button>
+                {!user.isEmailVerified && (
+                  <button
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => {
+                      setShowActions(false);
+                      verifyEmailMutation.mutate();
+                    }}
+                    disabled={verifyEmailMutation.isPending}
+                  >
+                    {verifyEmailMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Mail className="mr-2 h-4 w-4" />
+                    )}
+                    Verify Email
+                  </button>
+                )}
+                {user.role !== 'admin' ? (
+                  <button
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => {
+                      // Add to admin action
+                      setShowActions(false);
+                    }}
+                  >
+                    <ShieldAlert className="mr-2 h-4 w-4" /> Make Admin
+                  </button>
+                ) : (
+                  <button
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => {
+                      // Remove admin action
+                      setShowActions(false);
+                    }}
+                  >
+                    <ShieldAlert className="mr-2 h-4 w-4" /> Remove Admin
+                  </button>
+                )}
                 <button
                   className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                   onClick={() => {
@@ -108,17 +184,128 @@ const AdminUsers: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState<boolean>(false);
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  // Form state for adding a new user
+  const [newUserData, setNewUserData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    role: 'user',
+    isAdmin: false
+  });
   
   // Fetch users data
-  const { data: users = [] } = useQuery({
+  const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['/api/admin/users'],
   });
+  
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: any) => {
+      const res = await apiRequest('POST', '/api/register', userData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      setIsAddUserDialogOpen(false);
+      setNewUserData({
+        username: '',
+        email: '',
+        password: '',
+        role: 'user',
+        isAdmin: false
+      });
+      toast({
+        title: 'User created',
+        description: 'New user account has been created successfully.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error creating user',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Update user role mutation
+  const updateUserRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: number, role: string }) => {
+      const res = await apiRequest('PUT', `/api/admin/users/${userId}`, { role });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: 'User role updated',
+        description: 'User role has been updated successfully.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error updating user role',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setNewUserData(prev => ({ ...prev, [id]: value }));
+  };
+  
+  // Handle role select change
+  const handleRoleChange = (value: string) => {
+    setNewUserData(prev => ({ 
+      ...prev, 
+      role: value,
+      isAdmin: value === 'admin'
+    }));
+  };
+  
+  // Handle admin switch change
+  const handleAdminSwitchChange = (checked: boolean) => {
+    setNewUserData(prev => ({ 
+      ...prev, 
+      isAdmin: checked,
+      role: checked ? 'admin' : 'user'
+    }));
+  };
+  
+  // Handle form submission
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const userData = {
+      username: newUserData.username,
+      email: newUserData.email,
+      password: newUserData.password,
+      role: newUserData.role
+    };
+    createUserMutation.mutate(userData);
+  };
+  
+  // Handle user management actions
+  const handleManageUser = (userId: number) => {
+    navigate(`/webadmin/users/${userId}`);
+  };
+  
+  // Handle making user an admin
+  const handleToggleAdmin = (userId: number, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    updateUserRoleMutation.mutate({ userId, role: newRole });
+  };
   
   // Filter users based on search query and role filter
   const filteredUsers = users.filter((user: any) => {
     const matchesSearch = searchQuery
-      ? user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      ? user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchQuery.toLowerCase())
       : true;
       
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
@@ -159,54 +346,111 @@ const AdminUsers: React.FC = () => {
                     </DialogDescription>
                   </DialogHeader>
                   
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="name" className="text-right">
-                        Username
-                      </Label>
-                      <Input id="name" className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="email" className="text-right">
-                        Email
-                      </Label>
-                      <Input id="email" type="email" className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="password" className="text-right">
-                        Password
-                      </Label>
-                      <Input id="password" type="password" className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="role" className="text-right">
-                        Role
-                      </Label>
-                      <Select>
-                        <SelectTrigger id="role" className="col-span-3">
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="admin" className="text-right">
-                        Is Admin
-                      </Label>
-                      <div className="col-span-3 flex items-center space-x-2">
-                        <Switch id="admin" />
-                        <Label htmlFor="admin">Grant admin privileges</Label>
+                  <form onSubmit={handleCreateUser}>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="username" className="text-right">
+                          Username
+                        </Label>
+                        <Input 
+                          id="username" 
+                          className="col-span-3" 
+                          value={newUserData.username}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="email" className="text-right">
+                          Email
+                        </Label>
+                        <Input 
+                          id="email" 
+                          type="email" 
+                          className="col-span-3" 
+                          value={newUserData.email}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="password" className="text-right">
+                          Password
+                        </Label>
+                        <div className="col-span-3 space-y-1">
+                          <Input 
+                            id="password" 
+                            type="password" 
+                            className="w-full" 
+                            value={newUserData.password}
+                            onChange={handleInputChange}
+                            required
+                          />
+                          <p className="text-xs text-gray-500">Password must be at least 8 characters long.</p>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="role" className="text-right">
+                          Role
+                        </Label>
+                        <Select 
+                          value={newUserData.role} 
+                          onValueChange={handleRoleChange}
+                        >
+                          <SelectTrigger id="role" className="col-span-3">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="admin" className="text-right">
+                          Is Admin
+                        </Label>
+                        <div className="col-span-3 flex items-center space-x-2">
+                          <Switch 
+                            id="admin" 
+                            checked={newUserData.isAdmin}
+                            onCheckedChange={handleAdminSwitchChange}
+                          />
+                          <Label htmlFor="admin">Grant admin privileges</Label>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddUserDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit">Create User</Button>
-                  </DialogFooter>
+                    
+                    <DialogFooter>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setIsAddUserDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit"
+                        disabled={
+                          createUserMutation.isPending || 
+                          !newUserData.username || 
+                          !newUserData.email || 
+                          newUserData.password.length < 8
+                        }
+                      >
+                        {createUserMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating...
+                          </>
+                        ) : "Create User"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
                 </DialogContent>
               </Dialog>
             </div>
@@ -258,23 +502,39 @@ const AdminUsers: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Payment Setup</TableHead>
-                    <TableHead>Active Subscription</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user: any) => (
-                    <UserRow key={user.id} user={user} />
-                  ))}
-                </TableBody>
-              </Table>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2">Loading users...</span>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-2" />
+                  <p className="text-red-600 font-medium">Error loading users</p>
+                  <p className="text-gray-500 text-sm">Please try refreshing the page.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead>Payment Setup</TableHead>
+                      <TableHead>Active Subscription</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user: any) => (
+                      <UserRow 
+                        key={user.id} 
+                        user={user} 
+                        onManageUser={handleManageUser} 
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
               
               {filteredUsers.length === 0 && (
                 <div className="text-center py-8">
