@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import crypto from "crypto";
+import { mailService } from "./mail";
 
 // Session store setup
 const PostgresSessionStore = connectPg(session);
