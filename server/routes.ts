@@ -1,11 +1,13 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import Stripe from "stripe";
 import { z } from "zod";
 import { mailService } from "./mail";
 import crypto from "crypto";
+import { db } from "./db";
+import { users, userSubscriptions, payments } from "@shared/schema";
 
 // Email verification constants
 const EMAIL_VERIFICATION = {
@@ -886,8 +888,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin User Management APIs
   app.get("/api/admin/users", isAdmin, async (req, res) => {
     try {
-      const users = await db.select().from(users);
-      res.json(users);
+      const allUsers = await db.query.users.findMany();
+      res.json(allUsers);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching users: " + error.message });
     }
@@ -1014,8 +1016,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Payment APIs
   app.get("/api/admin/payments", isAdmin, async (req, res) => {
     try {
-      const payments = await db.select().from(payments);
-      res.json(payments);
+      const allPayments = await db.query.payments.findMany();
+      res.json(allPayments);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching payments: " + error.message });
     }
@@ -1024,8 +1026,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Subscription APIs
   app.get("/api/admin/subscriptions", isAdmin, async (req, res) => {
     try {
-      const subscriptions = await db.select().from(userSubscriptions);
-      res.json(subscriptions);
+      const allSubscriptions = await db.query.userSubscriptions.findMany();
+      res.json(allSubscriptions);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching subscriptions: " + error.message });
     }
