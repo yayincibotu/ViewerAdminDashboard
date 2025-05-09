@@ -117,7 +117,26 @@ export function setupAuth(app: Express) {
         ...validatedData,
         password: await hashPassword(validatedData.password),
         role: "user",
+        isEmailVerified: false, // E-posta doğrulanmadı olarak işaretlenir
       });
+
+      // Generate verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      
+      // Save token to user
+      await storage.setVerificationToken(user.id, verificationToken);
+      
+      // Get base URL from request
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      
+      // Send verification email
+      if (user.email) {
+        await mailService.sendVerificationEmail(
+          user.email,
+          user.username,
+          verificationToken
+        );
+      }
 
       // Remove password from response
       const userResponse = { ...user };
@@ -126,7 +145,10 @@ export function setupAuth(app: Express) {
       // Log the user in
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json(userResponse);
+        res.status(201).json({
+          ...userResponse,
+          needsEmailVerification: true
+        });
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
