@@ -22,7 +22,9 @@ const EmailVerificationTopbar = () => {
   // Check if user is in cooldown period
   useEffect(() => {
     const checkCooldown = () => {
+      // Check client-side timestamp
       const lastSentTime = localStorage.getItem(STORAGE_KEY);
+      
       if (lastSentTime) {
         const elapsed = Date.now() - parseInt(lastSentTime, 10);
         if (elapsed < COOLDOWN_PERIOD_MS) {
@@ -30,6 +32,9 @@ const EmailVerificationTopbar = () => {
           setTimeRemaining(remaining);
           setCountdown(remaining);
         } else {
+          // Also check if there's a server restriction before removing local cooldown
+          // Only reset the client state if both client and server cooldowns are expired
+          localStorage.removeItem(STORAGE_KEY);
           setTimeRemaining(null);
           setCountdown(0);
         }
@@ -40,6 +45,35 @@ const EmailVerificationTopbar = () => {
     const interval = setInterval(checkCooldown, 1000);
     return () => clearInterval(interval);
   }, []);
+  
+  // Check for server rate limits on component mount (reload won't clear server restrictions)
+  useEffect(() => {
+    // Only check if the user is not already in cooldown
+    if (timeRemaining === null && user && !user.isEmailVerified) {
+      // Make a lightweight request to check rate limit status
+      fetch('/api/verification-status')
+        .then(res => {
+          if (res.status === 429) {
+            // We're rate limited by the server
+            return res.json().then(data => {
+              if (data.remainingSeconds) {
+                setTimeRemaining(data.remainingSeconds);
+                setCountdown(data.remainingSeconds);
+                // Update localStorage to match server state
+                localStorage.setItem(
+                  STORAGE_KEY, 
+                  (Date.now() - (COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString()
+                );
+              }
+            });
+          }
+          return null;
+        })
+        .catch(() => {
+          // Ignore errors, default to allowing verification emails
+        });
+    }
+  }, [user, timeRemaining]);
 
   // Countdown timer for cooldown period
   useEffect(() => {

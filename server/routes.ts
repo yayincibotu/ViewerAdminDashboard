@@ -7,6 +7,13 @@ import { z } from "zod";
 import { mailService } from "./mail";
 import crypto from "crypto";
 
+// Email verification constants
+const EMAIL_VERIFICATION = {
+  COOLDOWN_PERIOD_MS: 60000, // 1 minute cooldown between email sends
+  MAX_ATTEMPTS: 5,           // Maximum 5 attempts per hour
+  RESET_PERIOD_MS: 3600000   // 1 hour reset period for attempts counter
+};
+
 // Email verification rate limiting
 interface VerificationRateLimiter {
   [userId: number]: {
@@ -56,6 +63,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Check verification rate limit status without actually sending an email
+  app.get("/api/verification-status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      
+      // Check if user is rate limited
+      const now = Date.now();
+      const userRateLimit = verificationRateLimit[userId];
+      
+      if (userRateLimit) {
+        // Check if we're still in cooldown period
+        if (now - userRateLimit.lastSent < EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS) {
+          const remainingSeconds = Math.ceil((EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - (now - userRateLimit.lastSent)) / 1000);
+          return res.status(429).json({ 
+            message: `Please wait ${remainingSeconds} seconds before requesting another verification email`,
+            remainingSeconds
+          });
+        }
+        
+        // Check for maximum attempts within reset period
+        if (userRateLimit.count >= EMAIL_VERIFICATION.MAX_ATTEMPTS && 
+            now - userRateLimit.lastSent < EMAIL_VERIFICATION.RESET_PERIOD_MS) {
+          const resetTime = new Date(userRateLimit.lastSent + EMAIL_VERIFICATION.RESET_PERIOD_MS);
+          return res.status(429).json({ 
+            message: `Maximum verification attempts reached. Please try again after ${resetTime.toLocaleTimeString()}`,
+            resetTime: resetTime.toISOString()
+          });
+        }
+      }
+      
+      // User is not rate-limited
+      return res.json({ 
+        status: "ok",
+        canSendVerification: true
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Error checking verification status: " + error.message });
+    }
+  });
+  
   app.post("/api/resend-verification", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Authentication required" });
@@ -65,17 +116,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       
       // Rate limiting check
-      const COOLDOWN_PERIOD_MS = 60000; // 1 minute cooldown
-      const MAX_ATTEMPTS = 5; // Maximum 5 attempts per hour
-      const RESET_PERIOD_MS = 3600000; // 1 hour
-      
       const now = Date.now();
       const userRateLimit = verificationRateLimit[userId];
       
       if (userRateLimit) {
         // Check if we're still in cooldown period
-        if (now - userRateLimit.lastSent < COOLDOWN_PERIOD_MS) {
-          const remainingSeconds = Math.ceil((COOLDOWN_PERIOD_MS - (now - userRateLimit.lastSent)) / 1000);
+        if (now - userRateLimit.lastSent < EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS) {
+          const remainingSeconds = Math.ceil((EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - (now - userRateLimit.lastSent)) / 1000);
           return res.status(429).json({ 
             message: `Please wait ${remainingSeconds} seconds before requesting another verification email`,
             remainingSeconds
@@ -83,9 +130,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check for maximum attempts within reset period
-        if (userRateLimit.count >= MAX_ATTEMPTS && 
-            now - userRateLimit.lastSent < RESET_PERIOD_MS) {
-          const resetTime = new Date(userRateLimit.lastSent + RESET_PERIOD_MS);
+        if (userRateLimit.count >= EMAIL_VERIFICATION.MAX_ATTEMPTS && 
+            now - userRateLimit.lastSent < EMAIL_VERIFICATION.RESET_PERIOD_MS) {
+          const resetTime = new Date(userRateLimit.lastSent + EMAIL_VERIFICATION.RESET_PERIOD_MS);
           return res.status(429).json({ 
             message: `Maximum verification attempts reached. Please try again after ${resetTime.toLocaleTimeString()}`,
             resetTime: resetTime.toISOString()
@@ -93,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Update count if we're still in the reset period
-        if (now - userRateLimit.lastSent < RESET_PERIOD_MS) {
+        if (now - userRateLimit.lastSent < EMAIL_VERIFICATION.RESET_PERIOD_MS) {
           userRateLimit.count += 1;
         } else {
           // Reset count if we're outside the reset period
@@ -138,8 +185,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Return the remaining attempts information
         rateLimitInfo: {
           attemptsUsed: verificationRateLimit[userId].count,
-          attemptsMax: MAX_ATTEMPTS,
-          cooldownSeconds: Math.ceil(COOLDOWN_PERIOD_MS / 1000)
+          attemptsMax: EMAIL_VERIFICATION.MAX_ATTEMPTS,
+          cooldownSeconds: Math.ceil(EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS / 1000)
         },
         // Only include these details in development
         debug: { 
