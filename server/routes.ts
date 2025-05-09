@@ -7,6 +7,17 @@ import { z } from "zod";
 import { mailService } from "./mail";
 import crypto from "crypto";
 
+// Email verification rate limiting
+interface VerificationRateLimiter {
+  [userId: number]: {
+    lastSent: number;
+    count: number;
+  }
+}
+
+// Store rate limiting data in memory
+const verificationRateLimit: VerificationRateLimiter = {};
+
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('Missing STRIPE_SECRET_KEY. Stripe functionality will not work properly.');
 }
@@ -52,6 +63,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const userId = req.user.id;
+      
+      // Rate limiting check
+      const COOLDOWN_PERIOD_MS = 60000; // 1 minute cooldown
+      const MAX_ATTEMPTS = 5; // Maximum 5 attempts per hour
+      const RESET_PERIOD_MS = 3600000; // 1 hour
+      
+      const now = Date.now();
+      const userRateLimit = verificationRateLimit[userId];
+      
+      if (userRateLimit) {
+        // Check if we're still in cooldown period
+        if (now - userRateLimit.lastSent < COOLDOWN_PERIOD_MS) {
+          const remainingSeconds = Math.ceil((COOLDOWN_PERIOD_MS - (now - userRateLimit.lastSent)) / 1000);
+          return res.status(429).json({ 
+            message: `Please wait ${remainingSeconds} seconds before requesting another verification email`,
+            remainingSeconds
+          });
+        }
+        
+        // Check for maximum attempts within reset period
+        if (userRateLimit.count >= MAX_ATTEMPTS && 
+            now - userRateLimit.lastSent < RESET_PERIOD_MS) {
+          const resetTime = new Date(userRateLimit.lastSent + RESET_PERIOD_MS);
+          return res.status(429).json({ 
+            message: `Maximum verification attempts reached. Please try again after ${resetTime.toLocaleTimeString()}`,
+            resetTime: resetTime.toISOString()
+          });
+        }
+        
+        // Update count if we're still in the reset period
+        if (now - userRateLimit.lastSent < RESET_PERIOD_MS) {
+          userRateLimit.count += 1;
+        } else {
+          // Reset count if we're outside the reset period
+          userRateLimit.count = 1;
+        }
+        
+        // Update last sent time
+        userRateLimit.lastSent = now;
+      } else {
+        // First attempt for this user
+        verificationRateLimit[userId] = {
+          lastSent: now,
+          count: 1
+        };
+      }
+      
       const result = await storage.resendVerificationEmail(userId);
       
       if (!result) {
@@ -77,6 +135,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? "Verification email sent successfully" 
           : "Verification token generated, but email could not be sent",
         success: emailSent,
+        // Return the remaining attempts information
+        rateLimitInfo: {
+          attemptsUsed: verificationRateLimit[userId].count,
+          attemptsMax: MAX_ATTEMPTS,
+          cooldownSeconds: Math.ceil(COOLDOWN_PERIOD_MS / 1000)
+        },
         // Only include these details in development
         debug: { 
           token: result.token,

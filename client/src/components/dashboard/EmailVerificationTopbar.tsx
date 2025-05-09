@@ -79,15 +79,63 @@ const EmailVerificationTopbar = () => {
       const res = await apiRequest("POST", "/api/resend-verification");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Verification email sent",
         description: "Please check your inbox for the verification link.",
         duration: 6000,
       });
+      
+      // Update the remaining attempts info if provided by the server
+      if (data.rateLimitInfo) {
+        const { attemptsUsed, attemptsMax } = data.rateLimitInfo;
+        if (attemptsUsed && attemptsMax) {
+          toast({
+            title: "Rate limit information",
+            description: `You have used ${attemptsUsed} of ${attemptsMax} verification attempts.`,
+            duration: 4000,
+          });
+        }
+      }
     },
-    onError: (error: Error) => {
-      // If there's an error, reset the cooldown
+    onError: (error: any) => {
+      // Check if this is a rate limit error (HTTP 429)
+      if (error.response?.status === 429) {
+        try {
+          // The error data is already parsed in our enhanced throwIfResNotOk function
+          const data = error.data;
+          
+          if (data.remainingSeconds) {
+            // Set the countdown based on server response
+            setTimeRemaining(data.remainingSeconds);
+            setCountdown(data.remainingSeconds);
+            localStorage.setItem(STORAGE_KEY, (Date.now() - (COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString());
+            
+            toast({
+              title: "Rate limited",
+              description: data.message || `Please wait ${data.remainingSeconds} seconds before trying again.`,
+              variant: "destructive",
+              duration: 6000,
+            });
+          } else if (data.resetTime) {
+            // Handle hourly limit reached
+            const resetTime = new Date(data.resetTime);
+            
+            toast({
+              title: "Verification limit reached",
+              description: data.message || `Maximum attempts reached. Please try again later.`,
+              variant: "destructive",
+              duration: 8000,
+            });
+          }
+          return;
+        } catch (e) {
+          // If we can't parse the response, fall through to default error handling
+          console.error("Error parsing rate limit response:", e);
+        }
+      }
+      
+      // Default error handling
       localStorage.removeItem(STORAGE_KEY);
       setTimeRemaining(null);
       setCountdown(0);
@@ -96,6 +144,7 @@ const EmailVerificationTopbar = () => {
         title: "Failed to send verification email",
         description: error.message,
         variant: "destructive",
+        duration: 5000,
       });
     },
   });
