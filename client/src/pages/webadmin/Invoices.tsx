@@ -407,7 +407,7 @@ const AdminInvoices = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={undefined}>All Statuses</SelectItem>
+                    <SelectItem value="">All Statuses</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="issued">Issued</SelectItem>
                     <SelectItem value="paid">Paid</SelectItem>

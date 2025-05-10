@@ -46,6 +46,13 @@ const AdminSidebar: React.FC = () => {
             </a>
           </Link>
           
+          <Link href="/webadmin/invoices">
+            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/invoices')}`}>
+              <i className="fas fa-file-invoice-dollar mr-3"></i>
+              Invoices
+            </a>
+          </Link>
+          
           <Link href="/webadmin/services">
             <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/services')}`}>
               <i className="fas fa-cogs mr-3"></i>

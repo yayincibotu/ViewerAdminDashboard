@@ -211,7 +211,7 @@ const AdminPayments = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={undefined}>All Statuses</SelectItem>
+                    <SelectItem value="">All Statuses</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
@@ -243,8 +243,17 @@ const AdminPayments = () => {
                       initialFocus
                       mode="range"
                       defaultMonth={dateRange.from}
-                      selected={dateRange}
-                      onSelect={setDateRange}
+                      selected={{
+                        from: dateRange.from,
+                        to: dateRange.to
+                      }}
+                      onSelect={(range) => {
+                        if (range) {
+                          setDateRange({ from: range.from, to: range.to });
+                        } else {
+                          setDateRange({});
+                        }
+                      }}
                       numberOfMonths={2}
                     />
                     <div className="flex items-center justify-between px-4 pb-4">

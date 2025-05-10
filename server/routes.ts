@@ -2193,14 +2193,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activeSubscriptions = await db
         .select()
         .from(userSubscriptions)
-        .where(eq(userSubscriptions.status, 'active'));
+        .where(eq(userSubscriptions.status, 'active'))
+        .execute();
       
       // Calculate subscription metrics
       const subscriptionCount = activeSubscriptions.length;
       
       // Get plans for the active subscriptions
-      const planIdsSet = new Set(activeSubscriptions.map(sub => sub.planId));
-      const planIds = Array.from(planIdsSet);
+      const planIds = Array.from(new Set(activeSubscriptions.map(sub => sub.planId)));
       const plans = await Promise.all(
         planIds.map(id => storage.getSubscriptionPlan(id))
       );

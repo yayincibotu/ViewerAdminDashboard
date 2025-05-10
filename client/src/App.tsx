@@ -9,15 +9,14 @@ import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "@/lib/protected-route";
 import Dashboard from "@/pages/app/Dashboard";
 import Services from "@/pages/app/Services";
-
 import BotControl from "@/pages/app/BotControl";
-
 import Billing from "@/pages/app/Billing";
 import Profile from "@/pages/app/Profile";
 import AdminDashboard from "@/pages/webadmin/Dashboard";
 import AdminUsers from "@/pages/webadmin/Users";
 import UserDetails from "@/pages/webadmin/UserDetails";
 import AdminPayments from "@/pages/webadmin/Payments";
+import AdminInvoices from "@/pages/webadmin/Invoices";
 import AdminServices from "@/pages/webadmin/Services";
 import AdminPlans from "@/pages/webadmin/Plans";
 import Checkout from "@/pages/payment/Checkout";
@@ -52,6 +51,7 @@ function Router() {
           <ProtectedRoute path="/webadmin/users" component={AdminUsers} />
           <ProtectedRoute path="/webadmin/users/:id" component={UserDetails} />
           <ProtectedRoute path="/webadmin/payments" component={AdminPayments} />
+          <ProtectedRoute path="/webadmin/invoices" component={AdminInvoices} />
           <ProtectedRoute path="/webadmin/services" component={AdminServices} />
           <ProtectedRoute path="/webadmin/plans" component={AdminPlans} />
         </>
