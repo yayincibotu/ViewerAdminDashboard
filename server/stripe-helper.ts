@@ -4,7 +4,7 @@
  */
 import Stripe from "stripe";
 import { db } from "./db";
-import { subscription_plans } from "@shared/schema";
+import { subscriptionPlans } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { storage } from "./storage";
 
@@ -54,11 +54,11 @@ export async function syncSubscriptionPlansWithStripe(): Promise<{
   }
 
   try {
-    const subscriptionPlans = await db.select().from(subscription_plans);
+    const plans = await db.select().from(subscriptionPlans);
     
     const results = [];
     
-    for (const plan of subscriptionPlans) {
+    for (const plan of plans) {
       try {
         // Check if a product already exists for this plan
         let product;
@@ -137,9 +137,9 @@ export async function syncSubscriptionPlansWithStripe(): Promise<{
         }
         
         // Update the plan with the Stripe price ID
-        await db.update(subscription_plans)
-          .set({ stripe_price_id: price.id })
-          .where(eq(subscription_plans.id, plan.id));
+        await db.update(subscriptionPlans)
+          .set({ stripePriceId: price.id, stripeProductId: product.id })
+          .where(eq(subscriptionPlans.id, plan.id));
         
         results.push({
           planId: plan.id,

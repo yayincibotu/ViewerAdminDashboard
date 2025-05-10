@@ -8,6 +8,7 @@ import { mailService } from "./mail";
 import crypto from "crypto";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
+import { getStripe, syncSubscriptionPlansWithStripe, isStripeConfigured } from "./stripe-helper";
 import { 
   users, userSubscriptions, payments, 
   invoices, paymentMethods,
@@ -3111,6 +3112,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(config);
     } catch (error: any) {
       res.status(500).json({ message: "Error updating system configuration: " + error.message });
+    }
+  });
+
+  /**
+   * Synchronize subscription plans with Stripe
+   * Creates products and prices in Stripe based on database plans
+   */
+  app.post("/api/admin/stripe/sync-plans", requireAdmin, async (req, res) => {
+    try {
+      // Check if Stripe is configured
+      if (!isStripeConfigured()) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Stripe is not configured. Please check your API keys in the settings." 
+        });
+      }
+      
+      // Synchronize plans with Stripe
+      const result = await syncSubscriptionPlansWithStripe();
+      
+      return res.status(200).json(result);
+    } catch (error: any) {
+      console.error("Error syncing plans with Stripe:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: `Error syncing plans with Stripe: ${error.message}` 
+      });
     }
   });
   
