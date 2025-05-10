@@ -12,7 +12,16 @@ import {
   blogPosts, BlogPost, InsertBlogPost,
   faqCategories, FaqCategory, InsertFaqCategory,
   faqs, Faq, InsertFaq,
-  contactMessages, ContactMessage, InsertContactMessage
+  contactMessages, ContactMessage, InsertContactMessage,
+  // Analytics and system settings tables
+  userAnalytics, UserAnalytics, 
+  subscriptionAnalytics, SubscriptionAnalytics,
+  financialAnalytics, FinancialAnalytics,
+  performanceMetrics, PerformanceMetrics,
+  systemConfigs, SystemConfig, InsertSystemConfig,
+  emailTemplates, EmailTemplate, InsertEmailTemplate,
+  ipRestrictions, IpRestriction, InsertIpRestriction,
+  auditLogs, AuditLog, InsertAuditLog
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
