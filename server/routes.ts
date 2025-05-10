@@ -1064,6 +1064,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error resetting password: " + error.message });
     }
   });
+  
+  // Delete user (admin only)
+  app.delete("/api/admin/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Prevent self-deletion
+      if (req.user.id === userId) {
+        return res.status(403).json({ message: "You cannot delete your own account" });
+      }
+      
+      // Delete user subscriptions and payments first
+      // This would normally be handled by database cascading deletes,
+      // but we're handling it explicitly here for clarity
+      const userSubscriptions = await storage.getUserSubscriptions(userId);
+      for (const subscription of userSubscriptions) {
+        // Cancel subscription in Stripe if applicable
+        if (subscription.stripeSubscriptionId && stripe) {
+          try {
+            await stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
+          } catch (error) {
+            console.error("Error canceling Stripe subscription:", error);
+            // Continue with deletion despite Stripe error
+          }
+        }
+      }
+      
+      // Delete the user
+      const success = await storage.deleteUser(userId);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Error deleting user" });
+      }
+      
+      res.json({ 
+        message: `User ${user.username} deleted successfully`,
+        success: true
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error deleting user: " + error.message });
+    }
+  });
 
   // Admin Payment APIs
   app.get("/api/admin/payments", isAdmin, async (req, res) => {

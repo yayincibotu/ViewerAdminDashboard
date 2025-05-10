@@ -192,32 +192,47 @@ const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> =
                 {user.role !== 'admin' ? (
                   <button
                     className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => {
-                      // Add to admin action
-                      setShowActions(false);
-                    }}
+                    onClick={() => toggleAdminMutation.mutate()}
+                    disabled={toggleAdminMutation.isPending}
                   >
-                    <ShieldAlert className="mr-2 h-4 w-4" /> Make Admin
+                    {toggleAdminMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ShieldAlert className="mr-2 h-4 w-4" />
+                    )}
+                    Make Admin
                   </button>
                 ) : (
                   <button
                     className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => {
-                      // Remove admin action
-                      setShowActions(false);
-                    }}
+                    onClick={() => toggleAdminMutation.mutate()}
+                    disabled={toggleAdminMutation.isPending}
                   >
-                    <ShieldAlert className="mr-2 h-4 w-4" /> Remove Admin
+                    {toggleAdminMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ShieldAlert className="mr-2 h-4 w-4" />
+                    )}
+                    Remove Admin
                   </button>
                 )}
                 <button
                   className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                   onClick={() => {
-                    // Delete action
-                    setShowActions(false);
+                    if (window.confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) {
+                      deleteUserMutation.mutate();
+                    } else {
+                      setShowActions(false);
+                    }
                   }}
+                  disabled={deleteUserMutation.isPending}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                  {deleteUserMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  Delete User
                 </button>
               </div>
             </div>
@@ -296,6 +311,28 @@ const AdminUsers: React.FC = () => {
     onError: (error: any) => {
       toast({
         title: 'Error updating user role',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest('DELETE', `/api/admin/users/${userId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: 'User deleted',
+        description: 'User has been successfully deleted.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error deleting user',
         description: error.message,
         variant: 'destructive',
       });

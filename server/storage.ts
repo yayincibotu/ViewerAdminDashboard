@@ -20,6 +20,7 @@ export interface IStorage {
   updateUser(id: number, data: Partial<User>): Promise<User | undefined>;
   updateStripeCustomerId(id: number, customerId: string): Promise<User | undefined>;
   updateUserStripeInfo(id: number, data: { customerId: string, subscriptionId: string }): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
   
   // Email verification operations
   setVerificationToken(userId: number, token: string, expiryHours?: number): Promise<User | undefined>;
@@ -252,6 +253,26 @@ export class DatabaseStorage implements IStorage {
       stripeCustomerId: data.customerId,
       stripeSubscriptionId: data.subscriptionId
     });
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    try {
+      // First, delete related records
+      
+      // Delete user's payments
+      await db.delete(payments).where(eq(payments.userId, id));
+      
+      // Delete user's subscriptions
+      await db.delete(userSubscriptions).where(eq(userSubscriptions.userId, id));
+      
+      // Finally, delete the user
+      const result = await db.delete(users).where(eq(users.id, id)).returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return false;
+    }
   }
 
   async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
