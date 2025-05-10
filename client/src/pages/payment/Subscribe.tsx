@@ -327,7 +327,12 @@ const SubscribePage: React.FC = () => {
           paymentMethod: paymentMethod
         });
         
-        const data = await response.json();
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to create subscription");
+        }
+        
+        const data = await response.clone().json();
         
         // Handle different payment methods
         if (paymentMethod === 'card' && data.clientSecret) {
@@ -337,11 +342,12 @@ const SubscribePage: React.FC = () => {
           setCryptoData(data);
           setClientSecret("");
         } else {
-          setError("Failed to initialize payment. Please try again.");
+          console.error("Unexpected payment response:", data);
+          setError("Failed to initialize payment. Please check if the plan has proper payment configuration.");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error creating subscription:", err);
-        setError("Failed to initialize payment. Please try again later.");
+        setError(err.message || "Failed to initialize payment. Please try again later.");
       } finally {
         setIsLoading(false);
       }
@@ -430,11 +436,9 @@ const SubscribePage: React.FC = () => {
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-3xl mx-auto">
           <div className="mb-8">
-            <Link href="/#pricing">
-              <a className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Plans
-              </a>
+            <Link href="/#pricing" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Plans
             </Link>
             <h1 className="text-3xl font-bold mt-4">Subscribe to {plan?.name}</h1>
             <p className="text-gray-500">Complete your subscription and start growing your audience</p>
@@ -529,26 +533,32 @@ const SubscribePage: React.FC = () => {
                     </div>
                     <div className="flex justify-between font-medium">
                       <span>Total</span>
-                      <span>${plan?.price}/month</span>
+                      <span>${plan ? plan.price : 0}/month</span>
                     </div>
                   </div>
                   
                   <div className="pt-4 space-y-2">
                     <h4 className="text-sm font-medium">Plan Features:</h4>
                     <ul className="space-y-2">
-                      {plan?.features?.map((feature: string, index: number) => (
+                      {plan && plan.features && Array.isArray(plan.features) && plan.features.map((feature: string, index: number) => (
                         <li key={index} className="flex items-center text-sm">
                           <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
+                      {!plan || !plan.features || !Array.isArray(plan.features) ? (
+                        <li className="flex items-center text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                          <span>Loading features...</span>
+                        </li>
+                      ) : null}
                     </ul>
                   </div>
                 </CardContent>
               </Card>
               
               <div className="mt-6 text-center text-sm text-gray-500">
-                <p>Need help? <Link href="/contact"><a className="text-primary-600 hover:underline">Contact Support</a></Link></p>
+                <p>Need help? <Link href="/contact" className="text-primary-600 hover:underline">Contact Support</Link></p>
               </div>
             </div>
           </div>

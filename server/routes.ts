@@ -688,8 +688,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       
-      if (!plan.stripePriceId) {
-        return res.status(400).json({ message: "Selected plan does not have a valid price ID" });
+      // If payment method is card, we need a valid Stripe price ID
+      if (paymentMethod === 'card' && !plan.stripePriceId) {
+        return res.status(400).json({ message: "Selected plan does not have a valid price ID for credit card payments" });
       }
 
       // Create or use existing Stripe customer
