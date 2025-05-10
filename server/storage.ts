@@ -1,7 +1,16 @@
-import { users, User, InsertUser, SubscriptionPlan, subscriptionPlans, platforms, Platform, InsertPlatform, services, Service, InsertService, payments, Payment, InsertPayment, userSubscriptions, UserSubscription, InsertUserSubscription } from "@shared/schema";
+import { 
+  users, User, InsertUser, 
+  subscriptionPlans, SubscriptionPlan, 
+  userSubscriptions, UserSubscription, InsertUserSubscription,
+  platforms, Platform, InsertPlatform, 
+  services, Service, InsertService, 
+  payments, Payment, InsertPayment,
+  invoices, Invoice, InsertInvoice,
+  paymentMethods, PaymentMethod, InsertPaymentMethod
+} from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, or, gt, gte, lt, lte, desc, asc, isNull, isNotNull } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import crypto from "crypto";
