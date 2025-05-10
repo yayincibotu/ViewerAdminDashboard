@@ -8,10 +8,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LoaderCircle, Save, Trash2, Plus, RefreshCw } from 'lucide-react';
+import { LoaderCircle, Save, Trash2, Plus, CheckCircle, Info, ShieldAlert, MailCheck, Zap } from 'lucide-react';
 import AdminLayout from '@/components/dashboard/AdminLayout';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import type { SystemConfig, EmailTemplate, IpRestriction } from '@shared/schema';
 
@@ -792,43 +794,366 @@ const SettingsPage: React.FC = () => {
   
   return (
     <AdminLayout>
-      <div className="container mx-auto py-8">
+      <div className="p-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">System Settings</h1>
+          <div>
+            <h1 className="text-3xl font-bold">System Settings</h1>
+            <p className="text-muted-foreground mt-1">
+              Configure all aspects of your website and services
+            </p>
+          </div>
           <Button 
             variant="outline" 
             onClick={() => refetch()}
             className="flex items-center gap-2"
             disabled={isLoading}
           >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-            Refresh
+            <CheckCircle size={16} className={isLoading ? 'animate-spin' : ''} />
+            Load Settings
           </Button>
         </div>
         
         <Tabs defaultValue="general" className="w-full">
           <TabsList className="mb-6">
-            {/* System Config tabs */}
-            {categories.map(category => (
-              <TabsTrigger key={category} value={category}>
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </TabsTrigger>
-            ))}
-            <TabsTrigger value="email-templates">Email Templates</TabsTrigger>
-            <TabsTrigger value="ip-restrictions">IP Restrictions</TabsTrigger>
+            <TabsTrigger value="general" className="flex items-center gap-2">
+              <Info size={16} />
+              General
+            </TabsTrigger>
+            <TabsTrigger value="api" className="flex items-center gap-2">
+              <Zap size={16} />
+              API Keys
+            </TabsTrigger>
+            <TabsTrigger value="mail" className="flex items-center gap-2">
+              <MailCheck size={16} />
+              Email Settings
+            </TabsTrigger>
+            <TabsTrigger value="email-templates" className="flex items-center gap-2">
+              <MailCheck size={16} />
+              Email Templates
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <ShieldAlert size={16} />
+              Security
+            </TabsTrigger>
+            <TabsTrigger value="ip-restrictions" className="flex items-center gap-2">
+              <ShieldAlert size={16} />
+              IP Restrictions
+            </TabsTrigger>
           </TabsList>
           
-          {/* System Config tab contents */}
-          {categories.map(category => (
-            <TabsContent key={category} value={category} className="space-y-6">
-              <ConfigTab 
-                category={category}
-                configs={configs}
-                isLoading={isLoading}
-                onSave={handleSaveConfig}
-              />
-            </TabsContent>
-          ))}
+          {/* Pre-defined config tabs */}
+          <TabsContent value="general" className="space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Website Settings</CardTitle>
+                  <CardDescription>Configure your website name, details and branding</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {configs
+                      .filter(config => config.category === 'general' && ['site_name', 'site_description', 'site_url'].includes(config.key))
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))
+                    }
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {configs
+                      .filter(config => config.category === 'general' && ['maintenance_mode', 'allow_registrations'].includes(config.key))
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))
+                    }
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="grid grid-cols-1 gap-6">
+                    {configs
+                      .filter(config => config.category === 'general' && ['tos_content', 'privacy_policy_content'].includes(config.key))
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))
+                    }
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Company Information</CardTitle>
+                  <CardDescription>Set your company details and contact information</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {configs
+                      .filter(config => config.category === 'general' && ['company_name', 'company_address', 'contact_email', 'contact_phone'].includes(config.key))
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))
+                    }
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Social Media</CardTitle>
+                  <CardDescription>Configure your social media profiles</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {configs
+                      .filter(config => config.category === 'general' && ['facebook_url', 'twitter_url', 'instagram_url', 'youtube_url', 'discord_url'].includes(config.key))
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))
+                    }
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="api" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Integration Keys</CardTitle>
+                <CardDescription>API keys for third-party services and platforms</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 gap-6">
+                  {configs
+                    .filter(config => config.category === 'api')
+                    .map(config => (
+                      <ConfigItem 
+                        key={config.id} 
+                        config={config} 
+                        onSave={handleSaveConfig}
+                      />
+                    ))
+                  }
+                  
+                  {configs.filter(config => config.category === 'api').length === 0 && (
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground">No API configuration found. Add keys for Stripe, Twitch, and other integrations.</p>
+                      <Button 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={() => {
+                          // Logic to add a new API config would go here
+                        }}
+                      >
+                        <Plus size={16} className="mr-2" />
+                        Add New API Key
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                <Separator className="my-6" />
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Twitch Integration</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {configs
+                      .filter(config => config.category === 'twitch')
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))
+                    }
+                  </div>
+                </div>
+                
+                <Separator className="my-6" />
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Stripe Integration</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {configs
+                      .filter(config => config.category === 'stripe')
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))
+                    }
+                  </div>
+                </div>
+                
+                <Separator className="my-6" />
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Crypto Payment Integration</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {configs
+                      .filter(config => config.category === 'crypto')
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))
+                    }
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="mail" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Email Service Configuration</CardTitle>
+                <CardDescription>Configure your email service provider settings</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="space-y-2">
+                    <Label>Email Provider</Label>
+                    <Select 
+                      defaultValue={
+                        configs.find(c => c.key === 'mail_provider')?.value || 'mailjet'
+                      }
+                      onValueChange={(value) => {
+                        const config = configs.find(c => c.key === 'mail_provider');
+                        if (config) {
+                          handleSaveConfig(config.id, value);
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mailjet">Mailjet</SelectItem>
+                        <SelectItem value="sendgrid">SendGrid</SelectItem>
+                        <SelectItem value="smtp">Custom SMTP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-6">
+                  {configs
+                    .filter(config => config.category === 'mail')
+                    .map(config => (
+                      <ConfigItem 
+                        key={config.id} 
+                        config={config} 
+                        onSave={handleSaveConfig}
+                      />
+                    ))
+                  }
+                  
+                  {configs.filter(config => config.category === 'mail').length === 0 && (
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground">No mail configuration found. Configure your email service settings.</p>
+                    </div>
+                  )}
+                </div>
+                
+                <Separator className="my-6" />
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Email Sending Options</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {configs
+                      .filter(config => config.category === 'mail_options')
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))
+                    }
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="security" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Security Settings</CardTitle>
+                <CardDescription>Configure security options for your application</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {configs
+                    .filter(config => config.category === 'security')
+                    .map(config => (
+                      <ConfigItem 
+                        key={config.id} 
+                        config={config} 
+                        onSave={handleSaveConfig}
+                      />
+                    ))
+                  }
+                  
+                  {configs.filter(config => config.category === 'security').length === 0 && (
+                    <div className="text-center py-4 col-span-2">
+                      <p className="text-muted-foreground">No security configuration found. Configure security options like password policy, session timeout, etc.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Fallback for other categories */}
+          {categories
+            .filter(category => !['general', 'api', 'mail', 'security', 'twitch', 'stripe', 'crypto', 'mail_options'].includes(category))
+            .map(category => (
+              <TabsContent key={category} value={category} className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{category.charAt(0).toUpperCase() + category.slice(1)} Settings</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ConfigTab 
+                      category={category}
+                      configs={configs}
+                      isLoading={isLoading}
+                      onSave={handleSaveConfig}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ))}
           
           <TabsContent value="email-templates">
             <EmailTemplateManager />
