@@ -238,7 +238,7 @@ const Blog: React.FC = () => {
       tags: post.tags || '',
       metaTitle: post.metaTitle || '',
       metaDescription: post.metaDescription || '',
-      coverImage: post.coverimage || '',
+      coverImage: post.coverImage || '',
       status: post.status as 'draft' | 'published'
     });
     setIsEditModalOpen(true);

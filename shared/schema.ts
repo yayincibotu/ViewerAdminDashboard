@@ -360,6 +360,7 @@ export const blogPosts = pgTable("blog_posts", {
   excerpt: text("excerpt").notNull(),
   content: text("content").notNull(),
   featuredImage: text("featured_image"),
+  coverImage: text("coverimage"),
   authorId: integer("author_id").notNull().references(() => users.id),
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
@@ -376,6 +377,7 @@ export const insertBlogPostSchema = createInsertSchema(blogPosts, {
   excerpt: z.string().min(1),
   content: z.string().min(1),
   featuredImage: z.string().max(255).optional(),
+  coverImage: z.string().max(255).optional(),
   metaTitle: z.string().max(200).optional(),
   metaDescription: z.string().optional(),
   tags: z.string().optional(),
@@ -431,6 +433,7 @@ export const contactMessages = pgTable("contact_messages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  phone: text("phone"),
   subject: text("subject").notNull(),
   message: text("message").notNull(),
   status: text("status").notNull().default("unread"), // unread, read, replied
