@@ -19,6 +19,7 @@ import AdminPayments from "@/pages/webadmin/Payments";
 import AdminInvoices from "@/pages/webadmin/Invoices";
 import AdminServices from "@/pages/webadmin/Services";
 import AdminPlans from "@/pages/webadmin/Plans";
+import AdminPageContents from "@/pages/webadmin/PageContents";
 import Checkout from "@/pages/payment/Checkout";
 import Subscribe from "@/pages/payment/Subscribe";
 import { useAuth } from "@/hooks/use-auth";
@@ -54,6 +55,7 @@ function Router() {
           <ProtectedRoute path="/webadmin/invoices" component={AdminInvoices} />
           <ProtectedRoute path="/webadmin/services" component={AdminServices} />
           <ProtectedRoute path="/webadmin/plans" component={AdminPlans} />
+          <ProtectedRoute path="/webadmin/page-contents" component={AdminPageContents} />
         </>
       )}
       

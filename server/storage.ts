@@ -6,11 +6,17 @@ import {
   services, Service, InsertService, 
   payments, Payment, InsertPayment,
   invoices, Invoice, InsertInvoice,
-  paymentMethods, PaymentMethod, InsertPaymentMethod
+  paymentMethods, PaymentMethod, InsertPaymentMethod,
+  pageContents, PageContent, InsertPageContent,
+  blogCategories, BlogCategory, InsertBlogCategory,
+  blogPosts, BlogPost, InsertBlogPost,
+  faqCategories, FaqCategory, InsertFaqCategory,
+  faqs, Faq, InsertFaq,
+  contactMessages, ContactMessage, InsertContactMessage
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, and, or, gt, gte, lt, lte, desc, asc, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, or, gt, gte, lt, lte, desc, asc, isNull, isNotNull, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import crypto from "crypto";
@@ -93,6 +99,52 @@ export interface IStorage {
   updateChatSettings(id: number, settings: string): Promise<UserSubscription | undefined>;
   updateFollowerSettings(id: number, settings: string): Promise<UserSubscription | undefined>;
   updateGeographicTargeting(id: number, countries: string): Promise<UserSubscription | undefined>;
+
+  // Content Management - Page Content
+  getPageContents(): Promise<PageContent[]>;
+  getPageContentBySlug(slug: string): Promise<PageContent | undefined>;
+  getPageContent(id: number): Promise<PageContent | undefined>;
+  createPageContent(content: InsertPageContent): Promise<PageContent>;
+  updatePageContent(id: number, data: Partial<PageContent>): Promise<PageContent | undefined>;
+  deletePageContent(id: number): Promise<boolean>;
+  
+  // Content Management - Blog
+  getBlogCategories(): Promise<BlogCategory[]>;
+  getBlogCategory(id: number): Promise<BlogCategory | undefined>;
+  createBlogCategory(category: InsertBlogCategory): Promise<BlogCategory>;
+  updateBlogCategory(id: number, data: Partial<BlogCategory>): Promise<BlogCategory | undefined>;
+  deleteBlogCategory(id: number): Promise<boolean>;
+  
+  getBlogPosts(filters?: { categoryId?: number, status?: string, tag?: string }): Promise<BlogPost[]>;
+  getBlogPost(id: number): Promise<BlogPost | undefined>;
+  getBlogPostBySlug(slug: string): Promise<BlogPost | undefined>;
+  createBlogPost(post: InsertBlogPost): Promise<BlogPost>;
+  updateBlogPost(id: number, data: Partial<BlogPost>): Promise<BlogPost | undefined>;
+  publishBlogPost(id: number): Promise<BlogPost | undefined>;
+  unpublishBlogPost(id: number): Promise<BlogPost | undefined>;
+  deleteBlogPost(id: number): Promise<boolean>;
+  
+  // Content Management - FAQ
+  getFaqCategories(): Promise<FaqCategory[]>;
+  getFaqCategory(id: number): Promise<FaqCategory | undefined>;
+  createFaqCategory(category: InsertFaqCategory): Promise<FaqCategory>;
+  updateFaqCategory(id: number, data: Partial<FaqCategory>): Promise<FaqCategory | undefined>;
+  deleteFaqCategory(id: number): Promise<boolean>;
+  
+  getFaqs(categoryId?: number): Promise<Faq[]>;
+  getFaq(id: number): Promise<Faq | undefined>;
+  createFaq(faq: InsertFaq): Promise<Faq>;
+  updateFaq(id: number, data: Partial<Faq>): Promise<Faq | undefined>;
+  toggleFaqStatus(id: number, isActive: boolean): Promise<Faq | undefined>;
+  deleteFaq(id: number): Promise<boolean>;
+  
+  // Content Management - Contact Messages
+  getContactMessages(filters?: { status?: string }): Promise<ContactMessage[]>;
+  getContactMessage(id: number): Promise<ContactMessage | undefined>;
+  createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
+  updateContactMessageStatus(id: number, status: string): Promise<ContactMessage | undefined>;
+  replyToContactMessage(id: number, userId: number): Promise<ContactMessage | undefined>;
+  deleteContactMessage(id: number): Promise<boolean>;
 
   // Session store
   sessionStore: any; // session.Store
@@ -696,6 +748,646 @@ export class DatabaseStorage implements IStorage {
   
   async updateGeographicTargeting(id: number, countries: string): Promise<UserSubscription | undefined> {
     return this.updateUserSubscription(id, { geographicTargeting: countries });
+  }
+
+  // Content Management - Page Content
+  async getPageContents(): Promise<PageContent[]> {
+    try {
+      console.log("[DB] Fetching page contents from PostgreSQL database");
+      const contents = await db
+        .select()
+        .from(pageContents)
+        .orderBy(pageContents.position);
+      
+      return contents;
+    } catch (error) {
+      console.error('[DB] Error fetching page contents:', error);
+      return [];
+    }
+  }
+  
+  async getPageContentBySlug(slug: string): Promise<PageContent | undefined> {
+    try {
+      console.log(`[DB] Fetching page content with slug ${slug} from PostgreSQL database`);
+      const [content] = await db
+        .select()
+        .from(pageContents)
+        .where(eq(pageContents.slug, slug));
+      
+      return content;
+    } catch (error) {
+      console.error(`[DB] Error fetching page content with slug ${slug}:`, error);
+      return undefined;
+    }
+  }
+  
+  async getPageContent(id: number): Promise<PageContent | undefined> {
+    try {
+      console.log(`[DB] Fetching page content with ID ${id} from PostgreSQL database`);
+      const [content] = await db
+        .select()
+        .from(pageContents)
+        .where(eq(pageContents.id, id));
+      
+      return content;
+    } catch (error) {
+      console.error(`[DB] Error fetching page content with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async createPageContent(content: InsertPageContent): Promise<PageContent> {
+    try {
+      console.log("[DB] Creating new page content in PostgreSQL database");
+      const [newContent] = await db
+        .insert(pageContents)
+        .values({
+          ...content,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return newContent;
+    } catch (error) {
+      console.error('[DB] Error creating page content:', error);
+      throw new Error('Failed to create page content');
+    }
+  }
+  
+  async updatePageContent(id: number, data: Partial<PageContent>): Promise<PageContent | undefined> {
+    try {
+      console.log(`[DB] Updating page content with ID ${id} in PostgreSQL database`);
+      const [updatedContent] = await db
+        .update(pageContents)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(pageContents.id, id))
+        .returning();
+      
+      return updatedContent;
+    } catch (error) {
+      console.error(`[DB] Error updating page content with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async deletePageContent(id: number): Promise<boolean> {
+    try {
+      console.log(`[DB] Deleting page content with ID ${id} from PostgreSQL database`);
+      await db
+        .delete(pageContents)
+        .where(eq(pageContents.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting page content with ID ${id}:`, error);
+      return false;
+    }
+  }
+  
+  // Content Management - Blog
+  async getBlogCategories(): Promise<BlogCategory[]> {
+    try {
+      console.log("[DB] Fetching blog categories from PostgreSQL database");
+      const categories = await db
+        .select()
+        .from(blogCategories)
+        .orderBy(blogCategories.position);
+      
+      return categories;
+    } catch (error) {
+      console.error('[DB] Error fetching blog categories:', error);
+      return [];
+    }
+  }
+  
+  async getBlogCategory(id: number): Promise<BlogCategory | undefined> {
+    try {
+      console.log(`[DB] Fetching blog category with ID ${id} from PostgreSQL database`);
+      const [category] = await db
+        .select()
+        .from(blogCategories)
+        .where(eq(blogCategories.id, id));
+      
+      return category;
+    } catch (error) {
+      console.error(`[DB] Error fetching blog category with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async createBlogCategory(category: InsertBlogCategory): Promise<BlogCategory> {
+    try {
+      console.log("[DB] Creating new blog category in PostgreSQL database");
+      const [newCategory] = await db
+        .insert(blogCategories)
+        .values({
+          ...category,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return newCategory;
+    } catch (error) {
+      console.error('[DB] Error creating blog category:', error);
+      throw new Error('Failed to create blog category');
+    }
+  }
+  
+  async updateBlogCategory(id: number, data: Partial<BlogCategory>): Promise<BlogCategory | undefined> {
+    try {
+      console.log(`[DB] Updating blog category with ID ${id} in PostgreSQL database`);
+      const [updatedCategory] = await db
+        .update(blogCategories)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(blogCategories.id, id))
+        .returning();
+      
+      return updatedCategory;
+    } catch (error) {
+      console.error(`[DB] Error updating blog category with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async deleteBlogCategory(id: number): Promise<boolean> {
+    try {
+      console.log(`[DB] Deleting blog category with ID ${id} from PostgreSQL database`);
+      // First check if there are any posts in this category
+      const posts = await db
+        .select()
+        .from(blogPosts)
+        .where(eq(blogPosts.categoryId, id));
+      
+      if (posts.length > 0) {
+        throw new Error('Cannot delete category that contains posts');
+      }
+      
+      await db
+        .delete(blogCategories)
+        .where(eq(blogCategories.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting blog category with ID ${id}:`, error);
+      return false;
+    }
+  }
+  
+  async getBlogPosts(filters?: { categoryId?: number, status?: string, tag?: string }): Promise<BlogPost[]> {
+    try {
+      console.log("[DB] Fetching blog posts from PostgreSQL database");
+      let query = db.select().from(blogPosts);
+      
+      if (filters?.categoryId) {
+        query = query.where(eq(blogPosts.categoryId, filters.categoryId));
+      }
+      
+      if (filters?.status) {
+        query = query.where(eq(blogPosts.status, filters.status));
+      }
+      
+      if (filters?.tag) {
+        query = query.where(sql`${blogPosts.tags} LIKE ${`%${filters.tag}%`}`);
+      }
+      
+      const posts = await query.orderBy(desc(blogPosts.createdAt));
+      return posts;
+    } catch (error) {
+      console.error('[DB] Error fetching blog posts:', error);
+      return [];
+    }
+  }
+  
+  async getBlogPost(id: number): Promise<BlogPost | undefined> {
+    try {
+      console.log(`[DB] Fetching blog post with ID ${id} from PostgreSQL database`);
+      const [post] = await db
+        .select()
+        .from(blogPosts)
+        .where(eq(blogPosts.id, id));
+      
+      return post;
+    } catch (error) {
+      console.error(`[DB] Error fetching blog post with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+    try {
+      console.log(`[DB] Fetching blog post with slug ${slug} from PostgreSQL database`);
+      const [post] = await db
+        .select()
+        .from(blogPosts)
+        .where(eq(blogPosts.slug, slug));
+      
+      return post;
+    } catch (error) {
+      console.error(`[DB] Error fetching blog post with slug ${slug}:`, error);
+      return undefined;
+    }
+  }
+  
+  async createBlogPost(post: InsertBlogPost): Promise<BlogPost> {
+    try {
+      console.log("[DB] Creating new blog post in PostgreSQL database");
+      const [newPost] = await db
+        .insert(blogPosts)
+        .values({
+          ...post,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return newPost;
+    } catch (error) {
+      console.error('[DB] Error creating blog post:', error);
+      throw new Error('Failed to create blog post');
+    }
+  }
+  
+  async updateBlogPost(id: number, data: Partial<BlogPost>): Promise<BlogPost | undefined> {
+    try {
+      console.log(`[DB] Updating blog post with ID ${id} in PostgreSQL database`);
+      const [updatedPost] = await db
+        .update(blogPosts)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(blogPosts.id, id))
+        .returning();
+      
+      return updatedPost;
+    } catch (error) {
+      console.error(`[DB] Error updating blog post with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async publishBlogPost(id: number): Promise<BlogPost | undefined> {
+    try {
+      console.log(`[DB] Publishing blog post with ID ${id} in PostgreSQL database`);
+      const [publishedPost] = await db
+        .update(blogPosts)
+        .set({
+          status: 'published',
+          publishedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(blogPosts.id, id))
+        .returning();
+      
+      return publishedPost;
+    } catch (error) {
+      console.error(`[DB] Error publishing blog post with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async unpublishBlogPost(id: number): Promise<BlogPost | undefined> {
+    try {
+      console.log(`[DB] Unpublishing blog post with ID ${id} in PostgreSQL database`);
+      const [unpublishedPost] = await db
+        .update(blogPosts)
+        .set({
+          status: 'draft',
+          updatedAt: new Date()
+        })
+        .where(eq(blogPosts.id, id))
+        .returning();
+      
+      return unpublishedPost;
+    } catch (error) {
+      console.error(`[DB] Error unpublishing blog post with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async deleteBlogPost(id: number): Promise<boolean> {
+    try {
+      console.log(`[DB] Deleting blog post with ID ${id} from PostgreSQL database`);
+      await db
+        .delete(blogPosts)
+        .where(eq(blogPosts.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting blog post with ID ${id}:`, error);
+      return false;
+    }
+  }
+  
+  // Content Management - FAQ
+  async getFaqCategories(): Promise<FaqCategory[]> {
+    try {
+      console.log("[DB] Fetching FAQ categories from PostgreSQL database");
+      const categories = await db
+        .select()
+        .from(faqCategories)
+        .orderBy(faqCategories.position);
+      
+      return categories;
+    } catch (error) {
+      console.error('[DB] Error fetching FAQ categories:', error);
+      return [];
+    }
+  }
+  
+  async getFaqCategory(id: number): Promise<FaqCategory | undefined> {
+    try {
+      console.log(`[DB] Fetching FAQ category with ID ${id} from PostgreSQL database`);
+      const [category] = await db
+        .select()
+        .from(faqCategories)
+        .where(eq(faqCategories.id, id));
+      
+      return category;
+    } catch (error) {
+      console.error(`[DB] Error fetching FAQ category with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async createFaqCategory(category: InsertFaqCategory): Promise<FaqCategory> {
+    try {
+      console.log("[DB] Creating new FAQ category in PostgreSQL database");
+      const [newCategory] = await db
+        .insert(faqCategories)
+        .values({
+          ...category,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return newCategory;
+    } catch (error) {
+      console.error('[DB] Error creating FAQ category:', error);
+      throw new Error('Failed to create FAQ category');
+    }
+  }
+  
+  async updateFaqCategory(id: number, data: Partial<FaqCategory>): Promise<FaqCategory | undefined> {
+    try {
+      console.log(`[DB] Updating FAQ category with ID ${id} in PostgreSQL database`);
+      const [updatedCategory] = await db
+        .update(faqCategories)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(faqCategories.id, id))
+        .returning();
+      
+      return updatedCategory;
+    } catch (error) {
+      console.error(`[DB] Error updating FAQ category with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async deleteFaqCategory(id: number): Promise<boolean> {
+    try {
+      console.log(`[DB] Deleting FAQ category with ID ${id} from PostgreSQL database`);
+      // First check if there are any FAQs in this category
+      const faqItems = await db
+        .select()
+        .from(faqs)
+        .where(eq(faqs.categoryId, id));
+      
+      if (faqItems.length > 0) {
+        throw new Error('Cannot delete category that contains FAQs');
+      }
+      
+      await db
+        .delete(faqCategories)
+        .where(eq(faqCategories.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting FAQ category with ID ${id}:`, error);
+      return false;
+    }
+  }
+  
+  async getFaqs(categoryId?: number): Promise<Faq[]> {
+    try {
+      console.log("[DB] Fetching FAQs from PostgreSQL database");
+      let query = db.select().from(faqs);
+      
+      if (categoryId) {
+        query = query.where(eq(faqs.categoryId, categoryId));
+      }
+      
+      const faqItems = await query.orderBy(faqs.position);
+      return faqItems;
+    } catch (error) {
+      console.error('[DB] Error fetching FAQs:', error);
+      return [];
+    }
+  }
+  
+  async getFaq(id: number): Promise<Faq | undefined> {
+    try {
+      console.log(`[DB] Fetching FAQ with ID ${id} from PostgreSQL database`);
+      const [faq] = await db
+        .select()
+        .from(faqs)
+        .where(eq(faqs.id, id));
+      
+      return faq;
+    } catch (error) {
+      console.error(`[DB] Error fetching FAQ with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async createFaq(faq: InsertFaq): Promise<Faq> {
+    try {
+      console.log("[DB] Creating new FAQ in PostgreSQL database");
+      const [newFaq] = await db
+        .insert(faqs)
+        .values({
+          ...faq,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return newFaq;
+    } catch (error) {
+      console.error('[DB] Error creating FAQ:', error);
+      throw new Error('Failed to create FAQ');
+    }
+  }
+  
+  async updateFaq(id: number, data: Partial<Faq>): Promise<Faq | undefined> {
+    try {
+      console.log(`[DB] Updating FAQ with ID ${id} in PostgreSQL database`);
+      const [updatedFaq] = await db
+        .update(faqs)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(faqs.id, id))
+        .returning();
+      
+      return updatedFaq;
+    } catch (error) {
+      console.error(`[DB] Error updating FAQ with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async toggleFaqStatus(id: number, isActive: boolean): Promise<Faq | undefined> {
+    try {
+      console.log(`[DB] Toggling FAQ status with ID ${id} in PostgreSQL database`);
+      const [updatedFaq] = await db
+        .update(faqs)
+        .set({
+          isActive,
+          updatedAt: new Date()
+        })
+        .where(eq(faqs.id, id))
+        .returning();
+      
+      return updatedFaq;
+    } catch (error) {
+      console.error(`[DB] Error toggling FAQ status with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async deleteFaq(id: number): Promise<boolean> {
+    try {
+      console.log(`[DB] Deleting FAQ with ID ${id} from PostgreSQL database`);
+      await db
+        .delete(faqs)
+        .where(eq(faqs.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting FAQ with ID ${id}:`, error);
+      return false;
+    }
+  }
+  
+  // Content Management - Contact Messages
+  async getContactMessages(filters?: { status?: string }): Promise<ContactMessage[]> {
+    try {
+      console.log("[DB] Fetching contact messages from PostgreSQL database");
+      let query = db.select().from(contactMessages);
+      
+      if (filters?.status) {
+        query = query.where(eq(contactMessages.status, filters.status));
+      }
+      
+      const messages = await query.orderBy(desc(contactMessages.createdAt));
+      return messages;
+    } catch (error) {
+      console.error('[DB] Error fetching contact messages:', error);
+      return [];
+    }
+  }
+  
+  async getContactMessage(id: number): Promise<ContactMessage | undefined> {
+    try {
+      console.log(`[DB] Fetching contact message with ID ${id} from PostgreSQL database`);
+      const [message] = await db
+        .select()
+        .from(contactMessages)
+        .where(eq(contactMessages.id, id));
+      
+      return message;
+    } catch (error) {
+      console.error(`[DB] Error fetching contact message with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
+    try {
+      console.log("[DB] Creating new contact message in PostgreSQL database");
+      const [newMessage] = await db
+        .insert(contactMessages)
+        .values({
+          ...message,
+          status: 'unread',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return newMessage;
+    } catch (error) {
+      console.error('[DB] Error creating contact message:', error);
+      throw new Error('Failed to create contact message');
+    }
+  }
+  
+  async updateContactMessageStatus(id: number, status: string): Promise<ContactMessage | undefined> {
+    try {
+      console.log(`[DB] Updating contact message status with ID ${id} in PostgreSQL database`);
+      const [updatedMessage] = await db
+        .update(contactMessages)
+        .set({
+          status,
+          updatedAt: new Date()
+        })
+        .where(eq(contactMessages.id, id))
+        .returning();
+      
+      return updatedMessage;
+    } catch (error) {
+      console.error(`[DB] Error updating contact message status with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async replyToContactMessage(id: number, userId: number): Promise<ContactMessage | undefined> {
+    try {
+      console.log(`[DB] Replying to contact message with ID ${id} in PostgreSQL database`);
+      const [repliedMessage] = await db
+        .update(contactMessages)
+        .set({
+          status: 'replied',
+          repliedBy: userId,
+          repliedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(contactMessages.id, id))
+        .returning();
+      
+      return repliedMessage;
+    } catch (error) {
+      console.error(`[DB] Error replying to contact message with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+  
+  async deleteContactMessage(id: number): Promise<boolean> {
+    try {
+      console.log(`[DB] Deleting contact message with ID ${id} from PostgreSQL database`);
+      await db
+        .delete(contactMessages)
+        .where(eq(contactMessages.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting contact message with ID ${id}:`, error);
+      return false;
+    }
   }
 }
 

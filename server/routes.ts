@@ -40,6 +40,19 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-04-30.basil" as any })
   : undefined;
 
+// Admin middleware to check if user is authenticated and has admin role
+const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ error: "Forbidden - Admin access required" });
+  }
+  
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Import required functions and modules
   const { hashPassword, comparePasswords } = await import('./auth');
@@ -2235,6 +2248,708 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ message: "Error generating financial summary: " + error.message });
+    }
+  });
+
+  // Content Management API Routes
+  
+  // Page Content Management
+  app.get("/api/admin/page-contents", requireAdmin, async (req, res) => {
+    try {
+      const contents = await storage.getPageContents();
+      res.status(200).json(contents);
+    } catch (error) {
+      console.error("[API Error] Failed to get page contents:", error);
+      res.status(500).json({ error: "Failed to get page contents" });
+    }
+  });
+  
+  app.get("/api/admin/page-contents/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid page content ID" });
+      }
+      
+      const content = await storage.getPageContent(id);
+      if (!content) {
+        return res.status(404).json({ error: "Page content not found" });
+      }
+      
+      res.status(200).json(content);
+    } catch (error) {
+      console.error("[API Error] Failed to get page content:", error);
+      res.status(500).json({ error: "Failed to get page content" });
+    }
+  });
+  
+  app.get("/api/page-content/:slug", async (req, res) => {
+    try {
+      const slug = req.params.slug;
+      const content = await storage.getPageContentBySlug(slug);
+      
+      if (!content) {
+        return res.status(404).json({ error: "Page content not found" });
+      }
+      
+      if (!content.isActive) {
+        return res.status(404).json({ error: "Page content not found or inactive" });
+      }
+      
+      res.status(200).json(content);
+    } catch (error) {
+      console.error("[API Error] Failed to get page content by slug:", error);
+      res.status(500).json({ error: "Failed to get page content" });
+    }
+  });
+  
+  app.post("/api/admin/page-contents", requireAdmin, async (req, res) => {
+    try {
+      const contentData = req.body;
+      
+      // Add the current user as the last updated by
+      contentData.lastUpdatedBy = req.user?.id;
+      
+      const newContent = await storage.createPageContent(contentData);
+      res.status(201).json(newContent);
+    } catch (error) {
+      console.error("[API Error] Failed to create page content:", error);
+      res.status(500).json({ error: "Failed to create page content" });
+    }
+  });
+  
+  app.put("/api/admin/page-contents/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid page content ID" });
+      }
+      
+      const contentData = req.body;
+      
+      // Add the current user as the last updated by
+      contentData.lastUpdatedBy = req.user?.id;
+      
+      const updatedContent = await storage.updatePageContent(id, contentData);
+      
+      if (!updatedContent) {
+        return res.status(404).json({ error: "Page content not found" });
+      }
+      
+      res.status(200).json(updatedContent);
+    } catch (error) {
+      console.error("[API Error] Failed to update page content:", error);
+      res.status(500).json({ error: "Failed to update page content" });
+    }
+  });
+  
+  app.delete("/api/admin/page-contents/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid page content ID" });
+      }
+      
+      const success = await storage.deletePageContent(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Page content not found or could not be deleted" });
+      }
+      
+      res.status(200).json({ message: "Page content deleted successfully" });
+    } catch (error) {
+      console.error("[API Error] Failed to delete page content:", error);
+      res.status(500).json({ error: "Failed to delete page content" });
+    }
+  });
+  
+  // Blog Category Management
+  app.get("/api/admin/blog-categories", requireAdmin, async (req, res) => {
+    try {
+      const categories = await storage.getBlogCategories();
+      res.status(200).json(categories);
+    } catch (error) {
+      console.error("[API Error] Failed to get blog categories:", error);
+      res.status(500).json({ error: "Failed to get blog categories" });
+    }
+  });
+  
+  app.get("/api/blog-categories", async (req, res) => {
+    try {
+      // Only return active categories for public API
+      const categories = await storage.getBlogCategories();
+      const activeCategories = categories.filter(category => category.isActive);
+      res.status(200).json(activeCategories);
+    } catch (error) {
+      console.error("[API Error] Failed to get blog categories:", error);
+      res.status(500).json({ error: "Failed to get blog categories" });
+    }
+  });
+  
+  app.get("/api/admin/blog-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid blog category ID" });
+      }
+      
+      const category = await storage.getBlogCategory(id);
+      
+      if (!category) {
+        return res.status(404).json({ error: "Blog category not found" });
+      }
+      
+      res.status(200).json(category);
+    } catch (error) {
+      console.error("[API Error] Failed to get blog category:", error);
+      res.status(500).json({ error: "Failed to get blog category" });
+    }
+  });
+  
+  app.post("/api/admin/blog-categories", requireAdmin, async (req, res) => {
+    try {
+      const categoryData = req.body;
+      const newCategory = await storage.createBlogCategory(categoryData);
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error("[API Error] Failed to create blog category:", error);
+      res.status(500).json({ error: "Failed to create blog category" });
+    }
+  });
+  
+  app.put("/api/admin/blog-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid blog category ID" });
+      }
+      
+      const categoryData = req.body;
+      const updatedCategory = await storage.updateBlogCategory(id, categoryData);
+      
+      if (!updatedCategory) {
+        return res.status(404).json({ error: "Blog category not found" });
+      }
+      
+      res.status(200).json(updatedCategory);
+    } catch (error) {
+      console.error("[API Error] Failed to update blog category:", error);
+      res.status(500).json({ error: "Failed to update blog category" });
+    }
+  });
+  
+  app.delete("/api/admin/blog-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid blog category ID" });
+      }
+      
+      const success = await storage.deleteBlogCategory(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Blog category not found or could not be deleted. Make sure it doesn't contain any posts." });
+      }
+      
+      res.status(200).json({ message: "Blog category deleted successfully" });
+    } catch (error) {
+      console.error("[API Error] Failed to delete blog category:", error);
+      res.status(500).json({ error: "Failed to delete blog category" });
+    }
+  });
+  
+  // Blog Post Management
+  app.get("/api/admin/blog-posts", requireAdmin, async (req, res) => {
+    try {
+      const filters = {
+        categoryId: req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined,
+        status: req.query.status as string,
+        tag: req.query.tag as string
+      };
+      
+      const posts = await storage.getBlogPosts(filters);
+      res.status(200).json(posts);
+    } catch (error) {
+      console.error("[API Error] Failed to get blog posts:", error);
+      res.status(500).json({ error: "Failed to get blog posts" });
+    }
+  });
+  
+  app.get("/api/blog-posts", async (req, res) => {
+    try {
+      // Only return published posts for public API
+      const filters = {
+        categoryId: req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined,
+        status: "published", // Force published status for public API
+        tag: req.query.tag as string
+      };
+      
+      const posts = await storage.getBlogPosts(filters);
+      res.status(200).json(posts);
+    } catch (error) {
+      console.error("[API Error] Failed to get blog posts:", error);
+      res.status(500).json({ error: "Failed to get blog posts" });
+    }
+  });
+  
+  app.get("/api/admin/blog-posts/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid blog post ID" });
+      }
+      
+      const post = await storage.getBlogPost(id);
+      
+      if (!post) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+      
+      res.status(200).json(post);
+    } catch (error) {
+      console.error("[API Error] Failed to get blog post:", error);
+      res.status(500).json({ error: "Failed to get blog post" });
+    }
+  });
+  
+  app.get("/api/blog-posts/:slug", async (req, res) => {
+    try {
+      const slug = req.params.slug;
+      const post = await storage.getBlogPostBySlug(slug);
+      
+      if (!post) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+      
+      // Only return published posts for public API
+      if (post.status !== "published") {
+        return res.status(404).json({ error: "Blog post not found or not published" });
+      }
+      
+      res.status(200).json(post);
+    } catch (error) {
+      console.error("[API Error] Failed to get blog post by slug:", error);
+      res.status(500).json({ error: "Failed to get blog post" });
+    }
+  });
+  
+  app.post("/api/admin/blog-posts", requireAdmin, async (req, res) => {
+    try {
+      const postData = req.body;
+      
+      // Add the current user as the author
+      postData.authorId = req.user?.id;
+      
+      const newPost = await storage.createBlogPost(postData);
+      res.status(201).json(newPost);
+    } catch (error) {
+      console.error("[API Error] Failed to create blog post:", error);
+      res.status(500).json({ error: "Failed to create blog post" });
+    }
+  });
+  
+  app.put("/api/admin/blog-posts/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid blog post ID" });
+      }
+      
+      const postData = req.body;
+      const updatedPost = await storage.updateBlogPost(id, postData);
+      
+      if (!updatedPost) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+      
+      res.status(200).json(updatedPost);
+    } catch (error) {
+      console.error("[API Error] Failed to update blog post:", error);
+      res.status(500).json({ error: "Failed to update blog post" });
+    }
+  });
+  
+  app.post("/api/admin/blog-posts/:id/publish", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid blog post ID" });
+      }
+      
+      const publishedPost = await storage.publishBlogPost(id);
+      
+      if (!publishedPost) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+      
+      res.status(200).json(publishedPost);
+    } catch (error) {
+      console.error("[API Error] Failed to publish blog post:", error);
+      res.status(500).json({ error: "Failed to publish blog post" });
+    }
+  });
+  
+  app.post("/api/admin/blog-posts/:id/unpublish", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid blog post ID" });
+      }
+      
+      const unpublishedPost = await storage.unpublishBlogPost(id);
+      
+      if (!unpublishedPost) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+      
+      res.status(200).json(unpublishedPost);
+    } catch (error) {
+      console.error("[API Error] Failed to unpublish blog post:", error);
+      res.status(500).json({ error: "Failed to unpublish blog post" });
+    }
+  });
+  
+  app.delete("/api/admin/blog-posts/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid blog post ID" });
+      }
+      
+      const success = await storage.deleteBlogPost(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Blog post not found or could not be deleted" });
+      }
+      
+      res.status(200).json({ message: "Blog post deleted successfully" });
+    } catch (error) {
+      console.error("[API Error] Failed to delete blog post:", error);
+      res.status(500).json({ error: "Failed to delete blog post" });
+    }
+  });
+  
+  // FAQ Category Management
+  app.get("/api/admin/faq-categories", requireAdmin, async (req, res) => {
+    try {
+      const categories = await storage.getFaqCategories();
+      res.status(200).json(categories);
+    } catch (error) {
+      console.error("[API Error] Failed to get FAQ categories:", error);
+      res.status(500).json({ error: "Failed to get FAQ categories" });
+    }
+  });
+  
+  app.get("/api/faq-categories", async (req, res) => {
+    try {
+      // Only return active categories for public API
+      const categories = await storage.getFaqCategories();
+      const activeCategories = categories.filter(category => category.isActive);
+      res.status(200).json(activeCategories);
+    } catch (error) {
+      console.error("[API Error] Failed to get FAQ categories:", error);
+      res.status(500).json({ error: "Failed to get FAQ categories" });
+    }
+  });
+  
+  app.get("/api/admin/faq-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid FAQ category ID" });
+      }
+      
+      const category = await storage.getFaqCategory(id);
+      
+      if (!category) {
+        return res.status(404).json({ error: "FAQ category not found" });
+      }
+      
+      res.status(200).json(category);
+    } catch (error) {
+      console.error("[API Error] Failed to get FAQ category:", error);
+      res.status(500).json({ error: "Failed to get FAQ category" });
+    }
+  });
+  
+  app.post("/api/admin/faq-categories", requireAdmin, async (req, res) => {
+    try {
+      const categoryData = req.body;
+      const newCategory = await storage.createFaqCategory(categoryData);
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error("[API Error] Failed to create FAQ category:", error);
+      res.status(500).json({ error: "Failed to create FAQ category" });
+    }
+  });
+  
+  app.put("/api/admin/faq-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid FAQ category ID" });
+      }
+      
+      const categoryData = req.body;
+      const updatedCategory = await storage.updateFaqCategory(id, categoryData);
+      
+      if (!updatedCategory) {
+        return res.status(404).json({ error: "FAQ category not found" });
+      }
+      
+      res.status(200).json(updatedCategory);
+    } catch (error) {
+      console.error("[API Error] Failed to update FAQ category:", error);
+      res.status(500).json({ error: "Failed to update FAQ category" });
+    }
+  });
+  
+  app.delete("/api/admin/faq-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid FAQ category ID" });
+      }
+      
+      const success = await storage.deleteFaqCategory(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "FAQ category not found or could not be deleted. Make sure it doesn't contain any FAQs." });
+      }
+      
+      res.status(200).json({ message: "FAQ category deleted successfully" });
+    } catch (error) {
+      console.error("[API Error] Failed to delete FAQ category:", error);
+      res.status(500).json({ error: "Failed to delete FAQ category" });
+    }
+  });
+  
+  // FAQ Management
+  app.get("/api/admin/faqs", requireAdmin, async (req, res) => {
+    try {
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const faqs = await storage.getFaqs(categoryId);
+      res.status(200).json(faqs);
+    } catch (error) {
+      console.error("[API Error] Failed to get FAQs:", error);
+      res.status(500).json({ error: "Failed to get FAQs" });
+    }
+  });
+  
+  app.get("/api/faqs", async (req, res) => {
+    try {
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const faqs = await storage.getFaqs(categoryId);
+      
+      // Only return active FAQs for public API
+      const activeFaqs = faqs.filter(faq => faq.isActive);
+      
+      res.status(200).json(activeFaqs);
+    } catch (error) {
+      console.error("[API Error] Failed to get FAQs:", error);
+      res.status(500).json({ error: "Failed to get FAQs" });
+    }
+  });
+  
+  app.get("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid FAQ ID" });
+      }
+      
+      const faq = await storage.getFaq(id);
+      
+      if (!faq) {
+        return res.status(404).json({ error: "FAQ not found" });
+      }
+      
+      res.status(200).json(faq);
+    } catch (error) {
+      console.error("[API Error] Failed to get FAQ:", error);
+      res.status(500).json({ error: "Failed to get FAQ" });
+    }
+  });
+  
+  app.post("/api/admin/faqs", requireAdmin, async (req, res) => {
+    try {
+      const faqData = req.body;
+      const newFaq = await storage.createFaq(faqData);
+      res.status(201).json(newFaq);
+    } catch (error) {
+      console.error("[API Error] Failed to create FAQ:", error);
+      res.status(500).json({ error: "Failed to create FAQ" });
+    }
+  });
+  
+  app.put("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid FAQ ID" });
+      }
+      
+      const faqData = req.body;
+      const updatedFaq = await storage.updateFaq(id, faqData);
+      
+      if (!updatedFaq) {
+        return res.status(404).json({ error: "FAQ not found" });
+      }
+      
+      res.status(200).json(updatedFaq);
+    } catch (error) {
+      console.error("[API Error] Failed to update FAQ:", error);
+      res.status(500).json({ error: "Failed to update FAQ" });
+    }
+  });
+  
+  app.post("/api/admin/faqs/:id/toggle-status", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid FAQ ID" });
+      }
+      
+      const { isActive } = req.body;
+      
+      if (typeof isActive !== "boolean") {
+        return res.status(400).json({ error: "isActive must be a boolean value" });
+      }
+      
+      const updatedFaq = await storage.toggleFaqStatus(id, isActive);
+      
+      if (!updatedFaq) {
+        return res.status(404).json({ error: "FAQ not found" });
+      }
+      
+      res.status(200).json(updatedFaq);
+    } catch (error) {
+      console.error("[API Error] Failed to toggle FAQ status:", error);
+      res.status(500).json({ error: "Failed to toggle FAQ status" });
+    }
+  });
+  
+  app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid FAQ ID" });
+      }
+      
+      const success = await storage.deleteFaq(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "FAQ not found or could not be deleted" });
+      }
+      
+      res.status(200).json({ message: "FAQ deleted successfully" });
+    } catch (error) {
+      console.error("[API Error] Failed to delete FAQ:", error);
+      res.status(500).json({ error: "Failed to delete FAQ" });
+    }
+  });
+  
+  // Contact Message Management
+  app.get("/api/admin/contact-messages", requireAdmin, async (req, res) => {
+    try {
+      const filters = {
+        status: req.query.status as string
+      };
+      
+      const messages = await storage.getContactMessages(filters);
+      res.status(200).json(messages);
+    } catch (error) {
+      console.error("[API Error] Failed to get contact messages:", error);
+      res.status(500).json({ error: "Failed to get contact messages" });
+    }
+  });
+  
+  app.get("/api/admin/contact-messages/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid contact message ID" });
+      }
+      
+      const message = await storage.getContactMessage(id);
+      
+      if (!message) {
+        return res.status(404).json({ error: "Contact message not found" });
+      }
+      
+      res.status(200).json(message);
+    } catch (error) {
+      console.error("[API Error] Failed to get contact message:", error);
+      res.status(500).json({ error: "Failed to get contact message" });
+    }
+  });
+  
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const messageData = req.body;
+      
+      // Add the IP address if available
+      if (req.ip) {
+        messageData.ipAddress = req.ip;
+      }
+      
+      const newMessage = await storage.createContactMessage(messageData);
+      res.status(201).json({ message: "Contact message sent successfully" });
+    } catch (error) {
+      console.error("[API Error] Failed to create contact message:", error);
+      res.status(500).json({ error: "Failed to send contact message" });
+    }
+  });
+  
+  app.post("/api/admin/contact-messages/:id/update-status", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid contact message ID" });
+      }
+      
+      const { status } = req.body;
+      
+      if (!status || !["unread", "read", "replied"].includes(status)) {
+        return res.status(400).json({ error: "Status must be one of: unread, read, replied" });
+      }
+      
+      let updatedMessage;
+      
+      if (status === "replied") {
+        updatedMessage = await storage.replyToContactMessage(id, req.user?.id as number);
+      } else {
+        updatedMessage = await storage.updateContactMessageStatus(id, status);
+      }
+      
+      if (!updatedMessage) {
+        return res.status(404).json({ error: "Contact message not found" });
+      }
+      
+      res.status(200).json(updatedMessage);
+    } catch (error) {
+      console.error("[API Error] Failed to update contact message status:", error);
+      res.status(500).json({ error: "Failed to update contact message status" });
+    }
+  });
+  
+  app.delete("/api/admin/contact-messages/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid contact message ID" });
+      }
+      
+      const success = await storage.deleteContactMessage(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Contact message not found or could not be deleted" });
+      }
+      
+      res.status(200).json({ message: "Contact message deleted successfully" });
+    } catch (error) {
+      console.error("[API Error] Failed to delete contact message:", error);
+      res.status(500).json({ error: "Failed to delete contact message" });
     }
   });
 

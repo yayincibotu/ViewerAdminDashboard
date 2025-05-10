@@ -67,6 +67,53 @@ const AdminSidebar: React.FC = () => {
             </a>
           </Link>
         </nav>
+        
+        <div className="mt-6 mb-2 px-4 text-xs font-semibold text-sidebar-foreground/60 uppercase">
+          Content Management
+        </div>
+        <nav className="space-y-1">
+          <Link href="/webadmin/page-contents">
+            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/page-contents')}`}>
+              <i className="fas fa-file-alt mr-3"></i>
+              Page Content
+            </a>
+          </Link>
+          
+          <Link href="/webadmin/blog">
+            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/blog')}`}>
+              <i className="fas fa-blog mr-3"></i>
+              Blog
+            </a>
+          </Link>
+          
+          <Link href="/webadmin/blog-categories">
+            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/blog-categories')}`}>
+              <i className="fas fa-folder mr-3"></i>
+              Blog Categories
+            </a>
+          </Link>
+          
+          <Link href="/webadmin/faq">
+            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/faq')}`}>
+              <i className="fas fa-question-circle mr-3"></i>
+              FAQ Management
+            </a>
+          </Link>
+          
+          <Link href="/webadmin/faq-categories">
+            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/faq-categories')}`}>
+              <i className="fas fa-list-alt mr-3"></i>
+              FAQ Categories
+            </a>
+          </Link>
+          
+          <Link href="/webadmin/contact-messages">
+            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/contact-messages')}`}>
+              <i className="fas fa-envelope mr-3"></i>
+              Contact Messages
+            </a>
+          </Link>
+        </nav>
       </div>
       
       <div className="px-3 py-2 mt-auto">
