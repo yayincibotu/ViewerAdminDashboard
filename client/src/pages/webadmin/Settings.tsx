@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -15,43 +15,10 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { SystemConfig, EmailTemplate, IpRestriction } from '@shared/schema';
 
-// Tab component for different config categories
-const ConfigTab: React.FC<{
-  category: string;
-  configs: SystemConfig[];
-  isLoading: boolean;
-  onSave: (id: number, value: string) => void;
-}> = ({ category, configs, isLoading, onSave }) => {
-  const filteredConfigs = configs.filter(config => config.category === category);
-  
-  const handleSave = (id: number, value: string) => {
-    onSave(id, value);
-  };
-  
-  return (
-    <div className="space-y-4">
-      {isLoading ? (
-        <div className="flex justify-center items-center h-40">
-          <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : filteredConfigs.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">No configuration items found in this category.</div>
-      ) : (
-        filteredConfigs.map(config => (
-          <ConfigItem 
-            key={config.id} 
-            config={config} 
-            onSave={handleSave}
-          />
-        ))
-      )}
-    </div>
-  );
-};
-
-// Individual configuration item
+// Individual configuration item component
 const ConfigItem: React.FC<{
   config: SystemConfig;
   onSave: (id: number, value: string) => void;
@@ -65,67 +32,127 @@ const ConfigItem: React.FC<{
   };
   
   const isMultiline = config.type === 'text' || config.value.length > 100;
+  const isBooleanField = config.key.startsWith('is_') || 
+    ['enabled', 'disabled', 'active', 'maintenance_mode', 'allow_registrations'].some(
+      suffix => config.key.includes(suffix)
+    );
+  
+  if (isBooleanField) {
+    return (
+      <div className="flex flex-col space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-medium">{config.name}</h4>
+            <p className="text-sm text-muted-foreground">{config.description}</p>
+          </div>
+          <Switch 
+            checked={value === 'true'} 
+            onCheckedChange={(checked) => {
+              const newValue = checked ? 'true' : 'false';
+              setValue(newValue);
+              onSave(config.id, newValue);
+            }} 
+          />
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{config.name}</CardTitle>
-        <CardDescription>{config.description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isEditing ? (
-          isMultiline ? (
-            <Textarea
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              rows={5}
-              className="font-mono text-sm"
-            />
-          ) : (
-            <Input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className={config.type === 'number' ? 'font-mono' : ''}
-            />
-          )
-        ) : (
-          <div 
-            onClick={() => setIsEditing(true)}
-            className="p-2 border rounded-md hover:bg-accent cursor-pointer min-h-[40px]"
-          >
-            {isMultiline ? (
-              <pre className="whitespace-pre-wrap text-sm">{value}</pre>
-            ) : (
-              <span>{value}</span>
-            )}
+    <div className="space-y-2">
+      <div className="flex justify-between">
+        <Label>{config.name}</Label>
+        {isEditing && (
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                setValue(config.value);
+                setIsEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={handleSave}
+            >
+              Save
+            </Button>
           </div>
         )}
-      </CardContent>
-      {isEditing && (
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={() => {
-            setValue(config.value);
-            setIsEditing(false);
-          }}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
-        </CardFooter>
+      </div>
+      {isEditing ? (
+        isMultiline ? (
+          <Textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            rows={5}
+            className={config.type === 'code' ? 'font-mono text-sm' : ''}
+          />
+        ) : (
+          <Input
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            type={config.type === 'number' ? 'number' : 'text'}
+            className={config.type === 'number' ? 'font-mono' : ''}
+          />
+        )
+      ) : (
+        <div 
+          onClick={() => setIsEditing(true)}
+          className="p-2 border rounded-md hover:bg-accent cursor-pointer min-h-[40px]"
+        >
+          {isMultiline ? (
+            <pre className="whitespace-pre-wrap text-sm">{value || <span className="text-muted-foreground italic">No value set</span>}</pre>
+          ) : (
+            <span>{value || <span className="text-muted-foreground italic">No value set</span>}</span>
+          )}
+        </div>
       )}
-    </Card>
+      {config.description && !isEditing && (
+        <p className="text-xs text-muted-foreground">{config.description}</p>
+      )}
+    </div>
   );
 };
 
-// Email Template Management
-const EmailTemplateManager: React.FC = () => {
+const SettingsPage: React.FC = () => {
   const { toast } = useToast();
-  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
-  const [editMode, setEditMode] = useState(false);
+  const [showNewTemplateDialog, setShowNewTemplateDialog] = useState(false);
+  const [showNewIpRestrictionDialog, setShowNewIpRestrictionDialog] = useState(false);
+  const [newEmailTemplate, setNewEmailTemplate] = useState<Partial<EmailTemplate>>({
+    name: '',
+    key: '',
+    type: 'notification',
+    subject: '',
+    content: '',
+  });
+  const [newIpRestriction, setNewIpRestriction] = useState<Partial<IpRestriction>>({
+    type: 'blacklist',
+    ipAddress: '',
+    comment: '',
+  });
   
+  // Fetch system configurations
   const {
-    data: templates = [],
+    data: systemConfigs = [],
     isLoading,
     refetch
+  } = useQuery<SystemConfig[]>({
+    queryKey: ['/api/admin/system-configs'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/admin/system-configs');
+      return res.json();
+    }
+  });
+  
+  // Fetch email templates
+  const {
+    data: emailTemplates = [],
+    isLoading: isEmailTemplatesLoading,
+    refetch: refetchEmailTemplates
   } = useQuery<EmailTemplate[]>({
     queryKey: ['/api/admin/email-templates'],
     queryFn: async () => {
@@ -134,53 +161,80 @@ const EmailTemplateManager: React.FC = () => {
     }
   });
   
-  const updateTemplateMutation = useMutation({
+  // Fetch IP restrictions
+  const {
+    data: ipRestrictions = [],
+    isLoading: isIpRestrictionsLoading,
+    refetch: refetchIpRestrictions
+  } = useQuery<IpRestriction[]>({
+    queryKey: ['/api/admin/ip-restrictions'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/admin/ip-restrictions');
+      return res.json();
+    }
+  });
+  
+  // Update system config mutation
+  const updateSystemConfigMutation = useMutation({
+    mutationFn: async ({ id, value }: { id: number; value: string }) => {
+      const res = await apiRequest('PATCH', `/api/admin/system-configs/${id}`, { value });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Configuration updated successfully',
+      });
+      refetch();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update configuration',
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Add/Update email template mutation
+  const saveEmailTemplateMutation = useMutation({
     mutationFn: async (template: Partial<EmailTemplate>) => {
-      if (!template.id) return null;
-      const res = await apiRequest('PATCH', `/api/admin/email-templates/${template.id}`, template);
-      return res.json();
+      if (template.id) {
+        // Update existing template
+        const res = await apiRequest('PATCH', `/api/admin/email-templates/${template.id}`, template);
+        return res.json();
+      } else {
+        // Create new template
+        const res = await apiRequest('POST', '/api/admin/email-templates', template);
+        return res.json();
+      }
     },
     onSuccess: () => {
       toast({
         title: 'Success',
-        description: 'Email template updated successfully',
+        description: 'Email template saved successfully',
       });
-      refetch();
-      setEditMode(false);
+      refetchEmailTemplates();
+      setShowNewTemplateDialog(false);
+      setNewEmailTemplate({
+        name: '',
+        key: '',
+        type: 'notification',
+        subject: '',
+        content: '',
+      });
     },
     onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update email template',
+        description: error.message || 'Failed to save email template',
         variant: 'destructive',
       });
     }
   });
   
-  const createTemplateMutation = useMutation({
-    mutationFn: async (template: Omit<EmailTemplate, 'id'>) => {
-      const res = await apiRequest('POST', '/api/admin/email-templates', template);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Email template created successfully',
-      });
-      refetch();
-      setEditMode(false);
-      setSelectedTemplate(null);
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create email template',
-        variant: 'destructive',
-      });
-    }
-  });
-  
-  const deleteTemplateMutation = useMutation({
+  // Delete email template mutation
+  const deleteEmailTemplateMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest('DELETE', `/api/admin/email-templates/${id}`);
       return res.json();
@@ -190,8 +244,7 @@ const EmailTemplateManager: React.FC = () => {
         title: 'Success',
         description: 'Email template deleted successfully',
       });
-      refetch();
-      setSelectedTemplate(null);
+      refetchEmailTemplates();
     },
     onError: (error: any) => {
       toast({
@@ -202,301 +255,36 @@ const EmailTemplateManager: React.FC = () => {
     }
   });
   
-  const handleSaveTemplate = () => {
-    if (!selectedTemplate) return;
-    
-    if (selectedTemplate.id) {
-      updateTemplateMutation.mutate(selectedTemplate);
-    } else {
-      createTemplateMutation.mutate(selectedTemplate as Omit<EmailTemplate, 'id'>);
-    }
-  };
-  
-  const handleNewTemplate = () => {
-    setSelectedTemplate({
-      name: 'New Template',
-      type: 'welcome',
-      subject: '',
-      htmlContent: '',
-      textContent: '',
-      isActive: true,
-      lastUpdatedBy: 1, // Assuming admin user ID is 1
-      createdAt: new Date(),
-      updatedAt: new Date()
-    } as EmailTemplate);
-    setEditMode(true);
-  };
-  
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Email Templates</h2>
-        <Button onClick={handleNewTemplate} className="flex items-center gap-2">
-          <Plus size={16} /> Add Template
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="col-span-1 border rounded-lg p-4 space-y-4 max-h-[600px] overflow-y-auto">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-40">
-              <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : templates.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No email templates found.</div>
-          ) : (
-            <div className="space-y-2">
-              {templates.map(template => (
-                <div 
-                  key={template.id} 
-                  className={`p-3 rounded-md cursor-pointer ${selectedTemplate?.id === template.id ? 'bg-primary text-white' : 'hover:bg-accent'}`}
-                  onClick={() => {
-                    setSelectedTemplate(template);
-                    setEditMode(false);
-                  }}
-                >
-                  <div className="font-medium">{template.name}</div>
-                  <div className="text-xs opacity-70">{template.type}</div>
-                  <div className="flex items-center mt-1">
-                    <div className={`h-2 w-2 rounded-full mr-2 ${template.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                    <span className="text-xs">{template.isActive ? 'Active' : 'Inactive'}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <div className="col-span-1 md:col-span-3 border rounded-lg p-6">
-          {!selectedTemplate ? (
-            <div className="text-center py-12 text-muted-foreground">
-              Select a template to view or edit its details, or create a new one.
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-semibold">{editMode ? 'Edit Template' : 'Template Details'}</h3>
-                <div className="space-x-2">
-                  {!editMode ? (
-                    <>
-                      <Button variant="outline" onClick={() => setEditMode(true)}>Edit</Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive">Delete</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the email template.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => selectedTemplate.id && deleteTemplateMutation.mutate(selectedTemplate.id)}>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="outline" onClick={() => {
-                        setEditMode(false);
-                        refetch();
-                      }}>Cancel</Button>
-                      <Button 
-                        onClick={handleSaveTemplate}
-                        disabled={updateTemplateMutation.isPending || createTemplateMutation.isPending}
-                      >
-                        {(updateTemplateMutation.isPending || createTemplateMutation.isPending) && (
-                          <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Save
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                {editMode ? (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="template-name">Template Name</Label>
-                        <Input
-                          id="template-name"
-                          value={selectedTemplate.name}
-                          onChange={(e) => setSelectedTemplate({...selectedTemplate, name: e.target.value})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="template-type">Template Type</Label>
-                        <Input
-                          id="template-type"
-                          value={selectedTemplate.type}
-                          onChange={(e) => setSelectedTemplate({...selectedTemplate, type: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="template-subject">Subject</Label>
-                      <Input
-                        id="template-subject"
-                        value={selectedTemplate.subject}
-                        onChange={(e) => setSelectedTemplate({...selectedTemplate, subject: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="template-html">HTML Content</Label>
-                      <Textarea
-                        id="template-html"
-                        rows={10}
-                        className="font-mono"
-                        value={selectedTemplate.htmlContent}
-                        onChange={(e) => setSelectedTemplate({...selectedTemplate, htmlContent: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="template-text">Text Content</Label>
-                      <Textarea
-                        id="template-text"
-                        rows={5}
-                        value={selectedTemplate.textContent}
-                        onChange={(e) => setSelectedTemplate({...selectedTemplate, textContent: e.target.value})}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="template-active"
-                        checked={selectedTemplate.isActive}
-                        onCheckedChange={(checked) => setSelectedTemplate({...selectedTemplate, isActive: checked})}
-                      />
-                      <Label htmlFor="template-active">Active</Label>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground">Template Name</Label>
-                        <div className="font-medium mt-1">{selectedTemplate.name}</div>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Template Type</Label>
-                        <div className="font-medium mt-1">{selectedTemplate.type}</div>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Status</Label>
-                        <div className="flex items-center mt-1">
-                          <div className={`h-2 w-2 rounded-full mr-2 ${selectedTemplate.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span>{selectedTemplate.isActive ? 'Active' : 'Inactive'}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Last Updated</Label>
-                        <div className="font-medium mt-1">
-                          {new Date(selectedTemplate.updatedAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-muted-foreground">Subject</Label>
-                      <div className="mt-1 p-2 border rounded-md">{selectedTemplate.subject}</div>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-muted-foreground">HTML Content</Label>
-                      <div className="mt-1 p-2 border rounded-md bg-slate-50 font-mono text-sm max-h-[200px] overflow-y-auto">
-                        <pre className="whitespace-pre-wrap">{selectedTemplate.htmlContent}</pre>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-muted-foreground">Text Content</Label>
-                      <div className="mt-1 p-2 border rounded-md bg-slate-50 max-h-[100px] overflow-y-auto">
-                        <pre className="whitespace-pre-wrap">{selectedTemplate.textContent}</pre>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// IP Restriction Management
-const IPRestrictionManager: React.FC = () => {
-  const { toast } = useToast();
-  const [selectedRestriction, setSelectedRestriction] = useState<IpRestriction | null>(null);
-  const [editMode, setEditMode] = useState(false);
-  
-  const {
-    data: restrictions = [],
-    isLoading,
-    refetch
-  } = useQuery<IpRestriction[]>({
-    queryKey: ['/api/admin/ip-restrictions'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/admin/ip-restrictions');
-      return res.json();
-    }
-  });
-  
-  const updateRestrictionMutation = useMutation({
+  // Add IP restriction mutation
+  const addIpRestrictionMutation = useMutation({
     mutationFn: async (restriction: Partial<IpRestriction>) => {
-      if (!restriction.id) return null;
-      const res = await apiRequest('PATCH', `/api/admin/ip-restrictions/${restriction.id}`, restriction);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'IP restriction updated successfully',
-      });
-      refetch();
-      setEditMode(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update IP restriction',
-        variant: 'destructive',
-      });
-    }
-  });
-  
-  const createRestrictionMutation = useMutation({
-    mutationFn: async (restriction: Omit<IpRestriction, 'id'>) => {
       const res = await apiRequest('POST', '/api/admin/ip-restrictions', restriction);
       return res.json();
     },
     onSuccess: () => {
       toast({
         title: 'Success',
-        description: 'IP restriction created successfully',
+        description: 'IP restriction added successfully',
       });
-      refetch();
-      setEditMode(false);
-      setSelectedRestriction(null);
+      refetchIpRestrictions();
+      setShowNewIpRestrictionDialog(false);
+      setNewIpRestriction({
+        type: 'blacklist',
+        ipAddress: '',
+        comment: '',
+      });
     },
     onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create IP restriction',
+        description: error.message || 'Failed to add IP restriction',
         variant: 'destructive',
       });
     }
   });
   
-  const deleteRestrictionMutation = useMutation({
+  // Delete IP restriction mutation
+  const deleteIpRestrictionMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest('DELETE', `/api/admin/ip-restrictions/${id}`);
       return res.json();
@@ -506,8 +294,7 @@ const IPRestrictionManager: React.FC = () => {
         title: 'Success',
         description: 'IP restriction deleted successfully',
       });
-      refetch();
-      setSelectedRestriction(null);
+      refetchIpRestrictions();
     },
     onError: (error: any) => {
       toast({
@@ -518,279 +305,53 @@ const IPRestrictionManager: React.FC = () => {
     }
   });
   
-  const handleSaveRestriction = () => {
-    if (!selectedRestriction) return;
-    
-    if (selectedRestriction.id) {
-      updateRestrictionMutation.mutate(selectedRestriction);
-    } else {
-      createRestrictionMutation.mutate(selectedRestriction as Omit<IpRestriction, 'id'>);
-    }
+  // Handle saving a config value
+  const handleSaveConfig = (id: number, value: string) => {
+    updateSystemConfigMutation.mutate({ id, value });
   };
   
-  const handleNewRestriction = () => {
-    setSelectedRestriction({
-      ipAddress: '',
-      type: 'blacklist',
-      reason: '',
-      expiresAt: null,
-      createdBy: 1, // Assuming admin user ID is 1
-      createdAt: new Date(),
-      updatedAt: new Date()
-    } as IpRestriction);
-    setEditMode(true);
+  // Handle saving an email template
+  const handleSaveEmailTemplate = (id: number, template: Partial<EmailTemplate>) => {
+    saveEmailTemplateMutation.mutate({ ...template, id });
   };
   
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">IP Restrictions</h2>
-        <Button onClick={handleNewRestriction} className="flex items-center gap-2">
-          <Plus size={16} /> Add Restriction
-        </Button>
-      </div>
-      
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted">
-            <tr>
-              <th className="p-3 text-left">IP Address</th>
-              <th className="p-3 text-left">Type</th>
-              <th className="p-3 text-left">Reason</th>
-              <th className="p-3 text-left">Expires</th>
-              <th className="p-3 text-left">Created</th>
-              <th className="p-3 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={6} className="p-8 text-center">
-                  <LoaderCircle className="h-8 w-8 animate-spin text-primary mx-auto" />
-                </td>
-              </tr>
-            ) : restrictions.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                  No IP restrictions found.
-                </td>
-              </tr>
-            ) : (
-              restrictions.map(restriction => (
-                <tr key={restriction.id} className="border-t hover:bg-muted/50">
-                  <td className="p-3 font-mono">{restriction.ipAddress}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      restriction.type === 'blacklist' 
-                        ? 'bg-red-100 text-red-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {restriction.type}
-                    </span>
-                  </td>
-                  <td className="p-3 max-w-xs truncate">{restriction.reason}</td>
-                  <td className="p-3">
-                    {restriction.expiresAt 
-                      ? new Date(restriction.expiresAt).toLocaleDateString() 
-                      : 'Never'}
-                  </td>
-                  <td className="p-3">{new Date(restriction.createdAt).toLocaleDateString()}</td>
-                  <td className="p-3 text-center">
-                    <div className="flex justify-center space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        onClick={() => {
-                          setSelectedRestriction(restriction);
-                          setEditMode(true);
-                        }}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="h-4 w-4"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                          />
-                        </svg>
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 w-8 p-0 text-red-500 border-red-200 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently remove the IP restriction for {restriction.ipAddress}.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => deleteRestrictionMutation.mutate(restriction.id)}
-                              className="bg-red-500 hover:bg-red-600"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      
-      {editMode && selectedRestriction && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6">
-            <h3 className="text-xl font-semibold mb-4">
-              {selectedRestriction.id ? 'Edit IP Restriction' : 'Add IP Restriction'}
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ip-address">IP Address</Label>
-                  <Input
-                    id="ip-address"
-                    placeholder="192.168.1.1"
-                    className="font-mono"
-                    value={selectedRestriction.ipAddress}
-                    onChange={(e) => setSelectedRestriction({...selectedRestriction, ipAddress: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="restriction-type">Restriction Type</Label>
-                  <Select 
-                    value={selectedRestriction.type}
-                    onValueChange={(value) => setSelectedRestriction({...selectedRestriction, type: value})}
-                  >
-                    <SelectTrigger id="restriction-type">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="blacklist">Blacklist</SelectItem>
-                      <SelectItem value="whitelist">Whitelist</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="restriction-reason">Reason</Label>
-                <Textarea
-                  id="restriction-reason"
-                  placeholder="Reason for restriction"
-                  value={selectedRestriction.reason || ''}
-                  onChange={(e) => setSelectedRestriction({...selectedRestriction, reason: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="expiration-date">Expiration Date (Optional)</Label>
-                <Input
-                  id="expiration-date"
-                  type="date"
-                  value={selectedRestriction.expiresAt 
-                    ? new Date(selectedRestriction.expiresAt).toISOString().split('T')[0]
-                    : ''
-                  }
-                  onChange={(e) => setSelectedRestriction({
-                    ...selectedRestriction, 
-                    expiresAt: e.target.value ? new Date(e.target.value) : null
-                  })}
-                />
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setEditMode(false);
-                  setSelectedRestriction(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSaveRestriction}
-                disabled={updateRestrictionMutation.isPending || createRestrictionMutation.isPending}
-              >
-                {(updateRestrictionMutation.isPending || createRestrictionMutation.isPending) && (
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Save
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Main Settings page component
-const SettingsPage: React.FC = () => {
-  const { toast } = useToast();
+  // Handle deleting an email template
+  const handleDeleteEmailTemplate = (id: number) => {
+    deleteEmailTemplateMutation.mutate(id);
+  };
   
-  const { 
-    data: configs = [], 
-    isLoading,
-    refetch 
-  } = useQuery<SystemConfig[]>({
-    queryKey: ['/api/admin/system-configs'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/admin/system-configs');
-      return res.json();
-    }
-  });
-  
-  const updateConfigMutation = useMutation({
-    mutationFn: async ({ id, value }: { id: number, value: string }) => {
-      const res = await apiRequest('PATCH', `/api/admin/system-configs/${id}`, { value });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'System configuration updated successfully',
-      });
-      refetch();
-    },
-    onError: (error: any) => {
+  // Handle adding an IP restriction
+  const handleAddIpRestriction = () => {
+    if (!newIpRestriction.ipAddress) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update system configuration',
+        description: 'IP address is required',
         variant: 'destructive',
       });
+      return;
     }
-  });
-  
-  const handleSaveConfig = (id: number, value: string) => {
-    updateConfigMutation.mutate({ id, value });
+    addIpRestrictionMutation.mutate(newIpRestriction);
   };
   
-  // Get unique categories
-  const categories = [...new Set(configs.map(config => config.category))];
+  // Handle deleting an IP restriction
+  const handleDeleteIpRestriction = (id: number) => {
+    deleteIpRestrictionMutation.mutate(id);
+  };
+  
+  // Generate a template key from name
+  const generateTemplateKey = (name: string) => {
+    return name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  };
+
+  // Update key when name changes
+  useEffect(() => {
+    if (newEmailTemplate.name && !newEmailTemplate.id) {
+      setNewEmailTemplate(prev => ({
+        ...prev,
+        key: generateTemplateKey(prev.name || '')
+      }));
+    }
+  }, [newEmailTemplate.name]);
   
   return (
     <AdminLayout>
@@ -804,12 +365,16 @@ const SettingsPage: React.FC = () => {
           </div>
           <Button 
             variant="outline" 
-            onClick={() => refetch()}
+            onClick={() => {
+              refetch();
+              refetchEmailTemplates();
+              refetchIpRestrictions();
+            }}
             className="flex items-center gap-2"
-            disabled={isLoading}
+            disabled={isLoading || isEmailTemplatesLoading || isIpRestrictionsLoading}
           >
             <CheckCircle size={16} className={isLoading ? 'animate-spin' : ''} />
-            Load Settings
+            Refresh All Settings
           </Button>
         </div>
         
@@ -841,7 +406,7 @@ const SettingsPage: React.FC = () => {
             </TabsTrigger>
           </TabsList>
           
-          {/* Pre-defined config tabs */}
+          {/* General settings tab */}
           <TabsContent value="general" className="space-y-6">
             <div className="grid grid-cols-1 gap-6">
               <Card>
@@ -851,7 +416,7 @@ const SettingsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {configs
+                    {systemConfigs
                       .filter(config => config.category === 'general' && ['site_name', 'site_description', 'site_url'].includes(config.key))
                       .map(config => (
                         <ConfigItem 
@@ -859,14 +424,13 @@ const SettingsPage: React.FC = () => {
                           config={config} 
                           onSave={handleSaveConfig}
                         />
-                      ))
-                    }
+                      ))}
                   </div>
                   
                   <Separator />
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {configs
+                    {systemConfigs
                       .filter(config => config.category === 'general' && ['maintenance_mode', 'allow_registrations'].includes(config.key))
                       .map(config => (
                         <ConfigItem 
@@ -874,14 +438,13 @@ const SettingsPage: React.FC = () => {
                           config={config} 
                           onSave={handleSaveConfig}
                         />
-                      ))
-                    }
+                      ))}
                   </div>
                   
                   <Separator />
                   
                   <div className="grid grid-cols-1 gap-6">
-                    {configs
+                    {systemConfigs
                       .filter(config => config.category === 'general' && ['tos_content', 'privacy_policy_content'].includes(config.key))
                       .map(config => (
                         <ConfigItem 
@@ -889,8 +452,7 @@ const SettingsPage: React.FC = () => {
                           config={config} 
                           onSave={handleSaveConfig}
                         />
-                      ))
-                    }
+                      ))}
                   </div>
                 </CardContent>
               </Card>
@@ -902,7 +464,7 @@ const SettingsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {configs
+                    {systemConfigs
                       .filter(config => config.category === 'general' && ['company_name', 'company_address', 'contact_email', 'contact_phone'].includes(config.key))
                       .map(config => (
                         <ConfigItem 
@@ -910,8 +472,7 @@ const SettingsPage: React.FC = () => {
                           config={config} 
                           onSave={handleSaveConfig}
                         />
-                      ))
-                    }
+                      ))}
                   </div>
                 </CardContent>
               </Card>
@@ -923,7 +484,7 @@ const SettingsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {configs
+                    {systemConfigs
                       .filter(config => config.category === 'general' && ['facebook_url', 'twitter_url', 'instagram_url', 'youtube_url', 'discord_url'].includes(config.key))
                       .map(config => (
                         <ConfigItem 
@@ -931,14 +492,14 @@ const SettingsPage: React.FC = () => {
                           config={config} 
                           onSave={handleSaveConfig}
                         />
-                      ))
-                    }
+                      ))}
                   </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
           
+          {/* API Keys settings tab */}
           <TabsContent value="api" className="space-y-6">
             <Card>
               <CardHeader>
@@ -947,7 +508,7 @@ const SettingsPage: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
-                  {configs
+                  {systemConfigs
                     .filter(config => config.category === 'api')
                     .map(config => (
                       <ConfigItem 
@@ -955,24 +516,7 @@ const SettingsPage: React.FC = () => {
                         config={config} 
                         onSave={handleSaveConfig}
                       />
-                    ))
-                  }
-                  
-                  {configs.filter(config => config.category === 'api').length === 0 && (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground">No API configuration found. Add keys for Stripe, Twitch, and other integrations.</p>
-                      <Button 
-                        variant="outline" 
-                        className="mt-4"
-                        onClick={() => {
-                          // Logic to add a new API config would go here
-                        }}
-                      >
-                        <Plus size={16} className="mr-2" />
-                        Add New API Key
-                      </Button>
-                    </div>
-                  )}
+                    ))}
                 </div>
                 
                 <Separator className="my-6" />
@@ -980,7 +524,7 @@ const SettingsPage: React.FC = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-4">Twitch Integration</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {configs
+                    {systemConfigs
                       .filter(config => config.category === 'twitch')
                       .map(config => (
                         <ConfigItem 
@@ -988,8 +532,7 @@ const SettingsPage: React.FC = () => {
                           config={config} 
                           onSave={handleSaveConfig}
                         />
-                      ))
-                    }
+                      ))}
                   </div>
                 </div>
                 
@@ -998,7 +541,7 @@ const SettingsPage: React.FC = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-4">Stripe Integration</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {configs
+                    {systemConfigs
                       .filter(config => config.category === 'stripe')
                       .map(config => (
                         <ConfigItem 
@@ -1006,8 +549,7 @@ const SettingsPage: React.FC = () => {
                           config={config} 
                           onSave={handleSaveConfig}
                         />
-                      ))
-                    }
+                      ))}
                   </div>
                 </div>
                 
@@ -1016,7 +558,7 @@ const SettingsPage: React.FC = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-4">Crypto Payment Integration</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {configs
+                    {systemConfigs
                       .filter(config => config.category === 'crypto')
                       .map(config => (
                         <ConfigItem 
@@ -1024,14 +566,14 @@ const SettingsPage: React.FC = () => {
                           config={config} 
                           onSave={handleSaveConfig}
                         />
-                      ))
-                    }
+                      ))}
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
+          {/* Email Settings tab */}
           <TabsContent value="mail" className="space-y-6">
             <Card>
               <CardHeader>
@@ -1044,10 +586,10 @@ const SettingsPage: React.FC = () => {
                     <Label>Email Provider</Label>
                     <Select 
                       defaultValue={
-                        configs.find(c => c.key === 'mail_provider')?.value || 'mailjet'
+                        systemConfigs.find(c => c.key === 'mail_provider')?.value || 'mailjet'
                       }
                       onValueChange={(value) => {
-                        const config = configs.find(c => c.key === 'mail_provider');
+                        const config = systemConfigs.find(c => c.key === 'mail_provider');
                         if (config) {
                           handleSaveConfig(config.id, value);
                         }
@@ -1066,7 +608,7 @@ const SettingsPage: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 gap-6">
-                  {configs
+                  {systemConfigs
                     .filter(config => config.category === 'mail')
                     .map(config => (
                       <ConfigItem 
@@ -1074,14 +616,7 @@ const SettingsPage: React.FC = () => {
                         config={config} 
                         onSave={handleSaveConfig}
                       />
-                    ))
-                  }
-                  
-                  {configs.filter(config => config.category === 'mail').length === 0 && (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground">No mail configuration found. Configure your email service settings.</p>
-                    </div>
-                  )}
+                    ))}
                 </div>
                 
                 <Separator className="my-6" />
@@ -1089,7 +624,7 @@ const SettingsPage: React.FC = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-4">Email Sending Options</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {configs
+                    {systemConfigs
                       .filter(config => config.category === 'mail_options')
                       .map(config => (
                         <ConfigItem 
@@ -1097,14 +632,138 @@ const SettingsPage: React.FC = () => {
                           config={config} 
                           onSave={handleSaveConfig}
                         />
-                      ))
-                    }
+                      ))}
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
+          {/* Email Templates tab */}
+          <TabsContent value="email-templates" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Email Templates</CardTitle>
+                    <CardDescription>Manage email templates for user notifications and system messages</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowNewTemplateDialog(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Add Template
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isEmailTemplatesLoading ? (
+                  <div className="flex justify-center p-8">
+                    <LoaderCircle className="animate-spin h-8 w-8 text-primary" />
+                  </div>
+                ) : emailTemplates.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-6">
+                    {emailTemplates.map(template => (
+                      <div key={template.id} className="border rounded-lg p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-xl font-semibold">{template.name}</h3>
+                            <p className="text-muted-foreground mt-1">
+                              {template.description || <span className="italic">No description provided</span>}
+                            </p>
+                          </div>
+                          <Badge variant="outline">{template.type}</Badge>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <Label>Subject</Label>
+                            <Input 
+                              value={template.subject} 
+                              onChange={(e) => {
+                                const updatedTemplate = { ...template, subject: e.target.value };
+                                handleSaveEmailTemplate(template.id, updatedTemplate);
+                              }}
+                              className="mt-2"
+                            />
+                          </div>
+                          <div>
+                            <Label>Template Key</Label>
+                            <Input 
+                              value={template.key} 
+                              readOnly 
+                              className="mt-2 bg-muted"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label>Content</Label>
+                          <Textarea 
+                            value={template.content} 
+                            onChange={(e) => {
+                              const updatedTemplate = { ...template, content: e.target.value };
+                              handleSaveEmailTemplate(template.id, updatedTemplate);
+                            }}
+                            className="mt-2 min-h-[200px]"
+                          />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Available variables: {"{username}"}, {"{verification_link}"}, {"{site_name}"}
+                          </p>
+                        </div>
+                        
+                        <div className="flex justify-end gap-2">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                <Trash2 size={16} className="mr-2" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete the email template "{template.name}".
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteEmailTemplate(template.id)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                          
+                          <Button 
+                            onClick={() => handleSaveEmailTemplate(template.id, template)} 
+                            size="sm"
+                          >
+                            <Save size={16} className="mr-2" />
+                            Save Changes
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center p-8">
+                    <p className="text-muted-foreground mb-4">No email templates found.</p>
+                    <Button onClick={() => setShowNewTemplateDialog(true)}>
+                      Add Your First Template
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Security settings tab */}
           <TabsContent value="security" className="space-y-6">
             <Card>
               <CardHeader>
@@ -1113,7 +772,7 @@ const SettingsPage: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {configs
+                  {systemConfigs
                     .filter(config => config.category === 'security')
                     .map(config => (
                       <ConfigItem 
@@ -1121,49 +780,305 @@ const SettingsPage: React.FC = () => {
                         config={config} 
                         onSave={handleSaveConfig}
                       />
-                    ))
-                  }
-                  
-                  {configs.filter(config => config.category === 'security').length === 0 && (
-                    <div className="text-center py-4 col-span-2">
-                      <p className="text-muted-foreground">No security configuration found. Configure security options like password policy, session timeout, etc.</p>
-                    </div>
-                  )}
+                    ))}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
-          {/* Fallback for other categories */}
-          {categories
-            .filter(category => !['general', 'api', 'mail', 'security', 'twitch', 'stripe', 'crypto', 'mail_options'].includes(category))
-            .map(category => (
-              <TabsContent key={category} value={category} className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{category.charAt(0).toUpperCase() + category.slice(1)} Settings</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ConfigTab 
-                      category={category}
-                      configs={configs}
-                      isLoading={isLoading}
-                      onSave={handleSaveConfig}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            ))}
-          
-          <TabsContent value="email-templates">
-            <EmailTemplateManager />
-          </TabsContent>
-          
-          <TabsContent value="ip-restrictions">
-            <IPRestrictionManager />
+          {/* IP Restrictions tab */}
+          <TabsContent value="ip-restrictions" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>IP Restrictions</CardTitle>
+                    <CardDescription>Manage IP address whitelists and blacklists</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowNewIpRestrictionDialog(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Add Restriction
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isIpRestrictionsLoading ? (
+                  <div className="flex justify-center p-8">
+                    <LoaderCircle className="animate-spin h-8 w-8 text-primary" />
+                  </div>
+                ) : ipRestrictions.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <Card className="shadow-none border-2 border-destructive/20">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Badge variant="destructive">Blacklist</Badge>
+                            Blocked IP Addresses
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {ipRestrictions
+                              .filter(r => r.type === 'blacklist')
+                              .map(restriction => (
+                                <div 
+                                  key={restriction.id} 
+                                  className="flex items-center justify-between p-3 border rounded-md bg-card"
+                                >
+                                  <div>
+                                    <p className="font-mono">{restriction.ipAddress}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {restriction.comment || <span className="italic">No comment</span>}
+                                    </p>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => handleDeleteIpRestriction(restriction.id)}
+                                  >
+                                    <Trash2 size={16} className="text-destructive" />
+                                  </Button>
+                                </div>
+                              ))}
+                            
+                            {ipRestrictions.filter(r => r.type === 'blacklist').length === 0 && (
+                              <p className="text-sm text-muted-foreground text-center py-2">
+                                No IP addresses blacklisted
+                              </p>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="shadow-none border-2 border-primary/20">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Badge variant="default">Whitelist</Badge>
+                            Allowed IP Addresses
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {ipRestrictions
+                              .filter(r => r.type === 'whitelist')
+                              .map(restriction => (
+                                <div 
+                                  key={restriction.id} 
+                                  className="flex items-center justify-between p-3 border rounded-md bg-card"
+                                >
+                                  <div>
+                                    <p className="font-mono">{restriction.ipAddress}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {restriction.comment || <span className="italic">No comment</span>}
+                                    </p>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => handleDeleteIpRestriction(restriction.id)}
+                                  >
+                                    <Trash2 size={16} className="text-destructive" />
+                                  </Button>
+                                </div>
+                              ))}
+                            
+                            {ipRestrictions.filter(r => r.type === 'whitelist').length === 0 && (
+                              <p className="text-sm text-muted-foreground text-center py-2">
+                                No IP addresses whitelisted
+                              </p>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    
+                    <div className="bg-muted p-4 rounded-md">
+                      <p className="text-sm">
+                        <strong>Note:</strong> When whitelist mode is active, only IPs in the whitelist will be allowed access.
+                        When blacklist mode is active, IPs in the blacklist will be blocked from accessing the site.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center p-8">
+                    <p className="text-muted-foreground mb-4">No IP restrictions found.</p>
+                    <Button onClick={() => setShowNewIpRestrictionDialog(true)}>
+                      Add Your First Restriction
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* New Email Template Dialog */}
+      <Dialog open={showNewTemplateDialog} onOpenChange={setShowNewTemplateDialog}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Add New Email Template</DialogTitle>
+            <DialogDescription>
+              Create a new email template for system notifications.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="template-name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="template-name"
+                value={newEmailTemplate.name}
+                onChange={(e) => setNewEmailTemplate({ ...newEmailTemplate, name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="template-key" className="text-right">
+                Key
+              </Label>
+              <Input
+                id="template-key"
+                value={newEmailTemplate.key}
+                onChange={(e) => setNewEmailTemplate({ ...newEmailTemplate, key: e.target.value })}
+                className="col-span-3"
+                disabled={!!newEmailTemplate.name}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="template-type" className="text-right">
+                Type
+              </Label>
+              <Select
+                value={newEmailTemplate.type}
+                onValueChange={(value) => setNewEmailTemplate({ ...newEmailTemplate, type: value })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select template type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="notification">Notification</SelectItem>
+                  <SelectItem value="welcome">Welcome</SelectItem>
+                  <SelectItem value="verification">Verification</SelectItem>
+                  <SelectItem value="password_reset">Password Reset</SelectItem>
+                  <SelectItem value="invoice">Invoice</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="template-subject" className="text-right">
+                Subject
+              </Label>
+              <Input
+                id="template-subject"
+                value={newEmailTemplate.subject}
+                onChange={(e) => setNewEmailTemplate({ ...newEmailTemplate, subject: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              <Label htmlFor="template-content" className="text-right">
+                Content
+              </Label>
+              <Textarea
+                id="template-content"
+                value={newEmailTemplate.content}
+                onChange={(e) => setNewEmailTemplate({ ...newEmailTemplate, content: e.target.value })}
+                className="col-span-3"
+                rows={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewTemplateDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => saveEmailTemplateMutation.mutate(newEmailTemplate)}
+              disabled={saveEmailTemplateMutation.isPending || !newEmailTemplate.name || !newEmailTemplate.subject}
+            >
+              {saveEmailTemplateMutation.isPending && (
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Save Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* New IP Restriction Dialog */}
+      <Dialog open={showNewIpRestrictionDialog} onOpenChange={setShowNewIpRestrictionDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add IP Restriction</DialogTitle>
+            <DialogDescription>
+              Add an IP address to the whitelist or blacklist.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="restriction-type" className="text-right">
+                Type
+              </Label>
+              <Select
+                value={newIpRestriction.type}
+                onValueChange={(value) => setNewIpRestriction({ ...newIpRestriction, type: value as 'blacklist' | 'whitelist' })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select restriction type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="blacklist">Blacklist (Block)</SelectItem>
+                  <SelectItem value="whitelist">Whitelist (Allow)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="ip-address" className="text-right">
+                IP Address
+              </Label>
+              <Input
+                id="ip-address"
+                value={newIpRestriction.ipAddress}
+                onChange={(e) => setNewIpRestriction({ ...newIpRestriction, ipAddress: e.target.value })}
+                placeholder="e.g. 192.168.1.1"
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="restriction-comment" className="text-right">
+                Comment
+              </Label>
+              <Input
+                id="restriction-comment"
+                value={newIpRestriction.comment || ''}
+                onChange={(e) => setNewIpRestriction({ ...newIpRestriction, comment: e.target.value })}
+                placeholder="Optional"
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewIpRestrictionDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddIpRestriction}
+              disabled={addIpRestrictionMutation.isPending || !newIpRestriction.ipAddress}
+            >
+              {addIpRestrictionMutation.isPending && (
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Add Restriction
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
