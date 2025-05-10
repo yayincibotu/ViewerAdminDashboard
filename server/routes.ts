@@ -1641,6 +1641,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Sync subscription plans with Stripe
+  app.post("/api/admin/sync-stripe-plans", requireAdmin, async (req, res) => {
+    try {
+      if (!isStripeConfigured()) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Stripe API key is not configured. Please add your Stripe API key in the settings." 
+        });
+      }
+      
+      // Import the sync function from stripe-helper
+      const { syncSubscriptionPlansWithStripe } = await import('./stripe-helper');
+      
+      // Execute the sync
+      const result = await syncSubscriptionPlansWithStripe();
+      
+      // Return success response
+      res.json({
+        success: true,
+        message: "Subscription plans successfully synchronized with Stripe.",
+        result
+      });
+    } catch (error: any) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error syncing plans with Stripe: " + error.message
+      });
+    }
+  });
+  
   // Get upcoming invoice
   app.get("/api/upcoming-invoice", async (req, res) => {
     if (!req.isAuthenticated()) {
