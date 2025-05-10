@@ -7,6 +7,7 @@ import { z } from "zod";
 import { mailService } from "./mail";
 import crypto from "crypto";
 import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 import { 
   users, userSubscriptions, payments, 
   invoices, paymentMethods,
@@ -36,7 +37,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-04-30.basil" as any })
   : undefined;
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1811,7 +1812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoiceRecords = await db.select().from(invoices);
       }
       
-      res.json(invoices);
+      res.json(invoiceRecords);
     } catch (error: any) {
       res.status(500).json({ message: "Error retrieving invoices: " + error.message });
     }
@@ -2198,7 +2199,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const subscriptionCount = activeSubscriptions.length;
       
       // Get plans for the active subscriptions
-      const planIds = [...new Set(activeSubscriptions.map(sub => sub.planId))];
+      const planIdsSet = new Set(activeSubscriptions.map(sub => sub.planId));
+      const planIds = Array.from(planIdsSet);
       const plans = await Promise.all(
         planIds.map(id => storage.getSubscriptionPlan(id))
       );
