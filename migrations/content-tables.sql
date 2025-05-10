@@ -1,0 +1,88 @@
+-- Page Contents Table
+CREATE TABLE IF NOT EXISTS page_contents (
+  id SERIAL PRIMARY KEY,
+  slug VARCHAR(255) NOT NULL UNIQUE,
+  title VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  meta_title VARCHAR(255),
+  meta_description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  position INTEGER NOT NULL DEFAULT 0,
+  last_updated_by INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  FOREIGN KEY (last_updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Blog Categories Table
+CREATE TABLE IF NOT EXISTS blog_categories (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) NOT NULL UNIQUE,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Blog Posts Table
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) NOT NULL UNIQUE,
+  content TEXT NOT NULL,
+  excerpt TEXT,
+  author_id INTEGER,
+  category_id INTEGER,
+  tags VARCHAR(255),
+  status VARCHAR(50) NOT NULL DEFAULT 'draft',
+  meta_title VARCHAR(255),
+  meta_description TEXT,
+  cover_image VARCHAR(255),
+  published_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (category_id) REFERENCES blog_categories(id) ON DELETE SET NULL
+);
+
+-- FAQ Categories Table
+CREATE TABLE IF NOT EXISTS faq_categories (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- FAQs Table
+CREATE TABLE IF NOT EXISTS faqs (
+  id SERIAL PRIMARY KEY,
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  category_id INTEGER,
+  position INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  FOREIGN KEY (category_id) REFERENCES faq_categories(id) ON DELETE SET NULL
+);
+
+-- Contact Messages Table
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(50),
+  subject VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'unread',
+  ip_address VARCHAR(45),
+  replied_by INTEGER,
+  replied_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  FOREIGN KEY (replied_by) REFERENCES users(id) ON DELETE SET NULL
+);
