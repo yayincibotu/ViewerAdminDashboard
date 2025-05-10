@@ -379,6 +379,16 @@ const SubscribePage: React.FC = () => {
         } else if (data.paymentMethod === 'crypto' && data.transactionId) {
           setCryptoData(data);
           setClientSecret("");
+        } else if (data.error === 'missing_stripe_price_id') {
+          console.error("Missing Stripe price ID:", data);
+          setError("This plan doesn't support credit card payments. Please try cryptocurrency payment or contact support.");
+        } else if (data.error === 'invalid_stripe_price') {
+          console.error("Invalid Stripe price:", data);
+          setError("The payment system configuration is invalid. Please contact support for assistance.");
+        } else if (data.error === 'stripe_not_configured') {
+          console.error("Stripe not configured:", data);
+          setError("Credit card payments are not available at this time. Please try cryptocurrency payment or contact support.");
+          setPaymentMethod('crypto'); // Auto-switch to crypto payment
         } else {
           console.error("Unexpected payment response:", data);
           setError("Failed to initialize payment. Please check if the plan has proper payment configuration.");

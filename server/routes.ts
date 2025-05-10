@@ -661,24 +661,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // For card payment, check if Stripe is configured
-    if (!stripe) {
-      return res.status(500).json({ message: "Stripe is not configured." });
-    }
-
-    // If user already has a subscription
-    if (user.stripeSubscriptionId) {
-      try {
-        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
-
-        res.json({
-          paymentMethod: 'card',
-          subscriptionId: subscription.id,
-          clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+    if (paymentMethod === 'card') {
+      if (!stripe) {
+        return res.status(500).json({ 
+          message: "Stripe is not configured. Card payments are not available at this time.",
+          error: "stripe_not_configured"
         });
-        return;
-      } catch (error) {
-        // If there was an error retrieving the subscription, continue to create a new one
-        console.error("Error retrieving subscription:", error);
+      }
+
+      // If user already has a subscription
+      if (user.stripeSubscriptionId) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+
+          res.json({
+            paymentMethod: 'card',
+            subscriptionId: subscription.id,
+            clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+          });
+          return;
+        } catch (error) {
+          // If there was an error retrieving the subscription, continue to create a new one
+          console.error("Error retrieving subscription:", error);
+        }
       }
     }
     
@@ -689,8 +694,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       
       // If payment method is card, we need a valid Stripe price ID
-      if (paymentMethod === 'card' && !plan.stripePriceId) {
-        return res.status(400).json({ message: "Selected plan does not have a valid price ID for credit card payments" });
+      const stripePriceId = plan.stripePriceId;
+      if (paymentMethod === 'card' && !stripePriceId) {
+        return res.status(400).json({ 
+          message: "This plan does not support credit card payments. Please contact an administrator to set up Stripe pricing.",
+          error: "missing_stripe_price_id"
+        });
       }
 
       // Create or use existing Stripe customer
@@ -707,11 +716,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
+        // Make sure stripe is initialized
+        if (!stripe) {
+          return res.status(500).json({ 
+            message: "Stripe is not configured. Card payments are not available at this time.",
+            error: "stripe_not_configured"
+          });
+        }
+        
+        // Get the actual Stripe price ID from the system config if it's using a placeholder
+        let actualPriceId = stripePriceId;
+        
+        // Verify the price exists in Stripe
+        try {
+          // Try to retrieve the price from Stripe to validate it exists
+          if (actualPriceId) {
+            await stripe.prices.retrieve(actualPriceId);
+          } else {
+            throw new Error("No price ID provided");
+          }
+        } catch (priceError: any) {
+          console.error(`Stripe price validation error: ${priceError.message}`, priceError);
+          return res.status(400).json({ 
+            message: "The payment system is not properly configured for this plan. Please contact an administrator.",
+            error: "invalid_stripe_price",
+            details: priceError.message
+          });
+        }
+        
         // Create subscription with Stripe
         const subscription = await stripe.subscriptions.create({
           customer: customerId,
           items: [{
-            price: plan.stripePriceId,
+            price: actualPriceId,
           }],
           payment_behavior: 'default_incomplete',
           expand: ['latest_invoice.payment_intent'],
