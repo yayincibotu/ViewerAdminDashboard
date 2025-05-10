@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, date, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -514,5 +514,196 @@ export const contactMessagesRelations = relations(contactMessages, ({ one }) => 
   repliedByUser: one(users, {
     fields: [contactMessages.repliedBy],
     references: [users.id],
+  }),
+}));
+
+// System Settings Tables
+
+// Email Templates
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // verification, welcome, invoice, etc.
+  subject: text("subject").notNull(),
+  htmlContent: text("html_content").notNull(),
+  textContent: text("text_content"),
+  isActive: boolean("is_active").notNull().default(true),
+  lastUpdatedBy: integer("last_updated_by").references(() => users.id),
+  variables: text("variables").array(), // Available variables that can be used in the template
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates, {
+  name: z.string().min(1).max(100),
+  type: z.string().min(1),
+  subject: z.string().min(1),
+  htmlContent: z.string().min(1),
+  textContent: z.string().optional(),
+  variables: z.array(z.string()).optional()
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// System Configurations
+export const systemConfigs = pgTable("system_configs", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value"),
+  description: text("description"),
+  category: text("category").notNull(), // integration, security, maintenance, etc.
+  isEncrypted: boolean("is_encrypted").default(false),
+  lastUpdatedBy: integer("last_updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+export const insertSystemConfigSchema = createInsertSchema(systemConfigs, {
+  key: z.string().min(1).max(100),
+  value: z.string().optional(),
+  description: z.string().optional(),
+  category: z.string().min(1),
+  isEncrypted: z.boolean().optional()
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// IP Restrictions
+export const ipRestrictions = pgTable("ip_restrictions", {
+  id: serial("id").primaryKey(),
+  ipAddress: text("ip_address").notNull(),
+  type: text("type").notNull().default("deny"), // allow, deny
+  comment: text("comment"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+export const insertIpRestrictionSchema = createInsertSchema(ipRestrictions, {
+  ipAddress: z.string().min(1),
+  type: z.string().default("deny"),
+  comment: z.string().optional()
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// Audit Logs
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  action: text("action").notNull(), // login, update_settings, create_post, etc.
+  entityType: text("entity_type"), // user, blog_post, system_config, etc.
+  entityId: text("entity_id"), // ID of the entity that was affected
+  details: text("details"), // JSON with additional details
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs, {
+  action: z.string().min(1),
+  entityType: z.string().optional(),
+  entityId: z.string().optional(),
+  details: z.string().optional(),
+  ipAddress: z.string().optional(),
+  userAgent: z.string().optional()
+}).omit({
+  id: true,
+  createdAt: true
+});
+
+// Analytics & Reporting Tables
+
+// User Analytics
+export const userAnalytics = pgTable("user_analytics", {
+  id: serial("id").primaryKey(),
+  date: timestamp("date").notNull(),
+  newUsers: integer("new_users").notNull().default(0),
+  activeUsers: integer("active_users").notNull().default(0),
+  totalUsers: integer("total_users").notNull().default(0),
+  countryData: text("country_data"), // JSON with country distribution
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+// Subscription Analytics
+export const subscriptionAnalytics = pgTable("subscription_analytics", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  planId: integer("plan_id").references(() => subscriptionPlans.id),
+  newSubscriptions: integer("new_subscriptions").notNull().default(0),
+  cancelledSubscriptions: integer("cancelled_subscriptions").notNull().default(0),
+  totalActiveSubscriptions: integer("total_active_subscriptions").notNull().default(0),
+  renewalRate: real("renewal_rate"), // Percentage
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+// Financial Analytics
+export const financialAnalytics = pgTable("financial_analytics", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  totalRevenue: integer("total_revenue").notNull().default(0), // In cents
+  newRevenue: integer("new_revenue").notNull().default(0), // In cents
+  recurringRevenue: integer("recurring_revenue").notNull().default(0), // In cents
+  refunds: integer("refunds").notNull().default(0), // In cents
+  averageRevenuePerUser: integer("average_revenue_per_user").default(0), // In cents
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+// Performance Metrics
+export const performanceMetrics = pgTable("performance_metrics", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  serviceType: text("service_type").notNull(), // twitch_viewers, twitch_chatbot, etc.
+  totalRequests: integer("total_requests").notNull().default(0),
+  successfulRequests: integer("successful_requests").notNull().default(0),
+  failedRequests: integer("failed_requests").notNull().default(0),
+  averageResponseTime: real("average_response_time").default(0), // In milliseconds
+  resourceUsage: text("resource_usage"), // JSON with CPU, memory usage, etc.
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+// Relations
+export const emailTemplatesRelations = relations(emailTemplates, ({ one }) => ({
+  lastUpdatedByUser: one(users, {
+    fields: [emailTemplates.lastUpdatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const systemConfigsRelations = relations(systemConfigs, ({ one }) => ({
+  lastUpdatedByUser: one(users, {
+    fields: [systemConfigs.lastUpdatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const ipRestrictionsRelations = relations(ipRestrictions, ({ one }) => ({
+  createdByUser: one(users, {
+    fields: [ipRestrictions.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const subscriptionAnalyticsRelations = relations(subscriptionAnalytics, ({ one }) => ({
+  plan: one(subscriptionPlans, {
+    fields: [subscriptionAnalytics.planId],
+    references: [subscriptionPlans.id],
   }),
 }));
