@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 const UserDetails: React.FC = () => {
   const [, navigate] = useLocation();
   const { id } = useParams();
-  const userId = parseInt(id);
+  const userId = parseInt(id || "0");
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -39,15 +39,31 @@ const UserDetails: React.FC = () => {
   });
   
   // Fetch user details
-  const { data: user, isLoading, error } = useQuery({
+  const { data: user, isLoading, error } = useQuery<any, Error>({
     queryKey: [`/api/admin/users/${userId}`],
-    onSuccess: (data) => {
-      setFormData({
-        username: data.username,
-        email: data.email,
-        role: data.role,
-        isEmailVerified: data.isEmailVerified
-      });
+    enabled: userId > 0, // Only run query if we have a valid userId
+    queryFn: async () => {
+      try {
+        const response = await apiRequest('GET', `/api/admin/users/${userId}`);
+        const data = await response.json();
+        
+        console.log("Received user data:", data);
+        
+        // Update form data when we get the user details
+        if (data) {
+          setFormData({
+            username: data.username || '',
+            email: data.email || '',
+            role: data.role || '',
+            isEmailVerified: data.isEmailVerified || false
+          });
+        }
+        
+        return data;
+      } catch (err) {
+        console.error("Error fetching user details:", err);
+        throw err;
+      }
     }
   });
   
@@ -181,7 +197,7 @@ const UserDetails: React.FC = () => {
     );
   }
   
-  if (!user) {
+  if (!isLoading && !user) {
     return (
       <div className="flex h-screen bg-gray-100">
         <AdminSidebar />
@@ -189,7 +205,8 @@ const UserDetails: React.FC = () => {
           <div className="text-center">
             <User className="h-8 w-8 text-gray-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">User Not Found</h2>
-            <p className="text-gray-600 mb-4">The requested user does not exist or has been deleted.</p>
+            <p className="text-gray-600 mb-4">The requested user (ID: {userId}) does not exist or could not be loaded.</p>
+            <p className="text-sm text-gray-500 mb-4">API result: {JSON.stringify(user)}</p>
             <Button onClick={() => navigate('/webadmin/users')}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Users
             </Button>
@@ -249,16 +266,16 @@ const UserDetails: React.FC = () => {
                 <div className="flex flex-col items-center mb-6">
                   <Avatar className="h-24 w-24 mb-4">
                     <AvatarFallback className="text-2xl">
-                      {user.username.charAt(0).toUpperCase()}
+                      {user?.username ? user.username.charAt(0).toUpperCase() : '?'}
                     </AvatarFallback>
                   </Avatar>
-                  <h2 className="text-xl font-bold">{user.username}</h2>
-                  <p className="text-gray-500">{user.email}</p>
+                  <h2 className="text-xl font-bold">{user?.username || 'Unknown User'}</h2>
+                  <p className="text-gray-500">{user?.email || 'No email'}</p>
                   <div className="flex items-center mt-2">
-                    <Badge className={user.role === 'admin' ? "bg-red-500" : "bg-blue-500"}>
-                      {user.role === 'admin' ? "Admin" : "User"}
+                    <Badge className={user?.role === 'admin' ? "bg-red-500" : "bg-blue-500"}>
+                      {user?.role === 'admin' ? "Admin" : "User"}
                     </Badge>
-                    {user.isEmailVerified ? (
+                    {user?.isEmailVerified ? (
                       <Badge className="ml-2 bg-green-500">Verified</Badge>
                     ) : (
                       <Badge className="ml-2 bg-yellow-500">Unverified</Badge>
@@ -269,19 +286,19 @@ const UserDetails: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm font-medium text-gray-500">User ID</p>
-                    <p>{user.id}</p>
+                    <p>{user?.id || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Registration Date</p>
-                    <p>{format(new Date(user.createdAt), 'PPP')}</p>
+                    <p>{user?.createdAt ? format(new Date(user.createdAt), 'PPP') : 'Not available'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Payment Status</p>
-                    <p>{user.stripeCustomerId ? "Payment Method Added" : "No Payment Method"}</p>
+                    <p>{user?.stripeCustomerId ? "Payment Method Added" : "No Payment Method"}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Subscription Status</p>
-                    <p>{user.stripeSubscriptionId ? "Active Subscription" : "No Subscription"}</p>
+                    <p>{user?.stripeSubscriptionId ? "Active Subscription" : "No Subscription"}</p>
                   </div>
                 </div>
               </CardContent>
@@ -292,7 +309,7 @@ const UserDetails: React.FC = () => {
                     Reset Password
                   </Button>
                   
-                  {!user.isEmailVerified && (
+                  {user && !user.isEmailVerified && (
                     <Button 
                       variant="outline" 
                       size="sm" 
