@@ -703,7 +703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         customerId = customer.id;
-        user = await storage.updateStripeCustomerId(user.id, customerId);
+        await storage.updateStripeCustomerId(user.id, customerId);
       }
 
       // Create subscription
@@ -717,10 +717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Update user with subscription info
-      await storage.updateUserStripeInfo(user.id, {
-        customerId: customerId, 
-        subscriptionId: subscription.id
-      });
+      await storage.updateUserStripeInfo(user.id, customerId, subscription.id);
       
       // Create user subscription record
       const now = new Date();
