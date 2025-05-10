@@ -318,25 +318,56 @@ const SubscribePage: React.FC = () => {
     if (!plan || !planId || !user) return;
     
     const createSubscription = async () => {
+      setIsLoading(true);
+      setError(null);
+      
       try {
-        setIsLoading(true);
-        setError(null);
+        // Create a new AbortController for this request
+        const controller = new AbortController();
+        const signal = controller.signal;
         
-        const response = await apiRequest("POST", "/api/get-or-create-subscription", { 
-          planId: planId,
-          paymentMethod: paymentMethod
-        });
+        // Set a timeout for the request
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         
+        const response = await apiRequest("POST", "/api/get-or-create-subscription", 
+          { 
+            planId: planId,
+            paymentMethod: paymentMethod
+          }
+        );
+        
+        // Clear the timeout since the request completed
+        clearTimeout(timeoutId);
+        
+        let responseText;
         let data;
-        try {
-          data = await response.json();
-        } catch (jsonError) {
-          console.error("Error parsing response:", jsonError);
-          throw new Error("Failed to parse server response");
-        }
         
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to create subscription");
+        try {
+          responseText = await response.text();
+          
+          if (!response.ok) {
+            let errorMessage = "Failed to create subscription";
+            
+            try {
+              const errorData = JSON.parse(responseText);
+              errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+              // If we can't parse the error as JSON, use the text directly
+              if (responseText) errorMessage = responseText;
+            }
+            
+            throw new Error(errorMessage);
+          }
+          
+          try {
+            data = JSON.parse(responseText);
+          } catch (jsonError) {
+            console.error("Error parsing response:", jsonError);
+            throw new Error("Failed to parse server response");
+          }
+        } catch (responseError) {
+          console.error("Error reading or parsing response:", responseError);
+          throw new Error("Failed to process server response");
         }
         
         console.log("Payment response:", data);
