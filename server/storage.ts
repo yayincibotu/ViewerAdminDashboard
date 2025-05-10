@@ -31,6 +31,8 @@ export interface IStorage {
   getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
   getSubscriptionPlan(id: number): Promise<SubscriptionPlan | undefined>;
   createSubscriptionPlan(plan: SubscriptionPlan): Promise<SubscriptionPlan>;
+  updateSubscriptionPlan(id: number, data: Partial<SubscriptionPlan>): Promise<SubscriptionPlan | undefined>;
+  deleteSubscriptionPlan(id: number): Promise<boolean>;
   
   // Platform operations
   getPlatforms(): Promise<Platform[]>;
@@ -60,7 +62,7 @@ export interface IStorage {
   updateGeographicTargeting(id: number, countries: string): Promise<UserSubscription | undefined>;
 
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: any; // session.Store
 }
 
 export class DatabaseStorage implements IStorage {
@@ -287,6 +289,44 @@ export class DatabaseStorage implements IStorage {
   async createSubscriptionPlan(plan: SubscriptionPlan): Promise<SubscriptionPlan> {
     const [newPlan] = await db.insert(subscriptionPlans).values(plan).returning();
     return newPlan;
+  }
+  
+  async updateSubscriptionPlan(id: number, data: Partial<SubscriptionPlan>): Promise<SubscriptionPlan | undefined> {
+    const [updatedPlan] = await db
+      .update(subscriptionPlans)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(subscriptionPlans.id, id))
+      .returning();
+    
+    return updatedPlan;
+  }
+  
+  async deleteSubscriptionPlan(id: number): Promise<boolean> {
+    try {
+      // Check if there are any active subscriptions using this plan
+      const subscriptions = await db
+        .select()
+        .from(userSubscriptions)
+        .where(eq(userSubscriptions.planId, id));
+        
+      // If there are active subscriptions, don't allow deletion
+      if (subscriptions.length > 0) {
+        return false;
+      }
+        
+      // Delete the plan
+      const result = await db
+        .delete(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, id));
+        
+      return true;
+    } catch (error) {
+      console.error("Error deleting subscription plan:", error);
+      return false;
+    }
   }
 
   async getPlatforms(): Promise<Platform[]> {

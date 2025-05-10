@@ -1133,16 +1133,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/subscription-plans", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    
+  // Admin Subscription Plan APIs
+  app.post("/api/admin/subscription-plans", isAdmin, async (req, res) => {
     try {
       const plan = await storage.createSubscriptionPlan(req.body);
       res.status(201).json(plan);
     } catch (error: any) {
       res.status(500).json({ message: "Error creating subscription plan: " + error.message });
+    }
+  });
+  
+  // Update subscription plan
+  app.put("/api/admin/subscription-plans/:id", isAdmin, async (req, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      
+      // Check if plan exists
+      const existingPlan = await storage.getSubscriptionPlan(planId);
+      if (!existingPlan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      // Update plan data
+      const updatedPlan = await storage.updateSubscriptionPlan(planId, req.body);
+      res.json(updatedPlan);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating subscription plan: " + error.message });
+    }
+  });
+  
+  // Update subscription plan visibility
+  app.patch("/api/admin/subscription-plans/:id/visibility", isAdmin, async (req, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const { isVisible } = req.body;
+      
+      if (typeof isVisible !== 'boolean') {
+        return res.status(400).json({ message: "isVisible must be a boolean" });
+      }
+      
+      // Check if plan exists
+      const existingPlan = await storage.getSubscriptionPlan(planId);
+      if (!existingPlan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      // Update plan visibility
+      const updatedPlan = await storage.updateSubscriptionPlan(planId, { isVisible });
+      res.json(updatedPlan);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating subscription plan visibility: " + error.message });
+    }
+  });
+  
+  // Delete subscription plan
+  app.delete("/api/admin/subscription-plans/:id", isAdmin, async (req, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      
+      // Check if plan exists
+      const existingPlan = await storage.getSubscriptionPlan(planId);
+      if (!existingPlan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      // Delete the plan
+      const success = await storage.deleteSubscriptionPlan(planId);
+      
+      if (success) {
+        res.status(204).send();
+      } else {
+        res.status(500).json({ message: "Failed to delete subscription plan" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: "Error deleting subscription plan: " + error.message });
     }
   });
   
