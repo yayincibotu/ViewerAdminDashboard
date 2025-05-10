@@ -19,6 +19,7 @@ import AdminUsers from "@/pages/webadmin/Users";
 import UserDetails from "@/pages/webadmin/UserDetails";
 import AdminPayments from "@/pages/webadmin/Payments";
 import AdminServices from "@/pages/webadmin/Services";
+import AdminPlans from "@/pages/webadmin/Plans";
 import Checkout from "@/pages/payment/Checkout";
 import Subscribe from "@/pages/payment/Subscribe";
 import { useAuth } from "@/hooks/use-auth";
@@ -52,6 +53,7 @@ function Router() {
           <ProtectedRoute path="/webadmin/users/:id" component={UserDetails} />
           <ProtectedRoute path="/webadmin/payments" component={AdminPayments} />
           <ProtectedRoute path="/webadmin/services" component={AdminServices} />
+          <ProtectedRoute path="/webadmin/plans" component={AdminPlans} />
         </>
       )}
       
