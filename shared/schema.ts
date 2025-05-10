@@ -35,20 +35,33 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export const subscriptionPlans = pgTable("subscription_plans", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  price: integer("price").notNull(),
+  price: integer("price").notNull(), // Price in cents
+  annualPrice: integer("annual_price"), // Annual price in cents (optional)
+  billingCycle: text("billing_cycle").default("monthly"), // monthly or annual
   viewerCount: integer("viewer_count").notNull(),
   chatCount: integer("chat_count").notNull(),
   followerCount: integer("follower_count").notNull(),
   description: text("description").notNull(),
   features: text("features").array().notNull(),
   stripePriceId: text("stripe_price_id"),
+  stripeProductId: text("stripe_product_id"),
+  stripeAnnualPriceId: text("stripe_annual_price_id"),
   isPopular: boolean("is_popular").default(false),
   platform: text("platform").notNull(),
   geographicTargeting: boolean("geographic_targeting").default(false),
+  promoCode: text("promo_code"),
+  discountPercentage: integer("discount_percentage"),
+  isVisible: boolean("is_visible").default(true).notNull(),
+  isComingSoon: boolean("is_coming_soon").default(false).notNull(),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertPlanSchema = createInsertSchema(subscriptionPlans).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // User Subscriptions
