@@ -327,18 +327,25 @@ const SubscribePage: React.FC = () => {
           paymentMethod: paymentMethod
         });
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to create subscription");
+        let data;
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          console.error("Error parsing response:", jsonError);
+          throw new Error("Failed to parse server response");
         }
         
-        const data = await response.clone().json();
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to create subscription");
+        }
+        
+        console.log("Payment response:", data);
         
         // Handle different payment methods
-        if (paymentMethod === 'card' && data.clientSecret) {
+        if (data.paymentMethod === 'card' && data.clientSecret) {
           setClientSecret(data.clientSecret);
           setCryptoData(null);
-        } else if (paymentMethod === 'crypto' && data.transactionId) {
+        } else if (data.paymentMethod === 'crypto' && data.transactionId) {
           setCryptoData(data);
           setClientSecret("");
         } else {

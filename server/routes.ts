@@ -706,37 +706,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateStripeCustomerId(user.id, customerId);
       }
 
-      // Create subscription
-      const subscription = await stripe.subscriptions.create({
-        customer: customerId,
-        items: [{
-          price: plan.stripePriceId,
-        }],
-        payment_behavior: 'default_incomplete',
-        expand: ['latest_invoice.payment_intent'],
-      });
+      try {
+        // Create subscription with Stripe
+        const subscription = await stripe.subscriptions.create({
+          customer: customerId,
+          items: [{
+            price: plan.stripePriceId,
+          }],
+          payment_behavior: 'default_incomplete',
+          expand: ['latest_invoice.payment_intent'],
+        });
 
-      // Update user with subscription info
-      await storage.updateUserStripeInfo(user.id, customerId, subscription.id);
-      
-      // Create user subscription record
-      const now = new Date();
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 1);
-      
-      await storage.createUserSubscription({
-        userId: user.id,
-        planId: plan.id,
-        status: "active",
-        startDate: now,
-        endDate: endDate,
-        stripeSubscriptionId: subscription.id,
-      });
-  
-      res.json({
-        subscriptionId: subscription.id,
-        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
-      });
+        // Update user with subscription info
+        await storage.updateUserStripeInfo(user.id, customerId, subscription.id);
+        
+        // Create user subscription record
+        const now = new Date();
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 1);
+        
+        await storage.createUserSubscription({
+          userId: user.id,
+          planId: plan.id,
+          status: "active",
+          startDate: now,
+          endDate: endDate,
+          stripeSubscriptionId: subscription.id,
+        });
+        
+        // Make sure we properly handle the potential nulls/undefined in the response
+        let clientSecret = null;
+        
+        if (subscription.latest_invoice && 
+            typeof subscription.latest_invoice !== 'string' && 
+            subscription.latest_invoice.payment_intent && 
+            typeof subscription.latest_invoice.payment_intent !== 'string') {
+          clientSecret = subscription.latest_invoice.payment_intent.client_secret;
+        }
+        
+        if (!clientSecret) {
+          console.error("Missing client secret in Stripe response:", subscription);
+          throw new Error("Failed to generate payment intent. Please check Stripe configuration.");
+        }
+        
+        res.json({
+          paymentMethod: 'card',
+          subscriptionId: subscription.id,
+          clientSecret: clientSecret,
+        });
+      } catch (stripeError) {
+        console.error("Stripe subscription creation error:", stripeError);
+        throw new Error(`Stripe Error: ${stripeError instanceof Error ? stripeError.message : 'Unknown error'}`);
+      }
     } catch (error: any) {
       res.status(500).json({ message: "Error creating subscription: " + error.message });
     }
