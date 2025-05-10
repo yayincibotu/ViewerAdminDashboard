@@ -558,10 +558,56 @@ const SettingsPage: React.FC = () => {
                 <Separator className="my-6" />
                 
                 <div>
-                  <h3 className="text-lg font-medium mb-4">Crypto Payment Integration</h3>
+                  <h3 className="text-lg font-medium mb-4">CoinPayments.net Integration</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Accept cryptocurrency payments through CoinPayments.net - supporting Bitcoin, Ethereum, Litecoin, and more.
+                  </p>
+                  
+                  <div className="space-y-4 mb-6">
+                    {/* Enable/Disable CoinPayments */}
+                    <div className="w-full p-4 border rounded-md bg-secondary/10">
+                      {systemConfigs
+                        .filter(config => config.key === 'coinpayments_enabled')
+                        .map(config => (
+                          <ConfigItem 
+                            key={config.id} 
+                            config={config} 
+                            onSave={handleSaveConfig}
+                          />
+                        ))}
+                    </div>
+                    
+                    {/* Accepted Cryptocurrencies */}
+                    <div className="w-full p-4 border rounded-md bg-secondary/10">
+                      {systemConfigs
+                        .filter(config => config.key === 'coinpayments_accepted_coins')
+                        .map(config => (
+                          <ConfigItem 
+                            key={config.id} 
+                            config={config} 
+                            onSave={handleSaveConfig}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                  
+                  <h4 className="text-md font-medium mb-4">API Credentials</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {systemConfigs
-                      .filter(config => config.category === 'crypto')
+                      .filter(config => config.category === 'crypto' && ['coinpayments_public_key', 'coinpayments_private_key', 'coinpayments_merchant_id', 'coinpayments_ipn_secret'].includes(config.key))
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))}
+                  </div>
+                  
+                  <h4 className="text-md font-medium mt-6 mb-4">Additional Settings</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {systemConfigs
+                      .filter(config => config.category === 'crypto' && ['coinpayments_debug_email'].includes(config.key))
                       .map(config => (
                         <ConfigItem 
                           key={config.id} 
