@@ -635,12 +635,12 @@ export const userAnalytics = pgTable("user_analytics", {
 // Subscription Analytics
 export const subscriptionAnalytics = pgTable("subscription_analytics", {
   id: serial("id").primaryKey(),
-  date: date("date").notNull(),
+  date: timestamp("date").notNull(),
   planId: integer("plan_id").references(() => subscriptionPlans.id),
   newSubscriptions: integer("new_subscriptions").notNull().default(0),
   cancelledSubscriptions: integer("cancelled_subscriptions").notNull().default(0),
   totalActiveSubscriptions: integer("total_active_subscriptions").notNull().default(0),
-  renewalRate: real("renewal_rate"), // Percentage
+  renewalRate: integer("renewal_rate"), // Percentage stored as integer (e.g. 7500 = 75.00%)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow()
 });
@@ -648,7 +648,7 @@ export const subscriptionAnalytics = pgTable("subscription_analytics", {
 // Financial Analytics
 export const financialAnalytics = pgTable("financial_analytics", {
   id: serial("id").primaryKey(),
-  date: date("date").notNull(),
+  date: timestamp("date").notNull(),
   totalRevenue: integer("total_revenue").notNull().default(0), // In cents
   newRevenue: integer("new_revenue").notNull().default(0), // In cents
   recurringRevenue: integer("recurring_revenue").notNull().default(0), // In cents
@@ -661,12 +661,12 @@ export const financialAnalytics = pgTable("financial_analytics", {
 // Performance Metrics
 export const performanceMetrics = pgTable("performance_metrics", {
   id: serial("id").primaryKey(),
-  date: date("date").notNull(),
+  date: timestamp("date").notNull(),
   serviceType: text("service_type").notNull(), // twitch_viewers, twitch_chatbot, etc.
   totalRequests: integer("total_requests").notNull().default(0),
   successfulRequests: integer("successful_requests").notNull().default(0),
   failedRequests: integer("failed_requests").notNull().default(0),
-  averageResponseTime: real("average_response_time").default(0), // In milliseconds
+  averageResponseTime: integer("average_response_time").default(0), // In milliseconds
   resourceUsage: text("resource_usage"), // JSON with CPU, memory usage, etc.
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow()
