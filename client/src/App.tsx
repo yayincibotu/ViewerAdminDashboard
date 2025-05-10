@@ -25,6 +25,8 @@ import BlogCategories from "@/pages/webadmin/BlogCategories";
 import Faq from "@/pages/webadmin/Faq";
 import FaqCategories from "@/pages/webadmin/FaqCategories";
 import ContactMessages from "@/pages/webadmin/ContactMessages";
+import Settings from "@/pages/webadmin/Settings";
+import Analytics from "@/pages/webadmin/Analytics";
 import Checkout from "@/pages/payment/Checkout";
 import Subscribe from "@/pages/payment/Subscribe";
 import { useAuth } from "@/hooks/use-auth";
@@ -66,6 +68,8 @@ function Router() {
           <ProtectedRoute path="/webadmin/faq" component={Faq} />
           <ProtectedRoute path="/webadmin/faq-categories" component={FaqCategories} />
           <ProtectedRoute path="/webadmin/contact-messages" component={ContactMessages} />
+          <ProtectedRoute path="/webadmin/settings" component={Settings} />
+          <ProtectedRoute path="/webadmin/analytics" component={Analytics} />
         </>
       )}
       

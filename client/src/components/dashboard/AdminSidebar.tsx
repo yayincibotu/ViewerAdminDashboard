@@ -114,6 +114,25 @@ const AdminSidebar: React.FC = () => {
             </a>
           </Link>
         </nav>
+        
+        <div className="mt-6 mb-2 px-4 text-xs font-semibold text-sidebar-foreground/60 uppercase">
+          System
+        </div>
+        <nav className="space-y-1">
+          <Link href="/webadmin/settings">
+            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/settings')}`}>
+              <i className="fas fa-cog mr-3"></i>
+              Settings
+            </a>
+          </Link>
+          
+          <Link href="/webadmin/analytics">
+            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/analytics')}`}>
+              <i className="fas fa-chart-line mr-3"></i>
+              Analytics
+            </a>
+          </Link>
+        </nav>
       </div>
       
       <div className="px-3 py-2 mt-auto">

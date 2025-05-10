@@ -1418,6 +1418,180 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  // System Config operations
+  async getAllSystemConfigs(): Promise<SystemConfig[]> {
+    try {
+      console.log("[DB] Fetching all system configs from PostgreSQL database");
+      const configs = await db.select().from(systemConfigs).orderBy(asc(systemConfigs.category), asc(systemConfigs.key));
+      return configs;
+    } catch (error) {
+      console.error('[DB] Error fetching system configs:', error);
+      return [];
+    }
+  }
+
+  async getSystemConfigsByCategory(category: string): Promise<SystemConfig[]> {
+    try {
+      console.log(`[DB] Fetching system configs with category: ${category} from PostgreSQL database`);
+      const configs = await db
+        .select()
+        .from(systemConfigs)
+        .where(eq(systemConfigs.category, category))
+        .orderBy(asc(systemConfigs.key));
+      return configs;
+    } catch (error) {
+      console.error(`[DB] Error fetching system configs for category ${category}:`, error);
+      return [];
+    }
+  }
+
+  async getSystemConfig(id: number): Promise<SystemConfig | undefined> {
+    try {
+      console.log(`[DB] Fetching system config with ID: ${id} from PostgreSQL database`);
+      const [config] = await db.select().from(systemConfigs).where(eq(systemConfigs.id, id));
+      return config;
+    } catch (error) {
+      console.error(`[DB] Error fetching system config with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async getSystemConfigByKey(key: string): Promise<SystemConfig | undefined> {
+    try {
+      console.log(`[DB] Fetching system config with key: ${key} from PostgreSQL database`);
+      const [config] = await db.select().from(systemConfigs).where(eq(systemConfigs.key, key));
+      return config;
+    } catch (error) {
+      console.error(`[DB] Error fetching system config with key ${key}:`, error);
+      return undefined;
+    }
+  }
+
+  async createSystemConfig(config: InsertSystemConfig): Promise<SystemConfig> {
+    try {
+      console.log("[DB] Creating new system config in PostgreSQL database");
+      const [newConfig] = await db.insert(systemConfigs).values({
+        ...config,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      
+      // Create audit log
+      if (config.lastUpdatedBy) {
+        await this.createAuditLog({
+          userId: config.lastUpdatedBy,
+          action: "create_system_config",
+          entityType: "system_config",
+          entityId: newConfig.id.toString(),
+          details: JSON.stringify({ key: newConfig.key, category: newConfig.category }),
+        });
+      }
+      
+      return newConfig;
+    } catch (error) {
+      console.error('[DB] Error creating system config:', error);
+      throw new Error('Failed to create system config');
+    }
+  }
+
+  async updateSystemConfig(id: number, updates: Partial<SystemConfig>): Promise<SystemConfig | undefined> {
+    try {
+      console.log(`[DB] Updating system config with ID: ${id} in PostgreSQL database`);
+      
+      const [updatedConfig] = await db
+        .update(systemConfigs)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(systemConfigs.id, id))
+        .returning();
+        
+      // Create audit log
+      if (updates.lastUpdatedBy) {
+        await this.createAuditLog({
+          userId: updates.lastUpdatedBy,
+          action: "update_system_config",
+          entityType: "system_config",
+          entityId: id.toString(),
+          details: JSON.stringify(updates),
+        });
+      }
+      
+      return updatedConfig;
+    } catch (error) {
+      console.error(`[DB] Error updating system config with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteSystemConfig(id: number): Promise<boolean> {
+    try {
+      console.log(`[DB] Deleting system config with ID: ${id} from PostgreSQL database`);
+      await db
+        .delete(systemConfigs)
+        .where(eq(systemConfigs.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting system config with ID ${id}:`, error);
+      return false;
+    }
+  }
+  
+  // Audit Log operations
+  async getAllAuditLogs(): Promise<AuditLog[]> {
+    try {
+      console.log("[DB] Fetching all audit logs from PostgreSQL database");
+      const logs = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
+      return logs;
+    } catch (error) {
+      console.error('[DB] Error fetching audit logs:', error);
+      return [];
+    }
+  }
+
+  async getUserAuditLogs(userId: number): Promise<AuditLog[]> {
+    try {
+      console.log(`[DB] Fetching audit logs for user ID: ${userId} from PostgreSQL database`);
+      const logs = await db
+        .select()
+        .from(auditLogs)
+        .where(eq(auditLogs.userId, userId))
+        .orderBy(desc(auditLogs.createdAt));
+      return logs;
+    } catch (error) {
+      console.error(`[DB] Error fetching audit logs for user ID ${userId}:`, error);
+      return [];
+    }
+  }
+
+  async getAuditLog(id: number): Promise<AuditLog | undefined> {
+    try {
+      console.log(`[DB] Fetching audit log with ID: ${id} from PostgreSQL database`);
+      const [log] = await db.select().from(auditLogs).where(eq(auditLogs.id, id));
+      return log;
+    } catch (error) {
+      console.error(`[DB] Error fetching audit log with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    try {
+      console.log("[DB] Creating new audit log in PostgreSQL database");
+      const [newLog] = await db.insert(auditLogs).values({
+        ...log,
+        createdAt: new Date()
+      }).returning();
+      
+      return newLog;
+    } catch (error) {
+      console.error('[DB] Error creating audit log:', error);
+      throw new Error('Failed to create audit log');
+    }
+  }
+  
   async replyToContactMessage(id: number, userId: number): Promise<ContactMessage | undefined> {
     try {
       console.log(`[DB] Replying to contact message with ID ${id} in PostgreSQL database`);
@@ -1450,6 +1624,514 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`[DB] Error deleting contact message with ID ${id}:`, error);
       return false;
+    }
+  }
+  
+  // Email Template operations
+  async getAllEmailTemplates(): Promise<EmailTemplate[]> {
+    try {
+      console.log("[DB] Fetching all email templates from PostgreSQL database");
+      const templates = await db.select().from(emailTemplates).orderBy(asc(emailTemplates.name));
+      return templates;
+    } catch (error) {
+      console.error('[DB] Error fetching email templates:', error);
+      return [];
+    }
+  }
+
+  async getEmailTemplate(id: number): Promise<EmailTemplate | undefined> {
+    try {
+      console.log(`[DB] Fetching email template with ID: ${id} from PostgreSQL database`);
+      const [template] = await db.select().from(emailTemplates).where(eq(emailTemplates.id, id));
+      return template;
+    } catch (error) {
+      console.error(`[DB] Error fetching email template with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async getEmailTemplateByType(type: string): Promise<EmailTemplate | undefined> {
+    try {
+      console.log(`[DB] Fetching email template with type: ${type} from PostgreSQL database`);
+      const [template] = await db
+        .select()
+        .from(emailTemplates)
+        .where(and(eq(emailTemplates.type, type), eq(emailTemplates.isActive, true)));
+      return template;
+    } catch (error) {
+      console.error(`[DB] Error fetching email template with type ${type}:`, error);
+      return undefined;
+    }
+  }
+
+  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
+    try {
+      console.log("[DB] Creating new email template in PostgreSQL database");
+      const [newTemplate] = await db.insert(emailTemplates).values({
+        ...template,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      
+      // Create audit log
+      if (template.lastUpdatedBy) {
+        await this.createAuditLog({
+          userId: template.lastUpdatedBy,
+          action: "create_email_template",
+          entityType: "email_template",
+          entityId: newTemplate.id.toString(),
+          details: JSON.stringify({ name: newTemplate.name, type: newTemplate.type }),
+        });
+      }
+      
+      return newTemplate;
+    } catch (error) {
+      console.error('[DB] Error creating email template:', error);
+      throw new Error('Failed to create email template');
+    }
+  }
+
+  async updateEmailTemplate(id: number, updates: Partial<EmailTemplate>): Promise<EmailTemplate | undefined> {
+    try {
+      console.log(`[DB] Updating email template with ID: ${id} in PostgreSQL database`);
+      
+      const [updatedTemplate] = await db
+        .update(emailTemplates)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(emailTemplates.id, id))
+        .returning();
+        
+      // Create audit log
+      if (updates.lastUpdatedBy) {
+        await this.createAuditLog({
+          userId: updates.lastUpdatedBy,
+          action: "update_email_template",
+          entityType: "email_template",
+          entityId: id.toString(),
+          details: JSON.stringify(updates),
+        });
+      }
+      
+      return updatedTemplate;
+    } catch (error) {
+      console.error(`[DB] Error updating email template with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteEmailTemplate(id: number): Promise<boolean> {
+    try {
+      console.log(`[DB] Deleting email template with ID: ${id} from PostgreSQL database`);
+      await db
+        .delete(emailTemplates)
+        .where(eq(emailTemplates.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting email template with ID ${id}:`, error);
+      return false;
+    }
+  }
+  
+  // IP Restriction operations
+  async getAllIpRestrictions(): Promise<IpRestriction[]> {
+    try {
+      console.log("[DB] Fetching all IP restrictions from PostgreSQL database");
+      const restrictions = await db.select().from(ipRestrictions).orderBy(asc(ipRestrictions.ipAddress));
+      return restrictions;
+    } catch (error) {
+      console.error('[DB] Error fetching IP restrictions:', error);
+      return [];
+    }
+  }
+
+  async getIpRestriction(id: number): Promise<IpRestriction | undefined> {
+    try {
+      console.log(`[DB] Fetching IP restriction with ID: ${id} from PostgreSQL database`);
+      const [restriction] = await db.select().from(ipRestrictions).where(eq(ipRestrictions.id, id));
+      return restriction;
+    } catch (error) {
+      console.error(`[DB] Error fetching IP restriction with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async getIpRestrictionByIp(ipAddress: string): Promise<IpRestriction | undefined> {
+    try {
+      console.log(`[DB] Fetching IP restriction with address: ${ipAddress} from PostgreSQL database`);
+      const [restriction] = await db.select().from(ipRestrictions).where(eq(ipRestrictions.ipAddress, ipAddress));
+      return restriction;
+    } catch (error) {
+      console.error(`[DB] Error fetching IP restriction with address ${ipAddress}:`, error);
+      return undefined;
+    }
+  }
+
+  async createIpRestriction(restriction: InsertIpRestriction): Promise<IpRestriction> {
+    try {
+      console.log("[DB] Creating new IP restriction in PostgreSQL database");
+      const [newRestriction] = await db.insert(ipRestrictions).values({
+        ...restriction,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      
+      // Create audit log
+      if (restriction.createdBy) {
+        await this.createAuditLog({
+          userId: restriction.createdBy,
+          action: "create_ip_restriction",
+          entityType: "ip_restriction",
+          entityId: newRestriction.id.toString(),
+          details: JSON.stringify({ ipAddress: newRestriction.ipAddress, type: newRestriction.type }),
+        });
+      }
+      
+      return newRestriction;
+    } catch (error) {
+      console.error('[DB] Error creating IP restriction:', error);
+      throw new Error('Failed to create IP restriction');
+    }
+  }
+
+  async updateIpRestriction(id: number, updates: Partial<IpRestriction>): Promise<IpRestriction | undefined> {
+    try {
+      console.log(`[DB] Updating IP restriction with ID: ${id} in PostgreSQL database`);
+      
+      const [updatedRestriction] = await db
+        .update(ipRestrictions)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(ipRestrictions.id, id))
+        .returning();
+        
+      // Create audit log
+      if (updates.createdBy) {
+        await this.createAuditLog({
+          userId: updates.createdBy,
+          action: "update_ip_restriction",
+          entityType: "ip_restriction",
+          entityId: id.toString(),
+          details: JSON.stringify(updates),
+        });
+      }
+      
+      return updatedRestriction;
+    } catch (error) {
+      console.error(`[DB] Error updating IP restriction with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteIpRestriction(id: number): Promise<boolean> {
+    try {
+      console.log(`[DB] Deleting IP restriction with ID: ${id} from PostgreSQL database`);
+      await db
+        .delete(ipRestrictions)
+        .where(eq(ipRestrictions.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting IP restriction with ID ${id}:`, error);
+      return false;
+    }
+  }
+  
+  // Analytics operations
+  async getUserAnalytics(startDate: Date, endDate: Date): Promise<UserAnalytics[]> {
+    try {
+      console.log(`[DB] Fetching user analytics from ${startDate} to ${endDate} from PostgreSQL database`);
+      const analytics = await db
+        .select()
+        .from(userAnalytics)
+        .where(
+          and(
+            gte(userAnalytics.date, startDate),
+            lte(userAnalytics.date, endDate)
+          )
+        )
+        .orderBy(asc(userAnalytics.date));
+      return analytics;
+    } catch (error) {
+      console.error(`[DB] Error fetching user analytics:`, error);
+      return [];
+    }
+  }
+
+  async getSubscriptionAnalytics(startDate: Date, endDate: Date, planId?: number): Promise<SubscriptionAnalytics[]> {
+    try {
+      console.log(`[DB] Fetching subscription analytics from ${startDate} to ${endDate} from PostgreSQL database`);
+      
+      let query = db
+        .select()
+        .from(subscriptionAnalytics)
+        .where(
+          and(
+            gte(subscriptionAnalytics.date, startDate),
+            lte(subscriptionAnalytics.date, endDate)
+          )
+        );
+        
+      if (planId) {
+        query = query.where(eq(subscriptionAnalytics.planId, planId));
+      }
+      
+      const analytics = await query.orderBy(asc(subscriptionAnalytics.date));
+      return analytics;
+    } catch (error) {
+      console.error(`[DB] Error fetching subscription analytics:`, error);
+      return [];
+    }
+  }
+
+  async getFinancialAnalytics(startDate: Date, endDate: Date): Promise<FinancialAnalytics[]> {
+    try {
+      console.log(`[DB] Fetching financial analytics from ${startDate} to ${endDate} from PostgreSQL database`);
+      const analytics = await db
+        .select()
+        .from(financialAnalytics)
+        .where(
+          and(
+            gte(financialAnalytics.date, startDate),
+            lte(financialAnalytics.date, endDate)
+          )
+        )
+        .orderBy(asc(financialAnalytics.date));
+      return analytics;
+    } catch (error) {
+      console.error(`[DB] Error fetching financial analytics:`, error);
+      return [];
+    }
+  }
+
+  async getPerformanceMetrics(startDate: Date, endDate: Date, serviceType?: string): Promise<PerformanceMetrics[]> {
+    try {
+      console.log(`[DB] Fetching performance metrics from ${startDate} to ${endDate} from PostgreSQL database`);
+      
+      let query = db
+        .select()
+        .from(performanceMetrics)
+        .where(
+          and(
+            gte(performanceMetrics.date, startDate),
+            lte(performanceMetrics.date, endDate)
+          )
+        );
+        
+      if (serviceType) {
+        query = query.where(eq(performanceMetrics.serviceType, serviceType));
+      }
+      
+      const metrics = await query.orderBy(asc(performanceMetrics.date));
+      return metrics;
+    } catch (error) {
+      console.error(`[DB] Error fetching performance metrics:`, error);
+      return [];
+    }
+  }
+
+  async recordUserAnalytics(data: Partial<UserAnalytics>): Promise<UserAnalytics> {
+    try {
+      console.log("[DB] Recording new user analytics entry in PostgreSQL database");
+      
+      // Check if we already have an entry for this date
+      const date = data.date || new Date();
+      const existingEntries = await db
+        .select()
+        .from(userAnalytics)
+        .where(eq(userAnalytics.date, date));
+      
+      if (existingEntries.length > 0) {
+        // Update existing entry
+        const [updatedAnalytics] = await db
+          .update(userAnalytics)
+          .set({
+            ...data,
+            updatedAt: new Date()
+          })
+          .where(eq(userAnalytics.id, existingEntries[0].id))
+          .returning();
+        return updatedAnalytics;
+      } else {
+        // Create new entry
+        const [newAnalytics] = await db
+          .insert(userAnalytics)
+          .values({
+            date: date,
+            activeUsers: 0,
+            newUsers: 0,
+            totalUsers: 0,
+            ...data,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+        return newAnalytics;
+      }
+    } catch (error) {
+      console.error('[DB] Error recording user analytics:', error);
+      throw new Error('Failed to record user analytics');
+    }
+  }
+
+  async recordSubscriptionAnalytics(data: Partial<SubscriptionAnalytics>): Promise<SubscriptionAnalytics> {
+    try {
+      console.log("[DB] Recording new subscription analytics entry in PostgreSQL database");
+      
+      // Check if we already have an entry for this date and plan
+      const date = data.date || new Date();
+      const planId = data.planId;
+      
+      if (!planId) {
+        throw new Error('Plan ID is required for subscription analytics');
+      }
+      
+      const existingEntries = await db
+        .select()
+        .from(subscriptionAnalytics)
+        .where(
+          and(
+            eq(subscriptionAnalytics.date, date),
+            eq(subscriptionAnalytics.planId, planId)
+          )
+        );
+      
+      if (existingEntries.length > 0) {
+        // Update existing entry
+        const [updatedAnalytics] = await db
+          .update(subscriptionAnalytics)
+          .set({
+            ...data,
+            updatedAt: new Date()
+          })
+          .where(eq(subscriptionAnalytics.id, existingEntries[0].id))
+          .returning();
+        return updatedAnalytics;
+      } else {
+        // Create new entry
+        const [newAnalytics] = await db
+          .insert(subscriptionAnalytics)
+          .values({
+            date: date,
+            planId: planId,
+            activeSubscriptions: 0,
+            newSubscriptions: 0,
+            canceledSubscriptions: 0,
+            ...data,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+        return newAnalytics;
+      }
+    } catch (error) {
+      console.error('[DB] Error recording subscription analytics:', error);
+      throw new Error('Failed to record subscription analytics');
+    }
+  }
+
+  async recordFinancialAnalytics(data: Partial<FinancialAnalytics>): Promise<FinancialAnalytics> {
+    try {
+      console.log("[DB] Recording new financial analytics entry in PostgreSQL database");
+      
+      // Check if we already have an entry for this date
+      const date = data.date || new Date();
+      const existingEntries = await db
+        .select()
+        .from(financialAnalytics)
+        .where(eq(financialAnalytics.date, date));
+      
+      if (existingEntries.length > 0) {
+        // Update existing entry
+        const [updatedAnalytics] = await db
+          .update(financialAnalytics)
+          .set({
+            ...data,
+            updatedAt: new Date()
+          })
+          .where(eq(financialAnalytics.id, existingEntries[0].id))
+          .returning();
+        return updatedAnalytics;
+      } else {
+        // Create new entry
+        const [newAnalytics] = await db
+          .insert(financialAnalytics)
+          .values({
+            date: date,
+            revenue: 0,
+            expenses: 0,
+            profit: 0,
+            ...data,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+        return newAnalytics;
+      }
+    } catch (error) {
+      console.error('[DB] Error recording financial analytics:', error);
+      throw new Error('Failed to record financial analytics');
+    }
+  }
+
+  async recordPerformanceMetrics(data: Partial<PerformanceMetrics>): Promise<PerformanceMetrics> {
+    try {
+      console.log("[DB] Recording new performance metrics entry in PostgreSQL database");
+      
+      // Check if we already have an entry for this date and service type
+      const date = data.date || new Date();
+      const serviceType = data.serviceType;
+      
+      if (!serviceType) {
+        throw new Error('Service type is required for performance metrics');
+      }
+      
+      const existingEntries = await db
+        .select()
+        .from(performanceMetrics)
+        .where(
+          and(
+            eq(performanceMetrics.date, date),
+            eq(performanceMetrics.serviceType, serviceType)
+          )
+        );
+      
+      if (existingEntries.length > 0) {
+        // Update existing entry
+        const [updatedMetrics] = await db
+          .update(performanceMetrics)
+          .set({
+            ...data,
+            updatedAt: new Date()
+          })
+          .where(eq(performanceMetrics.id, existingEntries[0].id))
+          .returning();
+        return updatedMetrics;
+      } else {
+        // Create new entry
+        const [newMetrics] = await db
+          .insert(performanceMetrics)
+          .values({
+            date: date,
+            serviceType: serviceType,
+            totalRequests: 0,
+            successfulRequests: 0,
+            failedRequests: 0,
+            ...data,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+        return newMetrics;
+      }
+    } catch (error) {
+      console.error('[DB] Error recording performance metrics:', error);
+      throw new Error('Failed to record performance metrics');
     }
   }
 }
