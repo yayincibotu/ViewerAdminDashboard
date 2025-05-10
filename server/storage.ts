@@ -66,7 +66,7 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Session store instance
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({
