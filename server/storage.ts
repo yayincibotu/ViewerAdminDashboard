@@ -43,7 +43,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, data: Partial<User>): Promise<User | undefined>;
   updateStripeCustomerId(id: number, customerId: string): Promise<User | undefined>;
-  updateUserStripeInfo(id: number, data: { customerId: string, subscriptionId: string }): Promise<User | undefined>;
+  updateUserStripeInfo(id: number, customerId: string, subscriptionId: string): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
   
   // Email verification operations
@@ -385,10 +385,10 @@ export class DatabaseStorage implements IStorage {
     return this.updateUser(id, { stripeCustomerId: customerId });
   }
 
-  async updateUserStripeInfo(id: number, data: { customerId: string, subscriptionId: string }): Promise<User | undefined> {
+  async updateUserStripeInfo(id: number, customerId: string, subscriptionId: string): Promise<User | undefined> {
     return this.updateUser(id, {
-      stripeCustomerId: data.customerId,
-      stripeSubscriptionId: data.subscriptionId
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId
     });
   }
   
