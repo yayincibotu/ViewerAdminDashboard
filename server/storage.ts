@@ -51,6 +51,47 @@ export interface IStorage {
   verifyEmail(token: string): Promise<User | undefined>;
   resendVerificationEmail(userId: number): Promise<{ user: User, token: string } | undefined>;
   
+  // System Config operations
+  getAllSystemConfigs(): Promise<SystemConfig[]>;
+  getSystemConfigsByCategory(category: string): Promise<SystemConfig[]>;
+  getSystemConfig(id: number): Promise<SystemConfig | undefined>;
+  getSystemConfigByKey(key: string): Promise<SystemConfig | undefined>;
+  createSystemConfig(config: InsertSystemConfig): Promise<SystemConfig>;
+  updateSystemConfig(id: number, updates: Partial<SystemConfig>): Promise<SystemConfig | undefined>;
+  deleteSystemConfig(id: number): Promise<boolean>;
+  
+  // Email Template operations
+  getAllEmailTemplates(): Promise<EmailTemplate[]>;
+  getEmailTemplate(id: number): Promise<EmailTemplate | undefined>;
+  getEmailTemplateByType(type: string): Promise<EmailTemplate | undefined>;
+  createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
+  updateEmailTemplate(id: number, updates: Partial<EmailTemplate>): Promise<EmailTemplate | undefined>;
+  deleteEmailTemplate(id: number): Promise<boolean>;
+  
+  // IP Restriction operations
+  getAllIpRestrictions(): Promise<IpRestriction[]>;
+  getIpRestriction(id: number): Promise<IpRestriction | undefined>;
+  getIpRestrictionByIp(ipAddress: string): Promise<IpRestriction | undefined>;
+  createIpRestriction(restriction: InsertIpRestriction): Promise<IpRestriction>;
+  updateIpRestriction(id: number, updates: Partial<IpRestriction>): Promise<IpRestriction | undefined>;
+  deleteIpRestriction(id: number): Promise<boolean>;
+  
+  // Audit Log operations
+  getAllAuditLogs(): Promise<AuditLog[]>;
+  getUserAuditLogs(userId: number): Promise<AuditLog[]>;
+  getAuditLog(id: number): Promise<AuditLog | undefined>;
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  
+  // Analytics operations
+  getUserAnalytics(startDate: Date, endDate: Date): Promise<UserAnalytics[]>;
+  getSubscriptionAnalytics(startDate: Date, endDate: Date, planId?: number): Promise<SubscriptionAnalytics[]>;
+  getFinancialAnalytics(startDate: Date, endDate: Date): Promise<FinancialAnalytics[]>;
+  getPerformanceMetrics(startDate: Date, endDate: Date, serviceType?: string): Promise<PerformanceMetrics[]>;
+  recordUserAnalytics(data: Partial<UserAnalytics>): Promise<UserAnalytics>;
+  recordSubscriptionAnalytics(data: Partial<SubscriptionAnalytics>): Promise<SubscriptionAnalytics>;
+  recordFinancialAnalytics(data: Partial<FinancialAnalytics>): Promise<FinancialAnalytics>;
+  recordPerformanceMetrics(data: Partial<PerformanceMetrics>): Promise<PerformanceMetrics>;
+  
   // Subscription plan operations
   getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
   getSubscriptionPlan(id: number): Promise<SubscriptionPlan | undefined>;
