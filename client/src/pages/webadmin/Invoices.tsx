@@ -122,7 +122,7 @@ const AdminInvoices = () => {
       let url = '/api/admin/invoices';
       const params = new URLSearchParams();
       
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== 'all') {
         params.append('status', statusFilter);
       }
       
@@ -408,7 +408,7 @@ const AdminInvoices = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="issued">Issued</SelectItem>
                     <SelectItem value="paid">Paid</SelectItem>

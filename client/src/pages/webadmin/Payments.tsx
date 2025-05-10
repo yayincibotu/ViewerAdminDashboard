@@ -89,7 +89,7 @@ const AdminPayments = () => {
       let url = '/api/admin/payments';
       const params = new URLSearchParams();
       
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== 'all') {
         params.append('status', statusFilter);
       }
       
@@ -211,7 +211,7 @@ const AdminPayments = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
