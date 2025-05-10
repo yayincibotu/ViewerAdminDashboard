@@ -2953,6 +2953,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // System Configuration API endpoints
+  app.get("/api/admin/system-configs", requireAdmin, async (req, res) => {
+    try {
+      const configs = await storage.getAllSystemConfigs();
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching system configurations: " + error.message });
+    }
+  });
+  
+  app.get("/api/admin/system-configs/category/:category", requireAdmin, async (req, res) => {
+    try {
+      const category = req.params.category;
+      const configs = await storage.getSystemConfigsByCategory(category);
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching system configurations by category: " + error.message });
+    }
+  });
+  
+  app.get("/api/admin/system-configs/:id", requireAdmin, async (req, res) => {
+    try {
+      const config = await storage.getSystemConfig(parseInt(req.params.id));
+      if (!config) {
+        return res.status(404).json({ message: "System configuration not found" });
+      }
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching system configuration: " + error.message });
+    }
+  });
+  
+  app.patch("/api/admin/system-configs/:id", requireAdmin, async (req, res) => {
+    try {
+      const { value } = req.body;
+      const config = await storage.updateSystemConfig(parseInt(req.params.id), { value });
+      if (!config) {
+        return res.status(404).json({ message: "System configuration not found" });
+      }
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating system configuration: " + error.message });
+    }
+  });
+  
+  // Email Templates API endpoints
+  app.get("/api/admin/email-templates", requireAdmin, async (req, res) => {
+    try {
+      const templates = await storage.getAllEmailTemplates();
+      res.json(templates);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching email templates: " + error.message });
+    }
+  });
+  
+  app.get("/api/admin/email-templates/:id", requireAdmin, async (req, res) => {
+    try {
+      const template = await storage.getEmailTemplate(parseInt(req.params.id));
+      if (!template) {
+        return res.status(404).json({ message: "Email template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching email template: " + error.message });
+    }
+  });
+  
+  app.post("/api/admin/email-templates", requireAdmin, async (req, res) => {
+    try {
+      const template = await storage.createEmailTemplate(req.body);
+      res.status(201).json(template);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error creating email template: " + error.message });
+    }
+  });
+  
+  app.patch("/api/admin/email-templates/:id", requireAdmin, async (req, res) => {
+    try {
+      const template = await storage.updateEmailTemplate(parseInt(req.params.id), req.body);
+      if (!template) {
+        return res.status(404).json({ message: "Email template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating email template: " + error.message });
+    }
+  });
+  
+  app.delete("/api/admin/email-templates/:id", requireAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteEmailTemplate(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Email template not found" });
+      }
+      res.json({ message: "Email template deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error deleting email template: " + error.message });
+    }
+  });
+  
+  // IP Restrictions API endpoints
+  app.get("/api/admin/ip-restrictions", requireAdmin, async (req, res) => {
+    try {
+      const restrictions = await storage.getAllIpRestrictions();
+      res.json(restrictions);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching IP restrictions: " + error.message });
+    }
+  });
+  
+  app.get("/api/admin/ip-restrictions/:id", requireAdmin, async (req, res) => {
+    try {
+      const restriction = await storage.getIpRestriction(parseInt(req.params.id));
+      if (!restriction) {
+        return res.status(404).json({ message: "IP restriction not found" });
+      }
+      res.json(restriction);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching IP restriction: " + error.message });
+    }
+  });
+  
+  app.post("/api/admin/ip-restrictions", requireAdmin, async (req, res) => {
+    try {
+      const restriction = await storage.createIpRestriction(req.body);
+      res.status(201).json(restriction);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error creating IP restriction: " + error.message });
+    }
+  });
+  
+  app.patch("/api/admin/ip-restrictions/:id", requireAdmin, async (req, res) => {
+    try {
+      const restriction = await storage.updateIpRestriction(parseInt(req.params.id), req.body);
+      if (!restriction) {
+        return res.status(404).json({ message: "IP restriction not found" });
+      }
+      res.json(restriction);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating IP restriction: " + error.message });
+    }
+  });
+  
+  app.delete("/api/admin/ip-restrictions/:id", requireAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteIpRestriction(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "IP restriction not found" });
+      }
+      res.json({ message: "IP restriction deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error deleting IP restriction: " + error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
