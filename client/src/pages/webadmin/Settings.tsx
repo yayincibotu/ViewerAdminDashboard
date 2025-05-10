@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LoaderCircle, Save, Trash2, Plus, CheckCircle, Info, ShieldAlert, MailCheck, Zap } from 'lucide-react';
+import { LoaderCircle, Save, Trash2, Plus, CheckCircle, Info, ShieldAlert, MailCheck, Zap, RefreshCw } from 'lucide-react';
 import AdminLayout from '@/components/dashboard/AdminLayout';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Switch } from '@/components/ui/switch';
@@ -344,6 +344,58 @@ const SettingsPage: React.FC = () => {
   const generateTemplateKey = (name: string) => {
     return name.toLowerCase().replace(/[^a-z0-9]/g, '_');
   };
+  
+  // Sync Stripe Button component
+  const SyncStripeButton: React.FC = () => {
+    const { toast } = useToast();
+    
+    const syncMutation = useMutation({
+      mutationFn: async () => {
+        const res = await apiRequest('POST', '/api/admin/sync-stripe-plans');
+        return res.json();
+      },
+      onSuccess: (data) => {
+        if (data.success) {
+          toast({
+            title: 'Success',
+            description: data.message,
+          });
+          
+          // Refresh subscription plans data
+          queryClient.invalidateQueries({ queryKey: ['/api/subscription-plans'] });
+        } else {
+          toast({
+            title: 'Error',
+            description: data.message,
+            variant: 'destructive',
+          });
+        }
+      },
+      onError: (error: any) => {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to sync plans with Stripe',
+          variant: 'destructive',
+        });
+      }
+    });
+    
+    return (
+      <Button 
+        variant="default" 
+        onClick={() => syncMutation.mutate()}
+        disabled={syncMutation.isPending}
+        className="gap-2"
+      >
+        {syncMutation.isPending ? (
+          <LoaderCircle className="h-4 w-4 animate-spin" />
+        ) : (
+          <RefreshCw className="h-4 w-4" />
+        )}
+        Sync Plans with Stripe
+      </Button>
+    );
+  };
 
   // Update key when name changes
   useEffect(() => {
@@ -405,6 +457,10 @@ const SettingsPage: React.FC = () => {
             <TabsTrigger value="ip-restrictions" className="flex items-center gap-2">
               <ShieldAlert size={16} />
               IP Restrictions
+            </TabsTrigger>
+            <TabsTrigger value="integrations" className="flex items-center gap-2">
+              <Zap size={16} />
+              Integrations
             </TabsTrigger>
           </TabsList>
           
@@ -961,6 +1017,62 @@ const SettingsPage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          {/* Integrations tab */}
+          <TabsContent value="integrations" className="space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Stripe Integration</CardTitle>
+                  <CardDescription>Manage Stripe payment integration and synchronize subscription plans</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {systemConfigs
+                      .filter(config => config.category === 'stripe' && ['stripe_api_key', 'stripe_webhook_secret'].includes(config.key))
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))}
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Synchronize Plans with Stripe</h3>
+                    <p className="text-muted-foreground mb-4">
+                      This will create or update Stripe products and prices based on your subscription plans.
+                      Make sure your Stripe API key is configured correctly before synchronizing.
+                    </p>
+                    <SyncStripeButton />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>CoinPayments Integration</CardTitle>
+                  <CardDescription>Manage cryptocurrency payment settings</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {systemConfigs
+                      .filter(config => config.category === 'coinpayments' && ['coinpayments_api_key', 'coinpayments_secret_key', 'coinpayments_merchant_id', 'accepted_coins'].includes(config.key))
+                      .map(config => (
+                        <ConfigItem 
+                          key={config.id} 
+                          config={config} 
+                          onSave={handleSaveConfig}
+                        />
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
