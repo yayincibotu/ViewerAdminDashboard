@@ -89,25 +89,27 @@ const ConfigItem: React.FC<{
             value={value}
             onChange={(e) => setValue(e.target.value)}
             rows={5}
-            className={config.type === 'code' ? 'font-mono text-sm' : ''}
+            className={`w-full ${config.type === 'code' ? 'font-mono text-sm' : ''}`}
+            style={{ wordBreak: "break-word", minHeight: "120px" }}
           />
         ) : (
           <Input
             value={value}
             onChange={(e) => setValue(e.target.value)}
             type={config.type === 'number' ? 'number' : 'text'}
-            className={config.type === 'number' ? 'font-mono' : ''}
+            className={`w-full ${config.type === 'number' ? 'font-mono' : ''}`}
+            style={{ wordBreak: "break-word" }}
           />
         )
       ) : (
         <div 
           onClick={() => setIsEditing(true)}
-          className="p-2 border rounded-md hover:bg-accent cursor-pointer min-h-[40px]"
+          className="p-2 border rounded-md hover:bg-accent cursor-pointer min-h-[40px] overflow-hidden"
         >
           {isMultiline ? (
-            <pre className="whitespace-pre-wrap text-sm">{value || <span className="text-muted-foreground italic">No value set</span>}</pre>
+            <pre className="whitespace-pre-wrap text-sm break-words overflow-hidden">{value || <span className="text-muted-foreground italic">No value set</span>}</pre>
           ) : (
-            <span>{value || <span className="text-muted-foreground italic">No value set</span>}</span>
+            <span className="break-words overflow-hidden">{value || <span className="text-muted-foreground italic">No value set</span>}</span>
           )}
         </div>
       )}
