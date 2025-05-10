@@ -589,11 +589,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    let user = req.user;
+    const { planId, paymentMethod = 'card' } = req.body;
+    
+    if (!planId) {
+      return res.status(400).json({ message: "Plan ID is required" });
+    }
+    
+    const plan = await storage.getSubscriptionPlan(parseInt(planId));
+    
+    if (!plan) {
+      return res.status(404).json({ message: "Subscription plan not found" });
+    }
+    
+    // If using cryptocurrency payment method
+    if (paymentMethod === 'crypto') {
+      try {
+        const coinpaymentsEnabled = await storage.getSystemConfigByKey('coinpayments_enabled');
+        if (!coinpaymentsEnabled || coinpaymentsEnabled.value !== 'true') {
+          return res.status(400).json({ message: "Cryptocurrency payments are not enabled" });
+        }
+        
+        // Generate a unique transaction identifier
+        const transactionId = `CP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        
+        // Create pending subscription for crypto payment
+        const now = new Date();
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 1);
+        
+        await storage.createUserSubscription({
+          userId: user.id,
+          planId: plan.id,
+          status: 'pending',
+          startDate: now,
+          endDate: endDate,
+          paymentMethod: 'crypto',
+          paymentReference: transactionId,
+          price: plan.price,
+          recurring: false,
+        });
+        
+        // Get accepted cryptocurrencies 
+        const acceptedCoins = await storage.getSystemConfigByKey('coinpayments_accepted_coins');
+        const acceptedCoinsList = acceptedCoins ? acceptedCoins.value.split(',') : ['BTC'];
+        
+        // Log an audit
+        await storage.createAuditLog({
+          userId: user.id,
+          action: 'crypto_payment_initiated',
+          details: JSON.stringify({
+            planId: plan.id,
+            planName: plan.name,
+            transactionId,
+            paymentMethod: 'crypto',
+          }),
+        });
+
+        // Return crypto payment details
+        return res.json({
+          paymentMethod: 'crypto',
+          transactionId,
+          acceptedCoins: acceptedCoinsList,
+          amount: plan.price,
+          status: 'pending'
+        });
+      } catch (error) {
+        console.error("Error creating crypto payment:", error);
+        return res.status(500).json({ message: "Error setting up cryptocurrency payment" });
+      }
+    }
+
+    // For card payment, check if Stripe is configured
     if (!stripe) {
       return res.status(500).json({ message: "Stripe is not configured." });
     }
-
-    let user = req.user;
 
     // If user already has a subscription
     if (user.stripeSubscriptionId) {
@@ -601,6 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
 
         res.json({
+          paymentMethod: 'card',
           subscriptionId: subscription.id,
           clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
         });
@@ -616,17 +687,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { planId } = req.body;
-      
-      if (!planId) {
-        return res.status(400).json({ message: "Plan ID is required" });
-      }
-      
-      const plan = await storage.getSubscriptionPlan(parseInt(planId));
-      
-      if (!plan) {
-        return res.status(404).json({ message: "Subscription plan not found" });
-      }
       
       if (!plan.stripePriceId) {
         return res.status(400).json({ message: "Selected plan does not have a valid price ID" });
