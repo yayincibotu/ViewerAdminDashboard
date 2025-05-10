@@ -7,7 +7,11 @@ import { z } from "zod";
 import { mailService } from "./mail";
 import crypto from "crypto";
 import { db } from "./db";
-import { users, userSubscriptions, payments } from "@shared/schema";
+import { 
+  users, userSubscriptions, payments, 
+  invoices, paymentMethods,
+  insertPaymentSchema, insertInvoiceSchema, insertPaymentMethodSchema
+} from "@shared/schema";
 
 // Email verification constants
 const EMAIL_VERIFICATION = {
@@ -1665,6 +1669,570 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid billing information format", errors: error.errors });
       }
       res.status(500).json({ message: "Error updating billing information: " + error.message });
+    }
+  });
+
+  // ======== PAYMENT AND BILLING MANAGEMENT ROUTES ========
+
+  // ==== Payment Routes ====
+  
+  // Get all payments (admin only)
+  app.get("/api/admin/payments", isAdmin, async (req, res) => {
+    try {
+      const { status, startDate, endDate, userId } = req.query;
+      
+      let paymentRecords = [];
+      
+      // Filter by status if provided
+      if (status) {
+        paymentRecords = await storage.getPaymentsByStatus(status as string);
+      } 
+      // Filter by date range if provided
+      else if (startDate && endDate) {
+        paymentRecords = await storage.getPaymentsByDateRange(
+          new Date(startDate as string),
+          new Date(endDate as string)
+        );
+      } 
+      // Filter by user if provided
+      else if (userId) {
+        paymentRecords = await storage.getUserPayments(parseInt(userId as string));
+      }
+      // Otherwise get all payments
+      else {
+        paymentRecords = await db.select().from(payments);
+      }
+      
+      res.json(paymentRecords);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error retrieving payments: " + error.message });
+    }
+  });
+  
+  // Get payment by ID (admin only)
+  app.get("/api/admin/payments/:id", isAdmin, async (req, res) => {
+    try {
+      const paymentId = parseInt(req.params.id);
+      const payment = await storage.getPayment(paymentId);
+      
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      
+      res.json(payment);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error retrieving payment: " + error.message });
+    }
+  });
+  
+  // Get current user's payments
+  app.get("/api/payments", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const payments = await storage.getUserPayments(req.user!.id);
+      res.json(payments);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error retrieving payments: " + error.message });
+    }
+  });
+  
+  // Process a refund (admin only)
+  app.post("/api/admin/payments/:id/refund", isAdmin, async (req, res) => {
+    try {
+      const paymentId = parseInt(req.params.id);
+      const { reason } = req.body;
+      
+      if (!reason) {
+        return res.status(400).json({ message: "Refund reason is required" });
+      }
+      
+      const payment = await storage.getPayment(paymentId);
+      
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      
+      if (payment.status === 'refunded') {
+        return res.status(400).json({ message: "Payment has already been refunded" });
+      }
+      
+      // Process refund in Stripe if it's a Stripe payment
+      if (payment.stripePaymentIntentId && stripe) {
+        try {
+          await stripe.refunds.create({
+            payment_intent: payment.stripePaymentIntentId,
+            reason: 'requested_by_customer'
+          });
+        } catch (stripeError: any) {
+          return res.status(400).json({ 
+            message: "Error processing Stripe refund: " + stripeError.message 
+          });
+        }
+      }
+      
+      // Process refund in our database
+      const refundedPayment = await storage.refundPayment(paymentId, reason);
+      
+      res.json(refundedPayment);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error processing refund: " + error.message });
+    }
+  });
+
+  // ==== Invoice Routes ====
+  
+  // Get all invoices (admin only)
+  app.get("/api/admin/invoices", isAdmin, async (req, res) => {
+    try {
+      const { status, startDate, endDate, userId } = req.query;
+      
+      let invoiceRecords = [];
+      
+      // Filter by status if provided
+      if (status) {
+        invoiceRecords = await storage.getInvoicesByStatus(status as string);
+      } 
+      // Filter by date range if provided
+      else if (startDate && endDate) {
+        invoiceRecords = await storage.getInvoicesByDateRange(
+          new Date(startDate as string),
+          new Date(endDate as string)
+        );
+      } 
+      // Filter by user if provided
+      else if (userId) {
+        invoiceRecords = await storage.getUserInvoices(parseInt(userId as string));
+      }
+      // Otherwise get all invoices
+      else {
+        invoiceRecords = await db.select().from(invoices);
+      }
+      
+      res.json(invoices);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error retrieving invoices: " + error.message });
+    }
+  });
+  
+  // Get invoice by ID (admin or invoice owner)
+  app.get("/api/invoices/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const invoiceId = parseInt(req.params.id);
+      const invoice = await storage.getInvoice(invoiceId);
+      
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      // Check if user is admin or the invoice owner
+      if (req.user!.role !== 'admin' && invoice.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Forbidden: You don't have access to this invoice" });
+      }
+      
+      res.json(invoice);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error retrieving invoice: " + error.message });
+    }
+  });
+  
+  // Get current user's invoices
+  app.get("/api/invoices", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const invoices = await storage.getUserInvoices(req.user!.id);
+      res.json(invoices);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error retrieving invoices: " + error.message });
+    }
+  });
+  
+  // Create new invoice (admin only)
+  app.post("/api/admin/invoices", isAdmin, async (req, res) => {
+    try {
+      const invoiceData = insertInvoiceSchema.parse(req.body);
+      
+      // Generate invoice number
+      if (!invoiceData.invoiceNumber) {
+        const date = new Date();
+        const timestamp = date.getTime().toString().slice(-6);
+        invoiceData.invoiceNumber = `INV-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${timestamp}`;
+      }
+      
+      const newInvoice = await storage.createInvoice(invoiceData);
+      res.status(201).json(newInvoice);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Error creating invoice: " + error.message });
+    }
+  });
+  
+  // Update invoice (admin only)
+  app.put("/api/admin/invoices/:id", isAdmin, async (req, res) => {
+    try {
+      const invoiceId = parseInt(req.params.id);
+      const existingInvoice = await storage.getInvoice(invoiceId);
+      
+      if (!existingInvoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      const updatedInvoice = await storage.updateInvoice(invoiceId, req.body);
+      res.json(updatedInvoice);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating invoice: " + error.message });
+    }
+  });
+  
+  // Update invoice status (admin only)
+  app.patch("/api/admin/invoices/:id/status", isAdmin, async (req, res) => {
+    try {
+      const invoiceId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      // Check if status is valid
+      if (!['draft', 'issued', 'paid', 'void', 'overdue'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+      
+      const existingInvoice = await storage.getInvoice(invoiceId);
+      
+      if (!existingInvoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, status);
+      res.json(updatedInvoice);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating invoice status: " + error.message });
+    }
+  });
+  
+  // Delete invoice (admin only)
+  app.delete("/api/admin/invoices/:id", isAdmin, async (req, res) => {
+    try {
+      const invoiceId = parseInt(req.params.id);
+      const existingInvoice = await storage.getInvoice(invoiceId);
+      
+      if (!existingInvoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      const success = await storage.deleteInvoice(invoiceId);
+      
+      if (!success) {
+        return res.status(400).json({ 
+          message: "Cannot delete this invoice as it has associated payments" 
+        });
+      }
+      
+      res.json({ success: true, message: "Invoice deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error deleting invoice: " + error.message });
+    }
+  });
+  
+  // ==== Payment Method Routes ====
+  
+  // Get current user's payment methods
+  app.get("/api/payment-methods", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const paymentMethods = await storage.getUserPaymentMethods(req.user!.id);
+      res.json(paymentMethods);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error retrieving payment methods: " + error.message });
+    }
+  });
+  
+  // Add a new payment method
+  app.post("/api/payment-methods", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Parse and validate request data
+      const methodData = req.body;
+      methodData.userId = req.user!.id;
+      
+      // Handle Stripe payment method if applicable
+      if (methodData.type === 'card' && methodData.stripePaymentMethodId && stripe) {
+        try {
+          // Attach payment method to customer in Stripe
+          if (req.user!.stripeCustomerId) {
+            await stripe.paymentMethods.attach(
+              methodData.stripePaymentMethodId,
+              { customer: req.user!.stripeCustomerId }
+            );
+            
+            // If set as default in our system, set as default in Stripe too
+            if (methodData.isDefault) {
+              await stripe.customers.update(
+                req.user!.stripeCustomerId,
+                { invoice_settings: { default_payment_method: methodData.stripePaymentMethodId } }
+              );
+            }
+          }
+        } catch (stripeError: any) {
+          return res.status(400).json({ 
+            message: "Error attaching payment method in Stripe: " + stripeError.message 
+          });
+        }
+      }
+      
+      const newMethod = await storage.createPaymentMethod(methodData);
+      res.status(201).json(newMethod);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Error adding payment method: " + error.message });
+    }
+  });
+  
+  // Update payment method
+  app.put("/api/payment-methods/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const methodId = parseInt(req.params.id);
+      const method = await storage.getPaymentMethod(methodId);
+      
+      if (!method) {
+        return res.status(404).json({ message: "Payment method not found" });
+      }
+      
+      // Check if user owns this payment method
+      if (method.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Forbidden: You don't own this payment method" });
+      }
+      
+      // Parse and validate request data
+      const methodData = req.body;
+      
+      // Update in Stripe if needed
+      if (method.type === 'card' && method.stripePaymentMethodId && methodData.isDefault && stripe) {
+        try {
+          if (req.user!.stripeCustomerId) {
+            await stripe.customers.update(
+              req.user!.stripeCustomerId,
+              { invoice_settings: { default_payment_method: method.stripePaymentMethodId } }
+            );
+          }
+        } catch (stripeError: any) {
+          console.error("Stripe error updating default payment method:", stripeError);
+          // Continue with our update even if Stripe update fails
+        }
+      }
+      
+      const updatedMethod = await storage.updatePaymentMethod(methodId, methodData);
+      res.json(updatedMethod);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating payment method: " + error.message });
+    }
+  });
+  
+  // Set default payment method
+  app.post("/api/payment-methods/:id/set-default", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const methodId = parseInt(req.params.id);
+      const method = await storage.getPaymentMethod(methodId);
+      
+      if (!method) {
+        return res.status(404).json({ message: "Payment method not found" });
+      }
+      
+      // Check if user owns this payment method
+      if (method.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Forbidden: You don't own this payment method" });
+      }
+      
+      // Update in Stripe if needed
+      if (method.type === 'card' && method.stripePaymentMethodId && stripe) {
+        try {
+          if (req.user!.stripeCustomerId) {
+            await stripe.customers.update(
+              req.user!.stripeCustomerId,
+              { invoice_settings: { default_payment_method: method.stripePaymentMethodId } }
+            );
+          }
+        } catch (stripeError: any) {
+          console.error("Stripe error setting default payment method:", stripeError);
+          // Continue with our update even if Stripe update fails
+        }
+      }
+      
+      const updatedMethod = await storage.setDefaultPaymentMethod(methodId, req.user!.id);
+      res.json(updatedMethod);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error setting default payment method: " + error.message });
+    }
+  });
+  
+  // Delete payment method
+  app.delete("/api/payment-methods/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const methodId = parseInt(req.params.id);
+      const method = await storage.getPaymentMethod(methodId);
+      
+      if (!method) {
+        return res.status(404).json({ message: "Payment method not found" });
+      }
+      
+      // Check if user owns this payment method
+      if (method.userId !== req.user!.id && req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Forbidden: You don't own this payment method" });
+      }
+      
+      // Detach from Stripe if needed
+      if (method.type === 'card' && method.stripePaymentMethodId && stripe) {
+        try {
+          await stripe.paymentMethods.detach(method.stripePaymentMethodId);
+        } catch (stripeError: any) {
+          console.error("Stripe error detaching payment method:", stripeError);
+          // Continue with our deletion even if Stripe detach fails
+        }
+      }
+      
+      const success = await storage.deletePaymentMethod(methodId);
+      
+      if (!success) {
+        return res.status(400).json({ 
+          message: "Cannot delete this payment method as it's required for active subscriptions" 
+        });
+      }
+      
+      res.json({ success: true, message: "Payment method deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error deleting payment method: " + error.message });
+    }
+  });
+
+  // ==== Financial Reports Routes ====
+  
+  // Get financial summary (admin only)
+  app.get("/api/admin/reports/financial-summary", isAdmin, async (req, res) => {
+    try {
+      // Get query parameters
+      const { period } = req.query;
+      const periodType = (period as string) || 'month'; // Default to month
+      
+      // Calculate date range
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (periodType) {
+        case 'week':
+          // Current week (starting from Sunday)
+          const dayOfWeek = now.getDay();
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - dayOfWeek);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'month':
+          // Current month
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'quarter':
+          // Current quarter
+          const currentQuarter = Math.floor(now.getMonth() / 3);
+          startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
+          break;
+        case 'year':
+          // Current year
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        default:
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1); // Default to current month
+      }
+      
+      // Get all payments in the given period
+      const periodPayments = await storage.getPaymentsByDateRange(startDate, now);
+      
+      // Calculate income
+      const income = periodPayments
+        .filter(p => p.status === 'completed' && p.paymentType !== 'refund')
+        .reduce((sum, payment) => sum + payment.amount, 0);
+      
+      // Calculate refunds
+      const refunds = periodPayments
+        .filter(p => p.status === 'refunded' || p.paymentType === 'refund')
+        .reduce((sum, payment) => sum + Math.abs(payment.amount), 0);
+      
+      // Get active subscriptions
+      const activeSubscriptions = await db
+        .select()
+        .from(userSubscriptions)
+        .where(eq(userSubscriptions.status, 'active'));
+      
+      // Calculate subscription metrics
+      const subscriptionCount = activeSubscriptions.length;
+      
+      // Get plans for the active subscriptions
+      const planIds = [...new Set(activeSubscriptions.map(sub => sub.planId))];
+      const plans = await Promise.all(
+        planIds.map(id => storage.getSubscriptionPlan(id))
+      );
+      
+      // Calculate recurring revenue (monthly basis)
+      const mrr = activeSubscriptions.reduce((sum, sub) => {
+        const plan = plans.find(p => p?.id === sub.planId);
+        if (plan) {
+          // For annual plans, divide by 12 to get monthly value
+          const monthlyPrice = plan.billingCycle === 'yearly' 
+            ? plan.price / 12
+            : plan.price;
+          return sum + monthlyPrice;
+        }
+        return sum;
+      }, 0);
+      
+      // Calculate average revenue per user
+      const arpu = subscriptionCount > 0 ? mrr / subscriptionCount : 0;
+      
+      // Return the financial summary
+      res.json({
+        period: periodType,
+        startDate,
+        endDate: now,
+        income,
+        refunds,
+        netIncome: income - refunds,
+        activeSubscriptions: subscriptionCount,
+        monthlyRecurringRevenue: mrr,
+        averageRevenuePerUser: arpu,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error generating financial summary: " + error.message });
     }
   });
 
