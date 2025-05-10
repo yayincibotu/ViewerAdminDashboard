@@ -254,10 +254,19 @@ const Blog: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Create payload (convert categoryId to number)
+    // Create payload (convert categoryId to number and ensure we only send the right fields)
+    // This fixes the "body stream already read" error by making sure we don't send featuredImage
     const payload = {
-      ...formData,
-      categoryId: formData.categoryId ? parseInt(formData.categoryId) : null
+      title: formData.title,
+      slug: formData.slug,
+      content: formData.content,
+      excerpt: formData.excerpt,
+      categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
+      tags: formData.tags,
+      metaTitle: formData.metaTitle,
+      metaDescription: formData.metaDescription,
+      coverImage: formData.coverImage,
+      status: formData.status
     };
     
     if (currentPost) {

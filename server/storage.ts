@@ -999,10 +999,23 @@ export class DatabaseStorage implements IStorage {
   async createBlogPost(post: InsertBlogPost): Promise<BlogPost> {
     try {
       console.log("[DB] Creating new blog post in PostgreSQL database");
+      
+      // Explicitly map the fields to avoid any schema mismatches
       const [newPost] = await db
         .insert(blogPosts)
         .values({
-          ...post,
+          title: post.title,
+          slug: post.slug,
+          content: post.content,
+          excerpt: post.excerpt,
+          categoryId: post.categoryId,
+          authorId: post.authorId,
+          tags: post.tags || null,
+          metaTitle: post.metaTitle || null,
+          metaDescription: post.metaDescription || null,
+          coverImage: post.coverImage || null,
+          status: post.status || 'draft',
+          publishedAt: post.status === 'published' ? new Date() : null,
           createdAt: new Date(),
           updatedAt: new Date()
         })
