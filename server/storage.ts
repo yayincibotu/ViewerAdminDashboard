@@ -48,6 +48,30 @@ export interface IStorage {
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
   getUserPayments(userId: number): Promise<Payment[]>;
+  getPayment(id: number): Promise<Payment | undefined>;
+  getPaymentsByInvoiceId(invoiceId: number): Promise<Payment[]>;
+  getPaymentsByStatus(status: string): Promise<Payment[]>;
+  getPaymentsByDateRange(startDate: Date, endDate: Date): Promise<Payment[]>;
+  updatePaymentStatus(id: number, status: string): Promise<Payment | undefined>;
+  refundPayment(id: number, reason: string): Promise<Payment | undefined>;
+  
+  // Invoice operations
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  getInvoice(id: number): Promise<Invoice | undefined>;
+  getUserInvoices(userId: number): Promise<Invoice[]>;
+  getInvoicesByStatus(status: string): Promise<Invoice[]>;
+  getInvoicesByDateRange(startDate: Date, endDate: Date): Promise<Invoice[]>;
+  updateInvoice(id: number, data: Partial<Invoice>): Promise<Invoice | undefined>;
+  updateInvoiceStatus(id: number, status: string): Promise<Invoice | undefined>;
+  deleteInvoice(id: number): Promise<boolean>;
+  
+  // Payment Method operations
+  createPaymentMethod(method: InsertPaymentMethod): Promise<PaymentMethod>;
+  getUserPaymentMethods(userId: number): Promise<PaymentMethod[]>;
+  getPaymentMethod(id: number): Promise<PaymentMethod | undefined>;
+  updatePaymentMethod(id: number, data: Partial<PaymentMethod>): Promise<PaymentMethod | undefined>;
+  setDefaultPaymentMethod(id: number, userId: number): Promise<PaymentMethod | undefined>;
+  deletePaymentMethod(id: number): Promise<boolean>;
   
   // User Subscription operations
   getUserSubscriptions(userId: number): Promise<UserSubscription[]>;
@@ -368,6 +392,242 @@ export class DatabaseStorage implements IStorage {
 
   async getUserPayments(userId: number): Promise<Payment[]> {
     return db.select().from(payments).where(eq(payments.userId, userId));
+  }
+  
+  async getPayment(id: number): Promise<Payment | undefined> {
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment;
+  }
+  
+  async getPaymentsByInvoiceId(invoiceId: number): Promise<Payment[]> {
+    return db.select().from(payments).where(eq(payments.invoiceId, invoiceId));
+  }
+  
+  async getPaymentsByStatus(status: string): Promise<Payment[]> {
+    return db.select().from(payments).where(eq(payments.status, status));
+  }
+  
+  async getPaymentsByDateRange(startDate: Date, endDate: Date): Promise<Payment[]> {
+    return db
+      .select()
+      .from(payments)
+      .where(
+        and(
+          gte(payments.createdAt, startDate),
+          lte(payments.createdAt, endDate)
+        )
+      );
+  }
+  
+  async updatePaymentStatus(id: number, status: string): Promise<Payment | undefined> {
+    const [updatedPayment] = await db
+      .update(payments)
+      .set({ 
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(payments.id, id))
+      .returning();
+      
+    return updatedPayment;
+  }
+  
+  async refundPayment(id: number, reason: string): Promise<Payment | undefined> {
+    const payment = await this.getPayment(id);
+    
+    if (!payment || payment.status === 'refunded') {
+      return undefined;
+    }
+    
+    // Create refund payment record
+    const refundPayment: InsertPayment = {
+      userId: payment.userId,
+      amount: -payment.amount, // Negative amount to represent refund
+      currency: payment.currency,
+      status: 'completed',
+      paymentMethod: payment.paymentMethod,
+      paymentType: 'refund',
+      refundReason: reason,
+      invoiceId: payment.invoiceId,
+      subscriptionId: payment.subscriptionId,
+      stripePaymentIntentId: payment.stripePaymentIntentId,
+      stripeCustomerId: payment.stripeCustomerId,
+      description: `Refund for payment #${payment.id}: ${reason}`,
+    };
+    
+    const [refundRecord] = await db.insert(payments).values(refundPayment).returning();
+    
+    // Update original payment status
+    const [updatedPayment] = await db
+      .update(payments)
+      .set({ 
+        status: 'refunded',
+        refundReason: reason,
+        updatedAt: new Date()
+      })
+      .where(eq(payments.id, id))
+      .returning();
+      
+    return updatedPayment;
+  }
+  
+  // Invoice operations
+  async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
+    const [newInvoice] = await db.insert(invoices).values(invoice).returning();
+    return newInvoice;
+  }
+  
+  async getInvoice(id: number): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    return invoice;
+  }
+  
+  async getUserInvoices(userId: number): Promise<Invoice[]> {
+    return db.select().from(invoices).where(eq(invoices.userId, userId));
+  }
+  
+  async getInvoicesByStatus(status: string): Promise<Invoice[]> {
+    return db.select().from(invoices).where(eq(invoices.status, status));
+  }
+  
+  async getInvoicesByDateRange(startDate: Date, endDate: Date): Promise<Invoice[]> {
+    return db
+      .select()
+      .from(invoices)
+      .where(
+        and(
+          gte(invoices.issuedDate, startDate),
+          lte(invoices.issuedDate, endDate)
+        )
+      );
+  }
+  
+  async updateInvoice(id: number, data: Partial<Invoice>): Promise<Invoice | undefined> {
+    const [updatedInvoice] = await db
+      .update(invoices)
+      .set({ 
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(invoices.id, id))
+      .returning();
+      
+    return updatedInvoice;
+  }
+  
+  async updateInvoiceStatus(id: number, status: string): Promise<Invoice | undefined> {
+    const [updatedInvoice] = await db
+      .update(invoices)
+      .set({ 
+        status,
+        updatedAt: new Date(),
+        paidDate: status === 'paid' ? new Date() : undefined
+      })
+      .where(eq(invoices.id, id))
+      .returning();
+      
+    return updatedInvoice;
+  }
+  
+  async deleteInvoice(id: number): Promise<boolean> {
+    try {
+      // Check if there are any payments associated with this invoice
+      const associatedPayments = await this.getPaymentsByInvoiceId(id);
+      
+      // If there are payments, don't allow deletion
+      if (associatedPayments.length > 0) {
+        return false;
+      }
+      
+      await db.delete(invoices).where(eq(invoices.id, id));
+      return true;
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      return false;
+    }
+  }
+  
+  // Payment Method operations
+  async createPaymentMethod(method: InsertPaymentMethod): Promise<PaymentMethod> {
+    // If this is set as default, unset any other default payment methods for this user
+    if (method.isDefault) {
+      await db
+        .update(paymentMethods)
+        .set({ isDefault: false })
+        .where(eq(paymentMethods.userId, method.userId));
+    }
+    
+    const [newMethod] = await db.insert(paymentMethods).values(method).returning();
+    return newMethod;
+  }
+  
+  async getUserPaymentMethods(userId: number): Promise<PaymentMethod[]> {
+    return db.select().from(paymentMethods).where(eq(paymentMethods.userId, userId));
+  }
+  
+  async getPaymentMethod(id: number): Promise<PaymentMethod | undefined> {
+    const [method] = await db.select().from(paymentMethods).where(eq(paymentMethods.id, id));
+    return method;
+  }
+  
+  async updatePaymentMethod(id: number, data: Partial<PaymentMethod>): Promise<PaymentMethod | undefined> {
+    const [updatedMethod] = await db
+      .update(paymentMethods)
+      .set({ 
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(paymentMethods.id, id))
+      .returning();
+      
+    return updatedMethod;
+  }
+  
+  async setDefaultPaymentMethod(id: number, userId: number): Promise<PaymentMethod | undefined> {
+    // First, unset any existing default payment methods for this user
+    await db
+      .update(paymentMethods)
+      .set({ isDefault: false })
+      .where(eq(paymentMethods.userId, userId));
+    
+    // Then set the specified payment method as default
+    const [updatedMethod] = await db
+      .update(paymentMethods)
+      .set({ 
+        isDefault: true,
+        updatedAt: new Date()
+      })
+      .where(eq(paymentMethods.id, id))
+      .returning();
+      
+    return updatedMethod;
+  }
+  
+  async deletePaymentMethod(id: number): Promise<boolean> {
+    try {
+      // First check if this is the only payment method or if it's used in active subscriptions
+      const method = await this.getPaymentMethod(id);
+      
+      if (!method) {
+        return false;
+      }
+      
+      // Don't allow deletion of the only default payment method if there are active subscriptions
+      if (method.isDefault) {
+        const userMethods = await this.getUserPaymentMethods(method.userId);
+        const userSubscriptions = await this.getUserSubscriptions(method.userId);
+        
+        if (userMethods.length === 1 && userSubscriptions.some(sub => sub.status === 'active')) {
+          return false;
+        }
+      }
+      
+      await db.delete(paymentMethods).where(eq(paymentMethods.id, id));
+      return true;
+    } catch (error) {
+      console.error('Error deleting payment method:', error);
+      return false;
+    }
   }
 
   async getUserSubscriptions(userId: number): Promise<UserSubscription[]> {

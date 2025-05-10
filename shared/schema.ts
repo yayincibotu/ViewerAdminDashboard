@@ -120,15 +120,93 @@ export const payments = pgTable("payments", {
   userId: integer("user_id").notNull(),
   amount: integer("amount").notNull(),
   currency: text("currency").default("usd").notNull(),
-  status: text("status").notNull(),
-  paymentMethod: text("payment_method").notNull(),
+  description: text("description"),
+  status: text("status").notNull(), // pending, completed, failed, refunded
+  paymentMethod: text("payment_method").notNull(), // stripe_card, stripe_sepa, crypto_btc, crypto_eth, etc.
+  paymentType: text("payment_type").default("one_time").notNull(), // one_time, subscription, refund
+  refundReason: text("refund_reason"),
+  invoiceId: integer("invoice_id"),
+  subscriptionId: integer("subscription_id"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeCustomerId: text("stripe_customer_id"),
+  cryptoTransactionHash: text("crypto_transaction_hash"),
+  cryptoAddress: text("crypto_address"),
+  cryptoCurrency: text("crypto_currency"),
+  metadata: text("metadata"), // Any additional payment metadata as JSON
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertPaymentSchema = createInsertSchema(payments).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+});
+
+// Invoices
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  invoiceNumber: text("invoice_number").notNull(),
+  amount: integer("amount").notNull(),
+  currency: text("currency").default("usd").notNull(),
+  status: text("status").notNull(), // draft, issued, paid, void, overdue
+  dueDate: timestamp("due_date"),
+  issuedDate: timestamp("issued_date").defaultNow().notNull(),
+  paidDate: timestamp("paid_date"),
+  billingName: text("billing_name"),
+  billingEmail: text("billing_email"),
+  billingAddress: text("billing_address"),
+  billingCity: text("billing_city"),
+  billingState: text("billing_state"),
+  billingCountry: text("billing_country"),
+  billingPostalCode: text("billing_postal_code"),
+  taxAmount: integer("tax_amount").default(0),
+  taxRate: integer("tax_rate").default(0),
+  notes: text("notes"),
+  termsAndConditions: text("terms_and_conditions"),
+  stripeInvoiceId: text("stripe_invoice_id"),
+  items: text("items").array(), // JSON array of invoice line items
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true, 
+  updatedAt: true,
+});
+
+// Payment Methods (stored payment methods for users)
+export const paymentMethods = pgTable("payment_methods", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  type: text("type").notNull(), // card, bank_account, crypto_wallet
+  name: text("name").notNull(), // User-friendly name for the payment method
+  isDefault: boolean("is_default").default(false),
+  // Card specific fields
+  cardBrand: text("card_brand"), // visa, mastercard, etc.
+  cardLast4: text("card_last4"), 
+  cardExpiryMonth: text("card_expiry_month"),
+  cardExpiryYear: text("card_expiry_year"),
+  // Bank account specific fields
+  bankName: text("bank_name"),
+  bankLast4: text("bank_last4"),
+  // Crypto specific fields
+  cryptoAddress: text("crypto_address"),
+  cryptoCurrency: text("crypto_currency"), // BTC, ETH, etc.
+  // Stripe specific fields
+  stripePaymentMethodId: text("stripe_payment_method_id"),
+  billingDetails: text("billing_details"), // Billing details as JSON
+  metadata: text("metadata"), // Any additional payment method metadata as JSON
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Types
@@ -150,17 +228,25 @@ export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   subscriptions: many(userSubscriptions),
   payments: many(payments),
+  invoices: many(invoices),
+  paymentMethods: many(paymentMethods),
 }));
 
 export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
   userSubscriptions: many(userSubscriptions),
 }));
 
-export const userSubscriptionsRelations = relations(userSubscriptions, ({ one }) => ({
+export const userSubscriptionsRelations = relations(userSubscriptions, ({ one, many }) => ({
   user: one(users, {
     fields: [userSubscriptions.userId],
     references: [users.id],
@@ -169,6 +255,7 @@ export const userSubscriptionsRelations = relations(userSubscriptions, ({ one })
     fields: [userSubscriptions.planId],
     references: [subscriptionPlans.id],
   }),
+  payments: many(payments, { relationName: "subscription_payments" }),
 }));
 
 export const platformsRelations = relations(platforms, ({ many }) => ({
@@ -185,6 +272,31 @@ export const servicesRelations = relations(services, ({ one }) => ({
 export const paymentsRelations = relations(payments, ({ one }) => ({
   user: one(users, {
     fields: [payments.userId],
+    references: [users.id],
+  }),
+  invoice: one(invoices, {
+    fields: [payments.invoiceId],
+    references: [invoices.id],
+    relationName: "invoice_payment",
+  }),
+  subscription: one(userSubscriptions, {
+    fields: [payments.subscriptionId],
+    references: [userSubscriptions.id],
+    relationName: "subscription_payments",
+  }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  user: one(users, {
+    fields: [invoices.userId],
+    references: [users.id],
+  }),
+  payments: many(payments, { relationName: "invoice_payment" }),
+}));
+
+export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({
+  user: one(users, {
+    fields: [paymentMethods.userId],
     references: [users.id],
   }),
 }));
