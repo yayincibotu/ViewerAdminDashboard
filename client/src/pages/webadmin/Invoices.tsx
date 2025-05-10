@@ -15,6 +15,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import { CalendarIcon, Download, FileText, Filter, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
@@ -439,8 +440,17 @@ const AdminInvoices = () => {
                       initialFocus
                       mode="range"
                       defaultMonth={dateRange.from}
-                      selected={dateRange}
-                      onSelect={setDateRange}
+                      selected={{
+                        from: dateRange.from,
+                        to: dateRange.to
+                      }}
+                      onSelect={(range) => {
+                        if (range) {
+                          setDateRange({ from: range.from, to: range.to });
+                        } else {
+                          setDateRange({});
+                        }
+                      }}
                       numberOfMonths={2}
                     />
                     <div className="flex items-center justify-between px-4 pb-4">
