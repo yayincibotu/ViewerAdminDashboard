@@ -318,7 +318,7 @@ const ContactMessages: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-muted-foreground">IP Address:</p>
-                  <p>{currentMessage?.ipaddress || 'Not recorded'}</p>
+                  <p>{currentMessage?.ipAddress || 'Not recorded'}</p>
                 </div>
               </div>
             </div>
