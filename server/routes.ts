@@ -745,15 +745,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Create subscription with Stripe
+        // Create subscription with Stripe - handle expanding properly
+        // First create the subscription
         const subscription = await stripe.subscriptions.create({
           customer: customerId,
           items: [{
             price: actualPriceId,
           }],
           payment_behavior: 'default_incomplete',
-          expand: ['latest_invoice.payment_intent'],
+          // Do not expand here as it causes issues with older Stripe API versions
+          expand: ['latest_invoice'],
         });
+        
+        // If we have an invoice, fetch the payment intent separately
+        let paymentIntent = null;
+        if (subscription.latest_invoice && typeof subscription.latest_invoice !== 'string') {
+          try {
+            // Get the payment intent ID from the invoice
+            const invoice = await stripe.invoices.retrieve(subscription.latest_invoice.id, {
+              expand: ['payment_intent']
+            });
+            if (invoice.payment_intent && typeof invoice.payment_intent !== 'string') {
+              paymentIntent = invoice.payment_intent;
+            }
+          } catch (err) {
+            console.error("Error retrieving payment intent from invoice:", err);
+          }
+        }
 
         // Update user with subscription info
         await storage.updateUserStripeInfo(user.id, customerId, subscription.id);

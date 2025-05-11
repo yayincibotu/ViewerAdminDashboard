@@ -357,9 +357,16 @@ const SubscribePage: React.FC = () => {
           throw new Error(errorMessage);
         }
         
-        // Response is OK, parse it as JSON
+        // Response is OK, get a clone before parsing as JSON to prevent "body already read" errors
         try {
-          data = await response.json();
+          const responseClone = response.clone();
+          try {
+            data = await response.json();
+          } catch (e) {
+            // If the first attempt fails, try with the clone
+            console.warn("First JSON parse attempt failed, trying with clone");
+            data = await responseClone.json();
+          }
         } catch (jsonError) {
           console.error("Error parsing response:", jsonError);
           throw new Error("Failed to parse server response");
