@@ -672,10 +672,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dedicated endpoint for subscription payments
   app.post("/api/create-subscription-payment", async (req, res) => {
     console.log("Create subscription payment request received:", req.body);
+    console.log("Session information:", req.session?.id);
+    console.log("User authenticated:", req.isAuthenticated());
     
     if (!req.isAuthenticated()) {
       console.log("User not authenticated, returning 401");
-      return res.status(401).json({ message: "Unauthorized", error: "not_authenticated" });
+      return res
+        .status(401)
+        .contentType('application/json')
+        .send({ message: "Unauthorized", error: "not_authenticated", success: false });
     }
     
     const stripe = getStripe();
@@ -746,17 +751,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       });
       
-      // Return the client secret to the client
-      return res.json({
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id
-      });
+      // Ensure proper JSON response with explicit content type
+      return res
+        .status(200)
+        .contentType('application/json')
+        .json({
+          clientSecret: paymentIntent.client_secret,
+          paymentIntentId: paymentIntent.id,
+          success: true
+        });
     } catch (error: any) {
       console.error("Error creating subscription payment:", error);
-      return res.status(500).json({ 
-        message: "Failed to create payment: " + error.message,
-        error: error.message
-      });
+      return res
+        .status(500)
+        .contentType('application/json')
+        .json({ 
+          message: "Failed to create payment: " + error.message,
+          error: error.message,
+          success: false
+        });
     }
   });
 

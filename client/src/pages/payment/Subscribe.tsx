@@ -360,9 +360,30 @@ const SubscribePage: React.FC = () => {
               throw new Error(errorMessage);
             }
             
-            // For successful response, parse JSON
-            const data = await response.json();
-            console.log("Payment API response data:", data);
+            // For successful response, first check content type
+            const contentType = response.headers.get('Content-Type');
+            let data;
+            
+            console.log("Response content type:", contentType);
+            
+            // Check if the response is HTML instead of JSON
+            const responseClone = response.clone();
+            const responseText = await responseClone.text();
+            
+            if (responseText.includes('<!DOCTYPE html>')) {
+              console.error("Server returned HTML instead of JSON:", responseText.substring(0, 100));
+              throw new Error("Unexpected server response. Please try again later.");
+            }
+            
+            try {
+              // Parse the original response as JSON
+              data = await response.json();
+              console.log("Payment API response data:", data);
+            } catch (e) {
+              console.error("JSON parse error:", e);
+              console.error("Response text was:", responseText);
+              throw new Error("Failed to process server response. Please try again.");
+            }
             
             console.log("Payment intent response:", data);
             
