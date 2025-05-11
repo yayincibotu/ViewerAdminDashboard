@@ -793,17 +793,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Make sure we properly handle the potential nulls/undefined in the response
         let clientSecret = null;
         
-        if (subscription.latest_invoice && 
+        // First try to get from our separate payment intent fetch
+        if (paymentIntent && typeof paymentIntent !== 'string' && paymentIntent.client_secret) {
+          clientSecret = paymentIntent.client_secret;
+          console.log("Got client secret from separately fetched payment intent");
+        }
+        // Fall back to subscription.latest_invoice.payment_intent if available (for older Stripe API versions)
+        else if (subscription.latest_invoice && 
             typeof subscription.latest_invoice !== 'string' && 
             subscription.latest_invoice.payment_intent && 
             typeof subscription.latest_invoice.payment_intent !== 'string') {
           clientSecret = subscription.latest_invoice.payment_intent.client_secret;
+          console.log("Got client secret from subscription.latest_invoice.payment_intent");
         }
         
+        // If still no client secret, try to create a payment intent manually
         if (!clientSecret) {
-          console.error("Missing client secret in Stripe response:", subscription);
-          throw new Error("Failed to generate payment intent. Please check Stripe configuration.");
+          try {
+            console.log("No client secret found. Creating a new payment intent manually...");
+            
+            // Create a payment intent manually
+            const newPaymentIntent = await stripe.paymentIntents.create({
+              amount: Math.round(plan.price * 100), // convert to cents
+              currency: 'usd',
+              customer: customerId,
+              description: `Subscription for ${plan.name}`,
+              setup_future_usage: 'off_session',
+              metadata: {
+                subscription_id: subscription.id,
+                plan_id: plan.id.toString(),
+              },
+            });
+            
+            clientSecret = newPaymentIntent.client_secret;
+            console.log("Successfully created new payment intent with client secret");
+          } catch (paymentError) {
+            console.error("Failed to create payment intent:", paymentError);
+            // Continue and return what we have - the client will show an error
+          }
         }
+        
+        // Even if we couldn't get a client secret, return the subscription ID
+        // This will let the client show an appropriate error
         
         res.json({
           paymentMethod: 'card',

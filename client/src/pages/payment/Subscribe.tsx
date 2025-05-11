@@ -375,9 +375,17 @@ const SubscribePage: React.FC = () => {
         console.log("Payment response:", data);
         
         // Handle different payment methods
-        if (data.paymentMethod === 'card' && data.clientSecret) {
-          setClientSecret(data.clientSecret);
-          setCryptoData(null);
+        if (data.paymentMethod === 'card') {
+          // Check if we have client secret for payment
+          if (data.clientSecret) {
+            setClientSecret(data.clientSecret);
+            setCryptoData(null);
+          } else {
+            // Handle the case where we have a subscription but no client secret
+            // This happens when the subscription is already created but we need to redirect to payment form
+            console.error("Unexpected payment response:", data);
+            setError("Failed to initialize payment. Please check if the plan has proper payment configuration or contact support.");
+          }
         } else if (data.paymentMethod === 'crypto' && data.transactionId) {
           setCryptoData(data);
           setClientSecret("");
