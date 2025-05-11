@@ -331,41 +331,38 @@ const SubscribePage: React.FC = () => {
         // Use the new direct payment intent API for card payments
         if (paymentMethod === 'card') {
           try {
-            // Simplify the request with a single parameter, avoiding the old ambiguity
-            const response = await fetch('/api/create-subscription-payment', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ planId }),
-              signal: controller.signal
+            // Use the apiRequest helper which handles credentials and headers
+            const response = await apiRequest("POST", "/api/create-subscription-payment", { 
+              planId: Number(planId) 
             });
             
             // Clear the timeout since the request completed
             clearTimeout(timeoutId);
             
-            // Read response as text first
-            const responseText = await response.text();
-            
+            // Handle errors
             if (!response.ok) {
-              // If the response is not OK, try to parse the error message
+              console.log("Error response:", response.status, response.statusText);
+              const errorText = await response.text();
+              console.log("Error response body:", errorText);
+              
+              let errorMessage = "Failed to create payment";
               try {
-                const errorData = JSON.parse(responseText);
-                throw new Error(errorData.message || "Failed to create payment");
+                // Try to parse as JSON
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorMessage;
               } catch (e) {
-                // If parsing fails, use the raw text
-                throw new Error(responseText || "Failed to create payment");
+                // If not JSON, use the text directly
+                if (errorText && errorText.length < 100) {
+                  errorMessage = errorText;
+                }
               }
+              
+              throw new Error(errorMessage);
             }
             
-            // Parse the successful response
-            let data;
-            try {
-              data = JSON.parse(responseText);
-            } catch (e) {
-              console.error("Failed to parse server response:", e);
-              throw new Error("Server returned an invalid response. Please try again.");
-            }
+            // For successful response, parse JSON
+            const data = await response.json();
+            console.log("Payment API response data:", data);
             
             console.log("Payment intent response:", data);
             

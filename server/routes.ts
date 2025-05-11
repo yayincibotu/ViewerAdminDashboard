@@ -671,8 +671,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Dedicated endpoint for subscription payments
   app.post("/api/create-subscription-payment", async (req, res) => {
+    console.log("Create subscription payment request received:", req.body);
+    
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Unauthorized" });
+      console.log("User not authenticated, returning 401");
+      return res.status(401).json({ message: "Unauthorized", error: "not_authenticated" });
     }
     
     const stripe = getStripe();
