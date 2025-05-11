@@ -8,7 +8,7 @@ import { mailService } from "./mail";
 import crypto from "crypto";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
-import { getStripe, syncSubscriptionPlansWithStripe, isStripeConfigured } from "./stripe-helper";
+import { getStripe, syncSubscriptionPlansWithStripe, isStripeConfigured, createPaymentIntentForPlan } from "./stripe-helper";
 import { 
   users, userSubscriptions, payments, 
   invoices, paymentMethods,
