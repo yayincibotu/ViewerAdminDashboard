@@ -543,43 +543,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stripe payment route for one-time payments
+  // Stripe payment route for one-time payments and subscriptions
   app.post("/api/create-payment-intent", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    const stripe = getStripe();
     if (!stripe) {
-      return res.status(500).json({ message: "Stripe is not configured." });
+      return res.status(500).json({ 
+        message: "Stripe is not configured. Card payments are not available at this time.",
+        error: "stripe_not_configured"
+      });
     }
 
     try {
-      const { amount } = req.body;
+      const { amount, planId } = req.body;
       
-      if (!amount || amount <= 0) {
-        return res.status(400).json({ message: "Invalid amount" });
-      }
+      // If planId is provided, we're creating a payment intent for a subscription
+      if (planId) {
+        try {
+          // Get the plan details
+          const plan = await storage.getSubscriptionPlan(Number(planId));
+          
+          if (!plan) {
+            return res.status(404).json({ message: "Subscription plan not found" });
+          }
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(amount * 100), // Convert to cents
-        currency: "usd",
-        metadata: {
-          userId: req.user.id.toString(),
+          if (!req.user.email) {
+            return res.status(400).json({ message: 'No user email on file' });
+          }
+
+          // Create or use existing Stripe customer
+          let customerId = req.user.stripeCustomerId;
+          
+          if (!customerId) {
+            const customer = await stripe.customers.create({
+              email: req.user.email,
+              name: req.user.username,
+            });
+            
+            customerId = customer.id;
+            await storage.updateStripeCustomerId(req.user.id, customerId);
+          }
+          
+          // Create a payment intent for the subscription
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(plan.price * 100), // convert to cents
+            currency: 'usd',
+            customer: customerId,
+            description: `Payment for ${plan.name} subscription`,
+            metadata: {
+              plan_id: planId.toString(),
+              user_id: req.user.id.toString(),
+              subscription_payment: 'true'
+            },
+          });
+          
+          console.log(`Created payment intent ${paymentIntent.id} for plan ${planId} for user ${req.user.id}`);
+          
+          // Create a payment record
+          await storage.createPayment({
+            userId: req.user.id,
+            amount: Math.round(plan.price * 100),
+            currency: "usd",
+            status: "pending",
+            paymentMethod: "stripe",
+            stripePaymentIntentId: paymentIntent.id,
+            metadata: JSON.stringify({
+              planId: Number(planId),
+              planName: plan.name
+            })
+          });
+          
+          // Return the client secret to the client
+          return res.json({
+            clientSecret: paymentIntent.client_secret,
+            paymentIntentId: paymentIntent.id
+          });
+        } catch (error) {
+          console.error("Error creating subscription payment intent:", error);
+          return res.status(500).json({ 
+            message: "Failed to create payment: " + (error instanceof Error ? error.message : String(error)),
+            error: error instanceof Error ? error.message : String(error)
+          });
         }
-      });
+      }
+      // Handle regular one-time payment
+      else if (amount) {
+        if (amount <= 0) {
+          return res.status(400).json({ message: "Invalid amount" });
+        }
 
-      // Create a payment record
-      await storage.createPayment({
-        userId: req.user.id,
-        amount: Math.round(amount * 100),
-        currency: "usd",
-        status: "pending",
-        paymentMethod: "stripe",
-        stripePaymentIntentId: paymentIntent.id,
-      });
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(amount * 100), // Convert to cents
+          currency: "usd",
+          metadata: {
+            userId: req.user.id.toString(),
+          }
+        });
 
-      res.json({ clientSecret: paymentIntent.client_secret });
+        // Create a payment record
+        await storage.createPayment({
+          userId: req.user.id,
+          amount: Math.round(amount * 100),
+          currency: "usd",
+          status: "pending",
+          paymentMethod: "stripe",
+          stripePaymentIntentId: paymentIntent.id,
+        });
+
+        return res.json({ clientSecret: paymentIntent.client_secret });
+      } 
+      else {
+        return res.status(400).json({ message: "Either amount or planId is required" });
+      }
     } catch (error: any) {
+      console.error("Error creating payment intent:", error);
       res.status(500).json({ message: "Error creating payment intent: " + error.message });
     }
   });

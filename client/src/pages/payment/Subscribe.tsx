@@ -324,88 +324,127 @@ const SubscribePage: React.FC = () => {
       try {
         // Create a new AbortController for this request
         const controller = new AbortController();
-        const signal = controller.signal;
         
         // Set a timeout for the request
         const timeoutId = setTimeout(() => controller.abort(), 30000);
         
-        const response = await apiRequest("POST", "/api/get-or-create-subscription", 
-          { 
-            planId: planId,
-            paymentMethod: paymentMethod
-          }
-        );
-        
-        // Clear the timeout since the request completed
-        clearTimeout(timeoutId);
-        
-        let data;
-        
-        if (!response.ok) {
-          // Read the error response as JSON or text
-          const errorText = await response.text();
-          let errorMessage = "Failed to create subscription";
-          
+        // Use the new direct payment intent API for card payments
+        if (paymentMethod === 'card') {
           try {
-            const errorData = JSON.parse(errorText);
-            errorMessage = errorData.message || errorMessage;
-          } catch (e) {
-            // If we can't parse the error as JSON, use the text directly
-            if (errorText) errorMessage = errorText;
+            const response = await apiRequest("POST", "/api/create-payment-intent", { planId });
+            
+            // Clear the timeout since the request completed
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              // Read the error response as JSON or text
+              const errorText = await response.text();
+              let errorMessage = "Failed to create payment";
+              
+              try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorMessage;
+              } catch (e) {
+                // If we can't parse the error as JSON, use the text directly
+                if (errorText) errorMessage = errorText;
+              }
+              
+              throw new Error(errorMessage);
+            }
+            
+            // Parse the response
+            const responseClone = response.clone();
+            let data;
+            
+            try {
+              data = await response.json();
+            } catch (e) {
+              // If the first attempt fails, try with the clone
+              console.warn("First JSON parse attempt failed, trying with clone");
+              data = await responseClone.json();
+            }
+            
+            console.log("Payment intent response:", data);
+            
+            // Check if we have client secret
+            if (data.clientSecret) {
+              setClientSecret(data.clientSecret);
+              setCryptoData(null);
+            } else {
+              console.error("Missing client secret in response:", data);
+              setError("Failed to initialize payment. Please try again or contact support.");
+            }
+          } catch (error) {
+            console.error("Error creating payment intent:", error);
+            setError(error instanceof Error ? error.message : "Failed to create payment");
+          }
+        } 
+        // Use the existing API for crypto payments
+        else if (paymentMethod === 'crypto') {
+          const response = await apiRequest("POST", "/api/get-or-create-subscription", 
+            { 
+              planId: planId,
+              paymentMethod: 'crypto'
+            }
+          );
+          
+          // Clear the timeout since the request completed
+          clearTimeout(timeoutId);
+          
+          let data;
+          
+          if (!response.ok) {
+            // Read the error response as JSON or text
+            const errorText = await response.text();
+            let errorMessage = "Failed to create subscription";
+            
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+              // If we can't parse the error as JSON, use the text directly
+              if (errorText) errorMessage = errorText;
+            }
+            
+            throw new Error(errorMessage);
           }
           
-          throw new Error(errorMessage);
-        }
-        
-        // Response is OK, get a clone before parsing as JSON to prevent "body already read" errors
-        try {
-          const responseClone = response.clone();
+          // Response is OK, get a clone before parsing as JSON to prevent "body already read" errors
           try {
-            data = await response.json();
-          } catch (e) {
-            // If the first attempt fails, try with the clone
-            console.warn("First JSON parse attempt failed, trying with clone");
-            data = await responseClone.json();
+            const responseClone = response.clone();
+            try {
+              data = await response.json();
+            } catch (e) {
+              // If the first attempt fails, try with the clone
+              console.warn("First JSON parse attempt failed, trying with clone");
+              data = await responseClone.json();
+            }
+          } catch (jsonError) {
+            console.error("Error parsing response:", jsonError);
+            throw new Error("Failed to parse server response");
           }
-        } catch (jsonError) {
-          console.error("Error parsing response:", jsonError);
-          throw new Error("Failed to parse server response");
-        }
-        
-        console.log("Payment response:", data);
-        
-        // Handle different payment methods
-        if (data.paymentMethod === 'card') {
-          // Check if we have client secret for payment
-          if (data.clientSecret) {
-            setClientSecret(data.clientSecret);
-            setCryptoData(null);
+          
+          console.log("Crypto payment response:", data);
+          
+          if (data.paymentMethod === 'crypto' && data.transactionId) {
+            setCryptoData(data);
+            setClientSecret("");
           } else {
-            // Handle the case where we have a subscription but no client secret
-            // This happens when the subscription is already created but we need to redirect to payment form
-            console.error("Unexpected payment response:", data);
-            setError("Failed to initialize payment. Please check if the plan has proper payment configuration or contact support.");
+            console.error("Unexpected crypto payment response:", data);
+            setError("Failed to initialize cryptocurrency payment. Please try again or contact support.");
           }
-        } else if (data.paymentMethod === 'crypto' && data.transactionId) {
-          setCryptoData(data);
-          setClientSecret("");
-        } else if (data.error === 'missing_stripe_price_id') {
-          console.error("Missing Stripe price ID:", data);
-          setError("This plan doesn't support credit card payments. Please try cryptocurrency payment or contact support.");
-        } else if (data.error === 'invalid_stripe_price') {
-          console.error("Invalid Stripe price:", data);
-          setError("The payment system configuration is invalid. Please contact support for assistance.");
-        } else if (data.error === 'stripe_not_configured') {
-          console.error("Stripe not configured:", data);
-          setError("Credit card payments are not available at this time. Please try cryptocurrency payment or contact support.");
-          setPaymentMethod('crypto'); // Auto-switch to crypto payment
-        } else {
-          console.error("Unexpected payment response:", data);
-          setError("Failed to initialize payment. Please check if the plan has proper payment configuration.");
         }
       } catch (err: any) {
         console.error("Error creating subscription:", err);
         setError(err.message || "Failed to initialize payment. Please try again later.");
+        
+        // If there's a Stripe configuration issue, switch to crypto payment
+        if (err.message && (
+          err.message.includes('Stripe is not configured') || 
+          err.message.includes('stripe_not_configured')
+        )) {
+          setPaymentMethod('crypto');
+        }
       } finally {
         setIsLoading(false);
       }
