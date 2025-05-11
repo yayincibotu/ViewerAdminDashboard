@@ -543,7 +543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stripe payment route for one-time payments and subscriptions
+  // Stripe payment route for subscription payments
   app.post("/api/create-payment-intent", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -558,10 +558,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { amount, planId } = req.body;
+      const { planId, subscriptionPlan } = req.body;
       
-      // If planId is provided, we're creating a payment intent for a subscription
-      if (planId) {
+      // Check if this is a subscription payment
+      if (planId && subscriptionPlan) {
         try {
           // Get the plan details
           const plan = await storage.getSubscriptionPlan(Number(planId));
@@ -629,8 +629,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      // Handle regular one-time payment
-      else if (amount) {
+      // For direct amount payments (not subscriptions)
+      else if (req.body.amount) {
+        const amount = req.body.amount;
+        
         if (amount <= 0) {
           return res.status(400).json({ message: "Invalid amount" });
         }
@@ -656,7 +658,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ clientSecret: paymentIntent.client_secret });
       } 
       else {
-        return res.status(400).json({ message: "Either amount or planId is required" });
+        return res.status(400).json({ 
+          message: "Required parameters are missing. For subscription payments, 'planId' and 'subscriptionPlan=true' are required. For one-time payments, 'amount' is required.",
+          error: "missing_parameters"
+        });
       }
     } catch (error: any) {
       console.error("Error creating payment intent:", error);

@@ -331,37 +331,48 @@ const SubscribePage: React.FC = () => {
         // Use the new direct payment intent API for card payments
         if (paymentMethod === 'card') {
           try {
-            const response = await apiRequest("POST", "/api/create-payment-intent", { planId });
+            const response = await apiRequest("POST", "/api/create-payment-intent", { 
+              planId,
+              subscriptionPlan: true // Explicitly state that this is a subscription payment
+            });
             
             // Clear the timeout since the request completed
             clearTimeout(timeoutId);
             
+            // Create a clone immediately before any reads
+            const responseClone = response.clone();
+            
             if (!response.ok) {
-              // Read the error response as JSON or text
-              const errorText = await response.text();
-              let errorMessage = "Failed to create payment";
-              
+              // Handle errors with the cloned response
               try {
-                const errorData = JSON.parse(errorText);
-                errorMessage = errorData.message || errorMessage;
-              } catch (e) {
-                // If we can't parse the error as JSON, use the text directly
-                if (errorText) errorMessage = errorText;
+                const errorData = await responseClone.json();
+                throw new Error(errorData.message || "Failed to create payment");
+              } catch (jsonError) {
+                // If JSON parsing fails, try text
+                try {
+                  const errorText = await response.text();
+                  throw new Error(errorText || "Failed to create payment");
+                } catch (textError) {
+                  // If all else fails
+                  throw new Error("Failed to create payment. Unknown error occurred.");
+                }
               }
-              
-              throw new Error(errorMessage);
             }
             
-            // Parse the response
-            const responseClone = response.clone();
+            // Parse the successful response with the original response
             let data;
             
             try {
               data = await response.json();
             } catch (e) {
-              // If the first attempt fails, try with the clone
-              console.warn("First JSON parse attempt failed, trying with clone");
-              data = await responseClone.json();
+              // If response.json() fails, the body has been read
+              console.warn("Response body already read, using clone");
+              try {
+                data = await responseClone.json();
+              } catch (cloneError) {
+                console.error("Failed to read response clone:", cloneError);
+                throw new Error("Failed to parse server response");
+              }
             }
             
             console.log("Payment intent response:", data);
