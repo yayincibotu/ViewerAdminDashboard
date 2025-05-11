@@ -339,35 +339,30 @@ const SubscribePage: React.FC = () => {
         // Clear the timeout since the request completed
         clearTimeout(timeoutId);
         
-        let responseText;
         let data;
         
-        try {
-          responseText = await response.text();
-          
-          if (!response.ok) {
-            let errorMessage = "Failed to create subscription";
-            
-            try {
-              const errorData = JSON.parse(responseText);
-              errorMessage = errorData.message || errorMessage;
-            } catch (e) {
-              // If we can't parse the error as JSON, use the text directly
-              if (responseText) errorMessage = responseText;
-            }
-            
-            throw new Error(errorMessage);
-          }
+        if (!response.ok) {
+          // Read the error response as JSON or text
+          const errorText = await response.text();
+          let errorMessage = "Failed to create subscription";
           
           try {
-            data = JSON.parse(responseText);
-          } catch (jsonError) {
-            console.error("Error parsing response:", jsonError);
-            throw new Error("Failed to parse server response");
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            // If we can't parse the error as JSON, use the text directly
+            if (errorText) errorMessage = errorText;
           }
-        } catch (responseError) {
-          console.error("Error reading or parsing response:", responseError);
-          throw new Error("Failed to process server response");
+          
+          throw new Error(errorMessage);
+        }
+        
+        // Response is OK, parse it as JSON
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          console.error("Error parsing response:", jsonError);
+          throw new Error("Failed to parse server response");
         }
         
         console.log("Payment response:", data);
