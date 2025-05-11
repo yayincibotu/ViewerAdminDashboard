@@ -322,6 +322,22 @@ const SubscribePage: React.FC = () => {
       setError(null);
       
       try {
+        // First check if user is still authenticated
+        const authCheckResponse = await fetch("/api/user", { 
+          credentials: "include",
+        });
+        
+        if (authCheckResponse.status === 401) {
+          console.error("User is not authenticated, redirecting to login");
+          toast({
+            title: "Authentication required",
+            description: "Please log in again to continue.",
+            variant: "destructive"
+          });
+          navigate("/auth");
+          return;
+        }
+        
         // Create a new AbortController for this request
         const controller = new AbortController();
         
@@ -331,19 +347,42 @@ const SubscribePage: React.FC = () => {
         // Use the new direct payment intent API for card payments
         if (paymentMethod === 'card') {
           try {
-            // Use the apiRequest helper which handles credentials and headers
-            const response = await apiRequest("POST", "/api/create-subscription-payment", { 
-              planId: Number(planId) 
+            console.log("Making payment request with planId:", planId);
+            
+            // Manual fetch with explicit credentials and headers
+            const response = await fetch("/api/create-subscription-payment", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ planId: Number(planId) }),
+              credentials: "include",
+              signal: controller.signal
             });
             
             // Clear the timeout since the request completed
             clearTimeout(timeoutId);
+            
+            console.log("Payment request status:", response.status);
+            console.log("Payment request headers:", Object.fromEntries(response.headers.entries()));
             
             // Handle errors
             if (!response.ok) {
               console.log("Error response:", response.status, response.statusText);
               const errorText = await response.text();
               console.log("Error response body:", errorText);
+              
+              // Check if the response is a redirect to login page
+              if (response.status === 401 || errorText.includes('<!DOCTYPE html>')) {
+                console.error("Authentication error, redirecting to login");
+                toast({
+                  title: "Session expired",
+                  description: "Please log in again to continue.",
+                  variant: "destructive"
+                });
+                navigate("/auth");
+                return;
+              }
               
               let errorMessage = "Failed to create payment";
               try {
@@ -366,18 +405,25 @@ const SubscribePage: React.FC = () => {
             
             console.log("Response content type:", contentType);
             
-            // Check if the response is HTML instead of JSON
+            // Get response text first to analyze it
             const responseClone = response.clone();
             const responseText = await responseClone.text();
             
+            // Check if it's actually HTML despite content type header
             if (responseText.includes('<!DOCTYPE html>')) {
               console.error("Server returned HTML instead of JSON:", responseText.substring(0, 100));
-              throw new Error("Unexpected server response. Please try again later.");
+              toast({
+                title: "Session expired",
+                description: "Please log in again to continue.",
+                variant: "destructive"
+              });
+              navigate("/auth");
+              return;
             }
             
             try {
-              // Parse the original response as JSON
-              data = await response.json();
+              // Parse the response as JSON
+              data = JSON.parse(responseText);
               console.log("Payment API response data:", data);
             } catch (e) {
               console.error("JSON parse error:", e);
