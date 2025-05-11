@@ -13,7 +13,7 @@ let stripe: Stripe | undefined;
 
 if (process.env.STRIPE_SECRET_KEY) {
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2023-10-16",
+    apiVersion: "2025-04-30.basil",
   });
 }
 
@@ -29,6 +29,46 @@ export function isStripeConfigured(): boolean {
  */
 export function getStripe(): Stripe | undefined {
   return stripe;
+}
+
+/**
+ * Create a payment intent for a subscription plan
+ * Use this when you need to create a standalone payment intent
+ */
+export async function createPaymentIntentForPlan(
+  planId: number, 
+  customerId: string,
+  description: string = "Subscription payment"
+): Promise<string | null> {
+  if (!stripe) {
+    console.error("Cannot create payment intent: Stripe not configured");
+    return null;
+  }
+  
+  try {
+    // Get plan details
+    const plan = await storage.getSubscriptionPlan(planId);
+    if (!plan) {
+      console.error(`Cannot create payment intent: Plan ${planId} not found`);
+      return null;
+    }
+    
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(plan.price * 100), // convert to cents
+      currency: 'usd',
+      customer: customerId,
+      description: description,
+      metadata: {
+        plan_id: planId.toString(),
+      },
+    });
+    
+    console.log(`Created payment intent ${paymentIntent.id} for plan ${planId}`);
+    return paymentIntent.client_secret;
+  } catch (error) {
+    console.error("Error creating payment intent:", error);
+    return null;
+  }
 }
 
 /**
