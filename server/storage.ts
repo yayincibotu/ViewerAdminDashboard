@@ -442,17 +442,9 @@ export class DatabaseStorage implements IStorage {
   
   async deleteSubscriptionPlan(id: number): Promise<boolean> {
     try {
-      // Check if there are any active subscriptions using this plan
-      const subscriptions = await db
-        .select()
-        .from(userSubscriptions)
-        .where(eq(userSubscriptions.planId, id));
-        
-      // If there are active subscriptions, don't allow deletion
-      if (subscriptions.length > 0) {
-        return false;
-      }
-        
+      // We don't check for active subscriptions here since it's already checked
+      // in the route handler with getUserSubscriptionsByPlan
+      
       // Delete the plan
       const result = await db
         .delete(subscriptionPlans)
