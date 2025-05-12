@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
-import AdminSidebar from '@/components/dashboard/AdminSidebar';
+import AdminLayout from '@/components/dashboard/AdminLayout';
+import AdminHeader from '@/components/dashboard/AdminHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -399,238 +400,212 @@ const AdminUsers: React.FC = () => {
   }) : [];
   
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-2xl font-bold">User Management</h1>
-              <p className="text-gray-500">Manage and monitor user accounts</p>
-            </div>
+    <AdminLayout>
+      <AdminHeader
+        title="User Management"
+        description="Manage and monitor user accounts"
+        actions={
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" className="flex items-center">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
             
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" className="flex items-center">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-              
-              <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="flex items-center">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Add User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Add New User</DialogTitle>
-                    <DialogDescription>
-                      Create a new user account manually.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <form onSubmit={handleCreateUser}>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="username" className="text-right">
-                          Username
-                        </Label>
-                        <Input 
-                          id="username" 
-                          className="col-span-3" 
-                          value={newUserData.username}
-                          onChange={handleInputChange}
-                          required
+            <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Add User
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Add New User</DialogTitle>
+                  <DialogDescription>
+                    Create a new user account manually.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <form onSubmit={handleCreateUser}>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="username" className="text-right">
+                        Username
+                      </Label>
+                      <Input
+                        id="username"
+                        value={newUserData.username}
+                        onChange={handleInputChange}
+                        className="col-span-3"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="email" className="text-right">
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newUserData.email}
+                        onChange={handleInputChange}
+                        className="col-span-3"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="password" className="text-right">
+                        Password
+                      </Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={newUserData.password}
+                        onChange={handleInputChange}
+                        className="col-span-3"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="role" className="text-right">
+                        User Role
+                      </Label>
+                      <Select
+                        value={newUserData.role}
+                        onValueChange={handleRoleChange}
+                      >
+                        <SelectTrigger className="col-span-3">
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="is-admin" className="text-right">
+                        Admin Access
+                      </Label>
+                      <div className="flex items-center space-x-2 col-span-3">
+                        <Switch
+                          id="is-admin"
+                          checked={newUserData.isAdmin}
+                          onCheckedChange={handleAdminSwitchChange}
                         />
-                      </div>
-                      
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="email" className="text-right">
-                          Email
+                        <Label htmlFor="is-admin">
+                          {newUserData.isAdmin ? 'Enabled' : 'Disabled'}
                         </Label>
-                        <Input 
-                          id="email" 
-                          type="email" 
-                          className="col-span-3" 
-                          value={newUserData.email}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="password" className="text-right">
-                          Password
-                        </Label>
-                        <div className="col-span-3 space-y-1">
-                          <Input 
-                            id="password" 
-                            type="password" 
-                            className="w-full" 
-                            value={newUserData.password}
-                            onChange={handleInputChange}
-                            required
-                          />
-                          <p className="text-xs text-gray-500">Password must be at least 8 characters long.</p>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="role" className="text-right">
-                          Role
-                        </Label>
-                        <Select 
-                          value={newUserData.role} 
-                          onValueChange={handleRoleChange}
-                        >
-                          <SelectTrigger id="role" className="col-span-3">
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="admin" className="text-right">
-                          Is Admin
-                        </Label>
-                        <div className="col-span-3 flex items-center space-x-2">
-                          <Switch 
-                            id="admin" 
-                            checked={newUserData.isAdmin}
-                            onCheckedChange={handleAdminSwitchChange}
-                          />
-                          <Label htmlFor="admin">Grant admin privileges</Label>
-                        </div>
                       </div>
                     </div>
-                    
-                    <DialogFooter>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setIsAddUserDialogOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button 
-                        type="submit"
-                        disabled={
-                          createUserMutation.isPending || 
-                          !newUserData.username || 
-                          !newUserData.email || 
-                          newUserData.password.length < 8
-                        }
-                      >
-                        {createUserMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Creating...
-                          </>
-                        ) : "Create User"}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button
+                      type="submit"
+                      disabled={createUserMutation.isPending}
+                    >
+                      {createUserMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create User'
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        }
+      >
+        <div className="p-6">
+          <div className="mb-6 flex flex-col md:flex-row gap-4 md:justify-between">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search users..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button 
+                  className="absolute right-2 top-2.5"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="h-4 w-4 text-gray-500" />
+                </button>
+              )}
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="user">Users Only</SelectItem>
+                  <SelectItem value="admin">Admins Only</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
           <Card>
-            <CardHeader>
-              <CardTitle>All Users</CardTitle>
-              <CardDescription>
-                View and manage all registered users
-              </CardDescription>
-              
-              <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search users..."
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  {searchQuery && (
-                    <button
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <Filter className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm">Filter:</span>
-                  </div>
-                  
-                  <Select value={roleFilter} onValueChange={setRoleFilter}>
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Filter by role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Roles</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <CardHeader className="pb-2">
+              <CardTitle>Users</CardTitle>
+              <CardDescription>Manage users and their roles</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="flex items-center justify-center py-12">
+                <div className="w-full flex justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <span className="ml-2">Loading users...</span>
                 </div>
               ) : error ? (
+                <div className="flex items-center justify-center py-8 text-center">
+                  <div>
+                    <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                    <p>Failed to load users. Please try again.</p>
+                  </div>
+                </div>
+              ) : filteredUsers.length === 0 ? (
                 <div className="text-center py-8">
-                  <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-2" />
-                  <p className="text-red-600 font-medium">Error loading users</p>
-                  <p className="text-gray-500 text-sm">Please try refreshing the page.</p>
+                  <p className="text-gray-500">No users found</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead>Payment Setup</TableHead>
-                      <TableHead>Active Subscription</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((user: any) => (
-                      <UserRow 
-                        key={user.id} 
-                        user={user} 
-                        onManageUser={handleManageUser} 
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-              
-              {filteredUsers.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No users found matching your filters.</p>
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Date Created</TableHead>
+                        <TableHead>Stripe Customer</TableHead>
+                        <TableHead>Subscription</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.map((user: any) => (
+                        <UserRow 
+                          key={user.id} 
+                          user={user}
+                          onManageUser={handleManageUser}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
-      </div>
-    </div>
+      </AdminHeader>
+    </AdminLayout>
   );
 };
 
