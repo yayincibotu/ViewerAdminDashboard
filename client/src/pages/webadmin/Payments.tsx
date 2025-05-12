@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import AdminSidebar from '@/components/dashboard/AdminSidebar';
+import AdminLayout from '@/components/dashboard/AdminLayout';
+import AdminHeader from '@/components/dashboard/AdminHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,19 +29,10 @@ const statusColors = {
   completed: 'bg-green-500',
   pending: 'bg-yellow-500',
   failed: 'bg-red-500',
-  refunded: 'bg-purple-500',
-  canceled: 'bg-gray-500',
+  refunded: 'bg-gray-500',
 };
 
-// Payment type colors
-const paymentTypeColors = {
-  payment: 'bg-blue-500',
-  refund: 'bg-purple-500',
-  chargeback: 'bg-red-700',
-  subscription: 'bg-emerald-600',
-};
-
-// Define the Payment type
+// Define the payment interface
 interface Payment {
   id: number;
   userId: number;
@@ -58,110 +50,93 @@ interface Payment {
   updatedAt: string;
 }
 
-// Define the refund form schema
-const refundFormSchema = z.object({
-  reason: z.string().min(3, { message: "Refund reason is required" })
+// Define the schema for refund form
+const refundSchema = z.object({
+  reason: z.string().min(3, 'Reason must be at least 3 characters'),
 });
 
 const AdminPayments = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
-  const [activeTab, setActiveTab] = useState('all'); // 'all', 'payments', 'refunds'
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
-
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [paymentTypeFilter, setPaymentTypeFilter] = useState<string>('all');
   const { toast } = useToast();
 
-  // Set up the refund form
-  const refundForm = useForm<z.infer<typeof refundFormSchema>>({
-    resolver: zodResolver(refundFormSchema),
-    defaultValues: {
-      reason: ''
-    }
-  });
-
-  // Query payments data
-  const { data: payments, isLoading, refetch } = useQuery<Payment[]>({
+  // Fetch payments data
+  const {
+    data: payments = [],
+    isLoading,
+    refetch: refetchPayments
+  } = useQuery<Payment[]>({
     queryKey: ['/api/admin/payments'],
     queryFn: async () => {
-      // Construct the query parameters based on filters
-      let url = '/api/admin/payments';
-      const params = new URLSearchParams();
-      
-      if (statusFilter && statusFilter !== 'all') {
-        params.append('status', statusFilter);
-      }
-      
-      if (dateRange.from && dateRange.to) {
-        params.append('startDate', dateRange.from.toISOString());
-        params.append('endDate', dateRange.to.toISOString());
-      }
-      
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-      
-      const res = await apiRequest('GET', url);
-      return await res.json();
-    }
+      const res = await apiRequest('GET', '/api/admin/payments');
+      return res.json();
+    },
+  });
+
+  // Handle refund form
+  const refundForm = useForm<z.infer<typeof refundSchema>>({
+    resolver: zodResolver(refundSchema),
+    defaultValues: {
+      reason: '',
+    },
   });
 
   // Process refund mutation
   const refundMutation = useMutation({
-    mutationFn: async (data: { paymentId: number, reason: string }) => {
+    mutationFn: async (data: { paymentId: number; reason: string }) => {
       const res = await apiRequest('POST', `/api/admin/payments/${data.paymentId}/refund`, { reason: data.reason });
-      return await res.json();
+      return res.json();
     },
     onSuccess: () => {
       toast({
-        title: "Refund processed",
-        description: "The payment has been refunded successfully.",
+        title: 'Refund Processed',
+        description: 'The payment has been successfully refunded.',
+        variant: 'default',
       });
-      // Close the dialog and clear the form
       setRefundDialogOpen(false);
-      refundForm.reset();
-      // Refresh the payments data
-      refetch();
+      refetchPayments();
     },
     onError: (error: any) => {
       toast({
-        title: "Refund failed",
-        description: error.message || "An error occurred while processing the refund.",
-        variant: "destructive",
+        title: 'Refund Failed',
+        description: error.message || 'There was an error processing the refund.',
+        variant: 'destructive',
       });
-    }
+    },
   });
 
-  // Handle refund form submission
-  const onRefundSubmit = (values: z.infer<typeof refundFormSchema>) => {
+  // Submit refund form
+  const onRefundSubmit = (data: z.infer<typeof refundSchema>) => {
     if (!selectedPayment) return;
     
-    refundMutation.mutate({ 
-      paymentId: selectedPayment.id, 
-      reason: values.reason 
+    refundMutation.mutate({
+      paymentId: selectedPayment.id,
+      reason: data.reason,
     });
   };
 
-  // Filter payments based on search term
-  const filteredPayments = payments?.filter(payment => {
-    // Filter by search term (check transaction ID, payment intent ID, or user ID)
-    const searchMatch = !searchTerm || 
-      payment.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.stripePaymentIntentId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.userId.toString().includes(searchTerm) ||
-      (payment.invoiceId && payment.invoiceId.toString().includes(searchTerm)) ||
-      payment.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-    // Filter by tab selection
-    const tabMatch = activeTab === 'all' || 
-      (activeTab === 'payments' && payment.paymentType === 'payment') ||
-      (activeTab === 'refunds' && payment.paymentType === 'refund');
+  // Filter payments based on search query and filters
+  const filteredPayments = payments.filter(payment => {
+    // Search query filter
+    const matchesSearch = searchQuery === '' || 
+      payment.id.toString().includes(searchQuery) || 
+      payment.userId.toString().includes(searchQuery) ||
+      (payment.description && payment.description.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    return searchMatch && tabMatch;
+    // Status filter
+    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
+    
+    // Payment type filter
+    const matchesType = paymentTypeFilter === 'all' || payment.paymentType === paymentTypeFilter;
+    
+    return matchesSearch && matchesStatus && matchesType;
   });
 
-  // Format currency
+  // Format currency for display
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -170,45 +145,42 @@ const AdminPayments = () => {
   };
 
   return (
-    <div className="flex">
-      <AdminSidebar />
-      <div className="flex-1 p-8">
+    <AdminLayout>
+      <AdminHeader
+        title="Payment Management"
+        description="View and manage all payment transactions"
+        actions={
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm" onClick={() => refetchPayments()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+        }
+      />
+      <div className="p-6">
         <Card className="w-full">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold">Payment Management</CardTitle>
-            <CardDescription>View and manage all payment transactions</CardDescription>
-          </CardHeader>
-          
-          <CardContent>
-            {/* Tabs for different payment types */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-              <TabsList>
-                <TabsTrigger value="all">All Transactions</TabsTrigger>
-                <TabsTrigger value="payments">Payments</TabsTrigger>
-                <TabsTrigger value="refunds">Refunds</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            
-            {/* Search and Filter Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex items-center relative w-full sm:w-96">
-                <Search className="absolute left-2 h-4 w-4 text-gray-400" />
-                <Input 
-                  placeholder="Search by ID, transaction ID, or description..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <CardTitle>Payments</CardTitle>
+                <CardDescription>View and manage all payment transactions</CardDescription>
               </div>
-              
-              <div className="flex gap-2">
-                {/* Status Filter */}
+
+              {/* Search and filter controls */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search payments..."
+                    className="pl-8 w-[200px]"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      {statusFilter || 'Filter by status'}
-                    </div>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
@@ -216,170 +188,122 @@ const AdminPayments = () => {
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
                     <SelectItem value="refunded">Refunded</SelectItem>
-                    <SelectItem value="canceled">Canceled</SelectItem>
                   </SelectContent>
                 </Select>
-                
-                {/* Date Filter */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4" />
-                      {dateRange.from ? (
-                        dateRange.to ? (
-                          <>
-                            {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
-                          </>
-                        ) : (
-                          format(dateRange.from, "LLL dd, y")
-                        )
-                      ) : (
-                        "Date Range"
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      initialFocus
-                      mode="range"
-                      defaultMonth={dateRange.from}
-                      selected={{
-                        from: dateRange.from,
-                        to: dateRange.to
-                      }}
-                      onSelect={(range) => {
-                        if (range) {
-                          setDateRange({ from: range.from, to: range.to });
-                        } else {
-                          setDateRange({});
-                        }
-                      }}
-                      numberOfMonths={2}
-                    />
-                    <div className="flex items-center justify-between px-4 pb-4">
-                      <Button variant="outline" onClick={() => setDateRange({})}>Clear</Button>
-                      <Button onClick={() => refetch()}>Apply</Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                
-                {/* Refresh Button */}
-                <Button variant="outline" onClick={() => refetch()} className="flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4" />
-                  Refresh
-                </Button>
+                <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Payment Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="subscription">Subscription</SelectItem>
+                    <SelectItem value="one-time">One-time</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            
-            {/* Payments Table */}
-            {isLoading ? (
-              <div className="py-10 text-center">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                <p className="mt-2 text-gray-500">Loading payment data...</p>
-              </div>
-            ) : (
-              <div className="rounded-md border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>User ID</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPayments?.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center">
-                          No payment transactions found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredPayments?.map((payment) => (
-                        <TableRow key={payment.id}>
-                          <TableCell className="font-medium">
-                            {format(new Date(payment.createdAt), "MMM d, yyyy HH:mm")}
-                          </TableCell>
-                          <TableCell>{payment.userId}</TableCell>
-                          <TableCell className={payment.paymentType === 'refund' ? 'text-red-600' : ''}>
-                            {formatCurrency(payment.amount, payment.currency)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`${paymentTypeColors[payment.paymentType as keyof typeof paymentTypeColors] || 'bg-gray-500'} text-white`}>
-                              {payment.paymentType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="capitalize">
-                            <div className="flex items-center">
-                              {payment.paymentMethod === 'card' && <CreditCard className="h-4 w-4 mr-1" />}
-                              {payment.paymentMethod}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`${statusColors[payment.status as keyof typeof statusColors] || 'bg-gray-500'} text-white`}>
-                              {payment.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {payment.invoiceId ? (
-                              <Button variant="link" className="p-0 h-auto" onClick={() => {
-                                // Navigate to invoice
-                                window.open(`/webadmin/invoices?id=${payment.invoiceId}`, '_blank');
-                              }}>
-                                #{payment.invoiceId}
-                              </Button>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <span className="truncate max-w-[200px] block">
-                              {payment.description || '-'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              {/* Refund button (only for completed payments) */}
-                              {payment.status === 'completed' && payment.paymentType !== 'refund' && (
-                                <Button variant="destructive" size="sm" onClick={() => {
-                                  setSelectedPayment(payment);
-                                  setRefundDialogOpen(true);
-                                }}>
-                                  Refund
-                                </Button>
-                              )}
-                              {/* View details button */}
-                              <Button variant="outline" size="sm" onClick={() => {
-                                // Navigate to payment details
-                                // TODO: Add payment details view
-                              }}>
-                                Details
-                              </Button>
-                            </div>
-                          </TableCell>
+          </CardHeader>
+          
+          <CardContent>
+            {/* Tabs for different payment types */}
+            <Tabs defaultValue="all" className="mb-6">
+              <TabsList>
+                <TabsTrigger value="all">All Payments</TabsTrigger>
+                <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+                <TabsTrigger value="one-time">One-time Payments</TabsTrigger>
+              </TabsList>
+              <TabsContent value="all">
+                {/* Payments table */}
+                {isLoading ? (
+                  <div className="py-10 text-center">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                    <p className="mt-2 text-gray-500">Loading payment data...</p>
+                  </div>
+                ) : (
+                  <div className="rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>User ID</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Method</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Invoice</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                      </TableHeader>
+                      <TableBody>
+                        {filteredPayments.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-4">
+                              No payments found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredPayments.map((payment) => (
+                            <TableRow key={payment.id}>
+                              <TableCell>{format(new Date(payment.createdAt), 'MMM dd, yyyy')}</TableCell>
+                              <TableCell>{payment.userId}</TableCell>
+                              <TableCell>{formatCurrency(payment.amount, payment.currency)}</TableCell>
+                              <TableCell>{payment.paymentType}</TableCell>
+                              <TableCell>{payment.paymentMethod}</TableCell>
+                              <TableCell>
+                                <Badge className={`${statusColors[payment.status as keyof typeof statusColors] || 'bg-gray-500'} text-white`}>
+                                  {payment.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {payment.invoiceId ? (
+                                  <Button variant="link" size="sm">
+                                    View Invoice
+                                  </Button>
+                                ) : (
+                                  'N/A'
+                                )}
+                              </TableCell>
+                              <TableCell className="max-w-[150px] truncate">
+                                {payment.description || 'N/A'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => {
+                                      setSelectedPayment(payment);
+                                      setRefundDialogOpen(true);
+                                    }}
+                                    disabled={payment.status === 'refunded'}
+                                  >
+                                    Refund
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="subscriptions">
+                {/* Subscription payments table - same structure with filtered data */}
+                <p>Subscription payments will be displayed here</p>
+              </TabsContent>
+              <TabsContent value="one-time">
+                {/* One-time payments table - same structure with filtered data */}
+                <p>One-time payments will be displayed here</p>
+              </TabsContent>
+            </Tabs>
           </CardContent>
-          <CardFooter className="flex justify-between">
-            <div className="text-sm text-gray-500">
-              {filteredPayments?.length} payment transactions
-            </div>
-          </CardFooter>
         </Card>
       </div>
-      
-      {/* Refund Confirmation Dialog */}
+
+      {/* Refund Dialog */}
       <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -424,7 +348,7 @@ const AdminPayments = () => {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminLayout>
   );
 };
 
