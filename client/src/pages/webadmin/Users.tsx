@@ -106,8 +106,8 @@ const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> =
     }
   };
   
-  const getUserVerificationBadge = (isVerified: boolean) => {
-    if (isVerified) {
+  const getUserVerificationBadge = (isVerified: boolean | null) => {
+    if (isVerified === true) {
       return <Badge className="ml-2 bg-green-500 hover:bg-green-600">Verified</Badge>;
     }
     return <Badge className="ml-2 bg-yellow-500 hover:bg-yellow-600">Unverified</Badge>;

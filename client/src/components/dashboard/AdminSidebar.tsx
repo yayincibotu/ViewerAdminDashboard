@@ -26,45 +26,45 @@ const AdminSidebar: React.FC = () => {
         </div>
         <nav className="space-y-1">
           <Link href="/webadmin">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin')}`}>
               <i className="fas fa-chart-line mr-3"></i>
               Dashboard
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/users">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/users')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/users')}`}>
               <i className="fas fa-users mr-3"></i>
               Users
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/payments">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/payments')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/payments')}`}>
               <i className="fas fa-credit-card mr-3"></i>
               Payments
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/invoices">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/invoices')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/invoices')}`}>
               <i className="fas fa-file-invoice-dollar mr-3"></i>
               Invoices
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/services">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/services')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/services')}`}>
               <i className="fas fa-cogs mr-3"></i>
               Services
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/plans">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/plans')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/plans')}`}>
               <i className="fas fa-tags mr-3"></i>
               Subscription Plans
-            </a>
+            </div>
           </Link>
         </nav>
         
@@ -73,45 +73,45 @@ const AdminSidebar: React.FC = () => {
         </div>
         <nav className="space-y-1">
           <Link href="/webadmin/page-contents">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/page-contents')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/page-contents')}`}>
               <i className="fas fa-file-alt mr-3"></i>
               Page Content
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/blog">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/blog')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/blog')}`}>
               <i className="fas fa-blog mr-3"></i>
               Blog
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/blog-categories">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/blog-categories')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/blog-categories')}`}>
               <i className="fas fa-folder mr-3"></i>
               Blog Categories
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/faq">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/faq')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/faq')}`}>
               <i className="fas fa-question-circle mr-3"></i>
               FAQ Management
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/faq-categories">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/faq-categories')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/faq-categories')}`}>
               <i className="fas fa-list-alt mr-3"></i>
               FAQ Categories
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/contact-messages">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/contact-messages')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/contact-messages')}`}>
               <i className="fas fa-envelope mr-3"></i>
               Contact Messages
-            </a>
+            </div>
           </Link>
         </nav>
         
@@ -120,17 +120,17 @@ const AdminSidebar: React.FC = () => {
         </div>
         <nav className="space-y-1">
           <Link href="/webadmin/settings">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/settings')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/settings')}`}>
               <i className="fas fa-cog mr-3"></i>
               Settings
-            </a>
+            </div>
           </Link>
           
           <Link href="/webadmin/analytics">
-            <a className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/analytics')}`}>
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/analytics')}`}>
               <i className="fas fa-chart-line mr-3"></i>
               Analytics
-            </a>
+            </div>
           </Link>
         </nav>
       </div>
@@ -162,10 +162,10 @@ const AdminSidebar: React.FC = () => {
       
       <div className="px-3 py-4">
         <Link href="/">
-          <a className="flex items-center px-4 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 rounded-md">
+          <div className="flex items-center px-4 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 rounded-md">
             <i className="fas fa-external-link-alt mr-3"></i>
             View Website
-          </a>
+          </div>
         </Link>
       </div>
     </div>
