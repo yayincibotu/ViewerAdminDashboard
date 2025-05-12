@@ -264,6 +264,8 @@ const AdminUsers: React.FC = () => {
   // Fetch users data
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['/api/admin/users'],
+    retry: 3,
+    staleTime: 10000,
   });
   
   // Debug log
@@ -397,9 +399,11 @@ const AdminUsers: React.FC = () => {
   
   // Filter users based on search query and role filter
   const filteredUsers = Array.isArray(users) ? users.filter((user: any) => {
+    if (!user || !user.username) return false;
+    
     const matchesSearch = searchQuery
-      ? user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      ? (user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchQuery.toLowerCase()))
       : true;
       
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
