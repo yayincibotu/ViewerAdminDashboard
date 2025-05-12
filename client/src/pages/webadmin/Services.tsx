@@ -185,7 +185,22 @@ const AdminServices: React.FC = () => {
   const deletePlanMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("DELETE", `/api/admin/subscription-plans/${id}`);
-      return await res.json();
+      
+      // For 204 No Content response (success case)
+      if (res.status === 204) {
+        return { success: true };
+      }
+      
+      // For error responses with JSON content
+      const data = await res.json();
+      
+      // If server returns 409 Conflict (plan has active subscriptions)
+      if (res.status === 409) {
+        throw new Error(data.message || "Cannot delete this plan because it has active subscribers");
+      }
+      
+      // For other error responses
+      throw new Error(data.message || "An error occurred while deleting the plan");
     },
     onSuccess: () => {
       toast({
@@ -197,6 +212,7 @@ const AdminServices: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['/api/subscription-plans'] });
     },
     onError: (error: Error) => {
+      setIsDeleteDialogOpen(false); // Close the dialog even on error
       toast({
         title: "Error deleting plan",
         description: error.message,
@@ -961,9 +977,16 @@ const AdminServices: React.FC = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the 
-              subscription plan and remove all associated data.
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                This action cannot be undone. This will permanently delete the 
+                subscription plan and remove all associated data.
+              </p>
+              <p className="font-medium text-amber-600">
+                Note: Plans with active subscribers cannot be deleted. You must
+                either migrate subscribers to a different plan or cancel their 
+                subscriptions first.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -971,6 +994,7 @@ const AdminServices: React.FC = () => {
             <AlertDialogAction 
               onClick={confirmDeletePlan}
               className="bg-red-600 hover:bg-red-700"
+              disabled={deletePlanMutation.isPending}
             >
               {deletePlanMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
