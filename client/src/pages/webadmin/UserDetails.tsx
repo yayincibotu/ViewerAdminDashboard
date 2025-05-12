@@ -38,6 +38,25 @@ const UserDetails: React.FC = () => {
     isEmailVerified: false
   });
   
+  // Subscription assignment dialog state
+  const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<number | string>('');
+  const [twitchChannel, setTwitchChannel] = useState('');
+  const [geoTargeting, setGeoTargeting] = useState('');
+  
+  // Subscription edit dialog state
+  const [isEditSubDialogOpen, setIsEditSubDialogOpen] = useState(false);
+  const [editingSubscription, setEditingSubscription] = useState<any>(null);
+  
+  // Fetch subscription plans
+  const { data: plans = [] } = useQuery<any[], Error>({
+    queryKey: ['/api/subscription-plans'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/subscription-plans');
+      return response.json();
+    }
+  });
+  
   // Fetch user details
   const { data: user, isLoading, error } = useQuery<any, Error>({
     queryKey: [`/api/admin/users/${userId}`],
@@ -134,6 +153,82 @@ const UserDetails: React.FC = () => {
     onError: (error: any) => {
       toast({
         title: 'Error verifying email',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Add subscription mutation
+  const addSubscriptionMutation = useMutation({
+    mutationFn: async (data: {
+      planId: number | string;
+      twitchChannel?: string;
+      geographicTargeting?: string;
+    }) => {
+      const res = await apiRequest('POST', `/api/admin/users/${userId}/subscriptions`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
+      setIsSubscriptionDialogOpen(false);
+      setSelectedPlanId('');
+      setTwitchChannel('');
+      setGeoTargeting('');
+      toast({
+        title: 'Subscription added',
+        description: 'User subscription has been added successfully.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error adding subscription',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Update subscription mutation
+  const updateSubscriptionMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number, data: any }) => {
+      const res = await apiRequest('PUT', `/api/admin/users/${userId}/subscriptions/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
+      setIsEditSubDialogOpen(false);
+      setEditingSubscription(null);
+      toast({
+        title: 'Subscription updated',
+        description: 'User subscription has been updated successfully.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error updating subscription',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Cancel subscription mutation
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async (subscriptionId: number) => {
+      const res = await apiRequest('DELETE', `/api/admin/users/${userId}/subscriptions/${subscriptionId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
+      toast({
+        title: 'Subscription cancelled',
+        description: 'User subscription has been cancelled successfully.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error cancelling subscription',
         description: error.message,
         variant: 'destructive',
       });
@@ -449,7 +544,15 @@ const UserDetails: React.FC = () => {
                   {/* Subscriptions Tab */}
                   <TabsContent value="subscriptions">
                     <div className="space-y-4">
-                      <h3 className="text-lg font-medium">User Subscriptions</h3>
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-medium">User Subscriptions</h3>
+                        <Button 
+                          onClick={() => setIsSubscriptionDialogOpen(true)}
+                          size="sm"
+                        >
+                          Assign Subscription
+                        </Button>
+                      </div>
                       
                       {user.subscriptions && user.subscriptions.length > 0 ? (
                         <Table>
@@ -470,22 +573,51 @@ const UserDetails: React.FC = () => {
                                 </TableCell>
                                 <TableCell>
                                   {subscription.isActive ? (
-                                    <Badge className="bg-green-500">Active</Badge>
+                                    <div className="flex items-center">
+                                      <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                                      <Badge className="bg-green-500">Active</Badge>
+                                    </div>
                                   ) : (
-                                    <Badge variant="outline" className="text-gray-500">Inactive</Badge>
+                                    <div className="flex items-center">
+                                      <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
+                                      <Badge variant="outline" className="text-gray-500">Inactive</Badge>
+                                    </div>
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {format(new Date(subscription.createdAt), 'MMM d, yyyy')}
+                                  {format(new Date(subscription.startDate || subscription.createdAt), 'MMM d, yyyy')}
                                 </TableCell>
                                 <TableCell>
                                   {subscription.twitchChannel || "Not set"}
                                 </TableCell>
                                 <TableCell>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                    <RefreshCw className="h-4 w-4" />
-                                    <span className="sr-only">View Details</span>
-                                  </Button>
+                                  <div className="flex space-x-1">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => {
+                                        setEditingSubscription(subscription);
+                                        setIsEditSubDialogOpen(true);
+                                      }}
+                                    >
+                                      <RefreshCw className="h-4 w-4" />
+                                      <span className="sr-only">Edit</span>
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-8 w-8 p-0 text-red-500"
+                                      onClick={() => {
+                                        if (window.confirm('Are you sure you want to cancel this subscription?')) {
+                                          cancelSubscriptionMutation.mutate(subscription.id);
+                                        }
+                                      }}
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                      <span className="sr-only">Cancel</span>
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -494,9 +626,220 @@ const UserDetails: React.FC = () => {
                       ) : (
                         <div className="text-center py-8 bg-gray-50 rounded-md">
                           <p className="text-gray-500">User has no active subscriptions.</p>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mt-4"
+                            onClick={() => setIsSubscriptionDialogOpen(true)}
+                          >
+                            Assign Plan
+                          </Button>
                         </div>
                       )}
                     </div>
+                    
+                    {/* Add Subscription Dialog */}
+                    <Dialog open={isSubscriptionDialogOpen} onOpenChange={setIsSubscriptionDialogOpen}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Assign Subscription Plan</DialogTitle>
+                          <DialogDescription>
+                            Assign a subscription plan to {user?.username}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="plan">Subscription Plan</Label>
+                            <Select 
+                              value={selectedPlanId.toString()} 
+                              onValueChange={(value) => setSelectedPlanId(parseInt(value))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a plan" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {plans.map((plan: any) => (
+                                  <SelectItem key={plan.id} value={plan.id.toString()}>
+                                    {plan.name} - ${plan.price}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="twitchChannel">Twitch Channel</Label>
+                            <Input 
+                              id="twitchChannel" 
+                              value={twitchChannel} 
+                              onChange={(e) => setTwitchChannel(e.target.value)}
+                              placeholder="Enter Twitch channel name"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="geoTargeting">Geographic Targeting</Label>
+                            <Input 
+                              id="geoTargeting" 
+                              value={geoTargeting} 
+                              onChange={(e) => setGeoTargeting(e.target.value)}
+                              placeholder="e.g. US,CA,UK"
+                            />
+                            <p className="text-sm text-gray-500">Comma-separated country codes</p>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setIsSubscriptionDialogOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={() => {
+                              if (!selectedPlanId) {
+                                toast({
+                                  title: 'Error',
+                                  description: 'Please select a subscription plan',
+                                  variant: 'destructive',
+                                });
+                                return;
+                              }
+                              
+                              addSubscriptionMutation.mutate({
+                                planId: selectedPlanId,
+                                twitchChannel,
+                                geographicTargeting: geoTargeting
+                              });
+                            }}
+                            disabled={addSubscriptionMutation.isPending}
+                          >
+                            {addSubscriptionMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Assigning...
+                              </>
+                            ) : 'Assign Plan'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    
+                    {/* Edit Subscription Dialog */}
+                    <Dialog open={isEditSubDialogOpen} onOpenChange={setIsEditSubDialogOpen}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit Subscription</DialogTitle>
+                          <DialogDescription>
+                            Update subscription details
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          {editingSubscription && (
+                            <>
+                              <div className="space-y-2">
+                                <Label htmlFor="editTwitchChannel">Twitch Channel</Label>
+                                <Input 
+                                  id="editTwitchChannel" 
+                                  value={editingSubscription.twitchChannel || ''}
+                                  onChange={(e) => setEditingSubscription({
+                                    ...editingSubscription,
+                                    twitchChannel: e.target.value
+                                  })}
+                                  placeholder="Enter Twitch channel name"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="editGeoTargeting">Geographic Targeting</Label>
+                                <Input 
+                                  id="editGeoTargeting" 
+                                  value={editingSubscription.geographicTargeting || ''}
+                                  onChange={(e) => setEditingSubscription({
+                                    ...editingSubscription,
+                                    geographicTargeting: e.target.value
+                                  })}
+                                  placeholder="e.g. US,CA,UK"
+                                />
+                                <p className="text-sm text-gray-500">Comma-separated country codes</p>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <div className="flex items-center space-x-2">
+                                  <Switch 
+                                    id="isActive" 
+                                    checked={editingSubscription.isActive} 
+                                    onCheckedChange={(checked) => setEditingSubscription({
+                                      ...editingSubscription,
+                                      isActive: checked
+                                    })}
+                                  />
+                                  <Label htmlFor="isActive">Active</Label>
+                                </div>
+                                <p className="text-sm text-gray-500">
+                                  Toggle to activate or deactivate this subscription
+                                </p>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="editStatus">Status</Label>
+                                <Select 
+                                  value={editingSubscription.status || 'active'} 
+                                  onValueChange={(value) => setEditingSubscription({
+                                    ...editingSubscription,
+                                    status: value
+                                  })}
+                                >
+                                  <SelectTrigger id="editStatus">
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                    <SelectItem value="suspended">Suspended</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setIsEditSubDialogOpen(false);
+                              setEditingSubscription(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={() => {
+                              if (editingSubscription) {
+                                updateSubscriptionMutation.mutate({
+                                  id: editingSubscription.id,
+                                  data: {
+                                    twitchChannel: editingSubscription.twitchChannel,
+                                    geographicTargeting: editingSubscription.geographicTargeting,
+                                    isActive: editingSubscription.isActive,
+                                    status: editingSubscription.status
+                                  }
+                                });
+                              }
+                            }}
+                            disabled={updateSubscriptionMutation.isPending}
+                          >
+                            {updateSubscriptionMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : 'Update Subscription'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </TabsContent>
                   
                   {/* Activity Tab */}
