@@ -169,21 +169,19 @@ const UserDetails: React.FC = () => {
   
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-100">
-        <AdminSidebar />
-        <div className="flex-1 flex items-center justify-center">
+      <AdminLayout>
+        <div className="flex-1 flex items-center justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <span className="ml-2">Loading user details...</span>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
   
   if (error) {
     return (
-      <div className="flex h-screen bg-gray-100">
-        <AdminSidebar />
-        <div className="flex-1 flex items-center justify-center">
+      <AdminLayout>
+        <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Error Loading User</h2>
@@ -193,15 +191,14 @@ const UserDetails: React.FC = () => {
             </Button>
           </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
   
   if (!isLoading && !user) {
     return (
-      <div className="flex h-screen bg-gray-100">
-        <AdminSidebar />
-        <div className="flex-1 flex items-center justify-center">
+      <AdminLayout>
+        <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <User className="h-8 w-8 text-gray-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">User Not Found</h2>
@@ -212,7 +209,7 @@ const UserDetails: React.FC = () => {
             </Button>
           </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
   
