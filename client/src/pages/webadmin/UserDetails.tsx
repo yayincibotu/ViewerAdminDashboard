@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useLocation, Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import AdminSidebar from '@/components/dashboard/AdminSidebar';
+import AdminLayout from '@/components/dashboard/AdminLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -217,11 +217,8 @@ const UserDetails: React.FC = () => {
   }
   
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+    <AdminLayout>
+      <div className="p-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
             <div className="flex items-center space-x-4 mb-4 sm:mb-0">
               <Button variant="outline" className="h-8 w-8 p-0" onClick={() => navigate('/webadmin/users')}>
@@ -561,8 +558,7 @@ const UserDetails: React.FC = () => {
             </Card>
           </div>
         </div>
-      </div>
-    </div>
+    </AdminLayout>
   );
 };
 
