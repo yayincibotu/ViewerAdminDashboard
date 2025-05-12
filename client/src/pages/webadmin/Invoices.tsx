@@ -367,26 +367,24 @@ const AdminInvoices = () => {
   };
 
   return (
-    <div className="flex">
-      <AdminSidebar />
-      <div className="flex-1 p-8">
-        <Card className="w-full">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl font-bold">Invoice Management</CardTitle>
-              <CardDescription>Create and manage customer invoices</CardDescription>
-            </div>
-            <Button onClick={() => {
-              setInvoiceItems([]);
-              invoiceForm.reset();
-              setIsCreateDialogOpen(true);
-            }} className="flex items-center gap-1">
-              <Plus className="h-4 w-4" />
-              New Invoice
-            </Button>
-          </CardHeader>
-          
-          <CardContent>
+    <AdminLayout>
+      <AdminHeader
+        title="Invoice Management"
+        description="Create and manage customer invoices"
+        actions={
+          <Button onClick={() => {
+            setInvoiceItems([]);
+            invoiceForm.reset();
+            setIsCreateDialogOpen(true);
+          }} className="flex items-center gap-1">
+            <Plus className="h-4 w-4" />
+            New Invoice
+          </Button>
+        }
+      >
+        <div>
+          <Card className="w-full">
+            <CardContent>
             {/* Search and Filter Controls */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="flex items-center relative w-full sm:w-96">
@@ -1295,7 +1293,8 @@ const AdminInvoices = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminHeader>
+  </AdminLayout>
   );
 };
 
