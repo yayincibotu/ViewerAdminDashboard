@@ -19,7 +19,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Download, Filter, Plus, Edit, Trash2, BookOpen, Tag, CheckCircle2, X, Box, Package, Loader2 } from 'lucide-react';
+import { Search, Download, Filter, Plus, Edit, Trash2, BookOpen, Tag, CheckCircle2, X, Box, Package, Loader2, AlertTriangle } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 // Schema for creating/editing subscription plan
 const planFormSchema = z.object({
@@ -70,6 +71,9 @@ const AdminServices: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [isAddPlanDialogOpen, setIsAddPlanDialogOpen] = useState<boolean>(false);
+  const [isEditPlanDialogOpen, setIsEditPlanDialogOpen] = useState<boolean>(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [features, setFeatures] = useState<string[]>([
     "Up to X Live Viewers",
     "Realistic Chatters",
@@ -150,6 +154,56 @@ const AdminServices: React.FC = () => {
     }
   });
   
+  // Update subscription plan mutation
+  const updatePlanMutation = useMutation({
+    mutationFn: async (data: PlanFormValues & { id: number }) => {
+      const { id, ...planData } = data;
+      const res = await apiRequest("PUT", `/api/admin/subscription-plans/${id}`, planData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Plan updated",
+        description: "Subscription plan has been updated successfully."
+      });
+      setIsEditPlanDialogOpen(false);
+      setSelectedPlan(null);
+      form.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/subscription-plans'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error updating plan",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Delete subscription plan mutation
+  const deletePlanMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/subscription-plans/${id}`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Plan deleted",
+        description: "Subscription plan has been deleted successfully."
+      });
+      setIsDeleteDialogOpen(false);
+      setSelectedPlan(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/subscription-plans'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error deleting plan",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
   // Filter plans based on search query and platform filter
   const filteredPlans = plans.filter((plan: Plan) => {
     const matchesSearch = searchQuery
@@ -172,7 +226,47 @@ const AdminServices: React.FC = () => {
   
   // Submit plan form
   const onSubmit = (data: PlanFormValues) => {
-    createPlanMutation.mutate(data);
+    if (selectedPlan) {
+      updatePlanMutation.mutate({ ...data, id: selectedPlan.id });
+    } else {
+      createPlanMutation.mutate(data);
+    }
+  };
+  
+  // Handle edit plan button click
+  const handleEditPlan = (plan: Plan) => {
+    setSelectedPlan(plan);
+    // Update features state with the plan features
+    if (plan.features && Array.isArray(plan.features)) {
+      setFeatures(plan.features);
+    }
+    form.reset({
+      name: plan.name,
+      price: plan.price,
+      platform: plan.platform,
+      description: plan.description,
+      viewerCount: plan.viewerCount,
+      chatCount: plan.chatCount,
+      followerCount: plan.followerCount,
+      isPopular: plan.isPopular,
+      geographicTargeting: plan.geographicTargeting,
+      isVisible: plan.isVisible,
+      features: plan.features || []
+    });
+    setIsEditPlanDialogOpen(true);
+  };
+  
+  // Handle delete plan button click
+  const handleDeletePlan = (plan: Plan) => {
+    setSelectedPlan(plan);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  // Confirm delete plan
+  const confirmDeletePlan = () => {
+    if (selectedPlan) {
+      deletePlanMutation.mutate(selectedPlan.id);
+    }
   };
 
   // Check if loading
@@ -583,10 +677,18 @@ const AdminServices: React.FC = () => {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end items-center gap-2">
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleEditPlan(plan)}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeletePlan(plan)}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -601,6 +703,277 @@ const AdminServices: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Edit Plan Dialog */}
+      <Dialog open={isEditPlanDialogOpen} onOpenChange={setIsEditPlanDialogOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Edit Subscription Plan</DialogTitle>
+            <DialogDescription>
+              Make changes to the subscription plan. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Plan Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter plan name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price (USD)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="29.99" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="platform"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Platform</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select platform" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {platforms.map((platform) => (
+                            <SelectItem key={platform.slug} value={platform.slug}>
+                              {platform.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Enter plan description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="viewerCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Viewers</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="100" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="chatCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Chat Count</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="50" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="followerCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Followers</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="200" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="isPopular"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between space-y-0 space-x-2">
+                      <FormLabel>Popular Plan</FormLabel>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="geographicTargeting"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between space-y-0 space-x-2">
+                      <FormLabel>Geo Targeting</FormLabel>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="isVisible"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between space-y-0 space-x-2">
+                      <FormLabel>Visible</FormLabel>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Features</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    placeholder="Add a feature"
+                  />
+                  <Button type="button" onClick={addFeature} variant="outline">
+                    Add
+                  </Button>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {features.map((feature, i) => (
+                    <Badge key={i} variant="outline" className="flex items-center gap-1">
+                      {feature}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0"
+                        onClick={() => removeFeature(feature)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  type="button" 
+                  onClick={() => setIsEditPlanDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updatePlanMutation.isPending}>
+                  {updatePlanMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the 
+              subscription plan and remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeletePlan}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deletePlanMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
