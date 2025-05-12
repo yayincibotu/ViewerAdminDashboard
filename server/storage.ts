@@ -140,6 +140,7 @@ export interface IStorage {
   
   // User Subscription operations
   getUserSubscriptions(userId: number): Promise<UserSubscription[]>;
+  getUserSubscriptionsByPlan(planId: number): Promise<UserSubscription[]>;
   getUserSubscriptionWithPlan(id: number): Promise<{ subscription: UserSubscription, plan: SubscriptionPlan } | undefined>;
   createUserSubscription(subscription: InsertUserSubscription): Promise<UserSubscription>;
   updateUserSubscription(id: number, data: Partial<UserSubscription>): Promise<UserSubscription | undefined>;
@@ -743,6 +744,10 @@ export class DatabaseStorage implements IStorage {
 
   async getUserSubscriptions(userId: number): Promise<UserSubscription[]> {
     return db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, userId));
+  }
+  
+  async getUserSubscriptionsByPlan(planId: number): Promise<UserSubscription[]> {
+    return db.select().from(userSubscriptions).where(eq(userSubscriptions.planId, planId));
   }
 
   async getUserSubscriptionWithPlan(id: number): Promise<{ subscription: UserSubscription, plan: SubscriptionPlan } | undefined> {
