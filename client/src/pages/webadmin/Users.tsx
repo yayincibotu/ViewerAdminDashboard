@@ -21,58 +21,13 @@ import { format } from 'date-fns';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
-const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> = ({ user, onManageUser }) => {
-  const [showActions, setShowActions] = useState(false);
-  const [, navigate] = useLocation();
+// İleri düzey kullanıcı işlemleri için mutasyonlar ve bileşenler
+
+// Admin rolü toggle bileşeni
+const AdminToggleButton = ({ user }: { user: any }) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // Güvenlik kontrolü - user undefined veya null ise boş div döndür
-  if (!user) {
-    console.error("UserRow received undefined or null user");
-    return <TableRow><TableCell colSpan={5}>Invalid user data</TableCell></TableRow>;
-  }
-  
-  // Ekstra güvenlik kontrolü - user yapısında gerekli alanlar yoksa hata göster
-  if (!user.username || !user.id || !user.email) {
-    console.error("UserRow received user with missing required fields:", user);
-    return (
-      <TableRow>
-        <TableCell colSpan={5}>
-          <div className="p-2 bg-yellow-50 text-yellow-700 rounded">
-            User data is incomplete. ID: {user.id || 'unknown'}
-          </div>
-        </TableCell>
-      </TableRow>
-    );
-  }
-  
-  // Debug - hangi kullanıcının render edildiğini logla
-  console.log("Rendering user row for:", user.username);
-  
-  // Email verification mutation
-  const verifyEmailMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest('POST', `/api/admin/users/${user.id}/verify-email`, {});
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
-      toast({
-        title: 'Email verified',
-        description: `User email for ${user.username} has been manually verified.`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error verifying email',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  });
-  
-  // Toggle admin role mutation
   const toggleAdminMutation = useMutation({
     mutationFn: async () => {
       const newRole = user.role === 'admin' ? 'user' : 'admin';
@@ -86,7 +41,6 @@ const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> =
         title: 'Admin role updated',
         description: `Admin privileges ${actionType} ${user.username}.`,
       });
-      setShowActions(false);
     },
     onError: (error: any) => {
       toast({
@@ -97,19 +51,90 @@ const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> =
     }
   });
   
-  // Delete user mutation (not yet implemented in the API)
-  const deleteUserMutation = useMutation({
+  return user.role !== 'admin' ? (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        if (window.confirm(`Make ${user.username} an admin?`)) {
+          toggleAdminMutation.mutate();
+        }
+      }}
+      className="flex items-center gap-1 px-2"
+      disabled={toggleAdminMutation.isPending}
+    >
+      {toggleAdminMutation.isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <ShieldAlert className="h-3.5 w-3.5" />
+      )}
+      <span>Make Admin</span>
+    </Button>
+  ) : (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        if (window.confirm(`Remove admin privileges from ${user.username}?`)) {
+          toggleAdminMutation.mutate();
+        }
+      }}
+      className="flex items-center gap-1 px-2"
+      disabled={toggleAdminMutation.isPending}
+    >
+      {toggleAdminMutation.isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <ShieldAlert className="h-3.5 w-3.5" />
+      )}
+      <span>Remove Admin</span>
+    </Button>
+  );
+};
+
+// Kullanıcı e-posta doğrulama
+const useVerifyEmailMutation = (userId: number, username: string) => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  return useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('DELETE', `/api/admin/users/${user.id}`, {});
+      const res = await apiRequest('POST', `/api/admin/users/${userId}/verify-email`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: 'Email verified',
+        description: `User email for ${username} has been manually verified.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error verifying email',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+};
+
+// Kullanıcı silme
+const useDeleteUserMutation = (userId: number, username: string) => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('DELETE', `/api/admin/users/${userId}`, {});
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       toast({
         title: 'User deleted',
-        description: `User ${user.username} has been deleted.`,
+        description: `User ${username} has been deleted.`,
       });
-      setShowActions(false);
     },
     onError: (error: any) => {
       toast({
@@ -119,154 +144,6 @@ const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> =
       });
     }
   });
-  
-  const getUserRoleBadge = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return <Badge className="bg-red-500 hover:bg-red-600">Admin</Badge>;
-      default:
-        return <Badge className="bg-blue-500 hover:bg-blue-600">User</Badge>;
-    }
-  };
-  
-  const getUserVerificationBadge = (isVerified: boolean | null) => {
-    if (isVerified === true) {
-      return <Badge className="ml-2 bg-green-500 hover:bg-green-600">Verified</Badge>;
-    }
-    return <Badge className="ml-2 bg-yellow-500 hover:bg-yellow-600">Unverified</Badge>;
-  };
-  
-  return (
-    <TableRow>
-      <TableCell>
-        <div className="flex items-center">
-          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mr-3">
-            {user.username.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <p className="font-medium">{user.username}</p>
-            <p className="text-sm text-gray-500">{user.email}</p>
-            <div className="mt-1 flex">
-              {getUserRoleBadge(user.role)}
-              {getUserVerificationBadge(user.isEmailVerified)}
-            </div>
-          </div>
-        </div>
-      </TableCell>
-      <TableCell>
-        <span className="text-sm">
-          {user.createdAt ? format(new Date(user.createdAt), 'MMM d, yyyy') : 'Unknown date'}
-        </span>
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center">
-          <span className={`h-2.5 w-2.5 rounded-full ${user.stripeCustomerId ? 'bg-green-500' : 'bg-gray-300'} mr-2`}></span>
-          <span className="text-sm">{user.stripeCustomerId ? 'Yes' : 'No'}</span>
-        </div>
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center">
-          <span className={`h-2.5 w-2.5 rounded-full ${user.stripeSubscriptionId ? 'bg-green-500' : 'bg-gray-300'} mr-2`}></span>
-          <span className="text-sm">{user.stripeSubscriptionId ? 'Active' : 'None'}</span>
-        </div>
-      </TableCell>
-      <TableCell>
-        <div className="relative">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowActions(!showActions)}>
-            <span className="sr-only">Open menu</span>
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-          
-          {showActions && (
-            <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white z-50 ring-1 ring-black ring-opacity-5 focus:outline-none">
-              <div className="py-1" role="menu" aria-orientation="vertical">
-                <button
-                  className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  onClick={() => {
-                    setShowActions(false);
-                    navigate(`/webadmin/users/${user.id}`);
-                  }}
-                >
-                  <Eye className="mr-2 h-4 w-4" /> View Full Details
-                </button>
-                <button
-                  className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  onClick={() => {
-                    setShowActions(false);
-                    onManageUser(user.id);
-                  }}
-                >
-                  <Edit className="mr-2 h-4 w-4" /> Manage User
-                </button>
-                {!user.isEmailVerified && (
-                  <button
-                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => {
-                      setShowActions(false);
-                      verifyEmailMutation.mutate();
-                    }}
-                    disabled={verifyEmailMutation.isPending}
-                  >
-                    {verifyEmailMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Mail className="mr-2 h-4 w-4" />
-                    )}
-                    Verify Email
-                  </button>
-                )}
-                {user.role !== 'admin' ? (
-                  <button
-                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => toggleAdminMutation.mutate()}
-                    disabled={toggleAdminMutation.isPending}
-                  >
-                    {toggleAdminMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <ShieldAlert className="mr-2 h-4 w-4" />
-                    )}
-                    Make Admin
-                  </button>
-                ) : (
-                  <button
-                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => toggleAdminMutation.mutate()}
-                    disabled={toggleAdminMutation.isPending}
-                  >
-                    {toggleAdminMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <ShieldAlert className="mr-2 h-4 w-4" />
-                    )}
-                    Remove Admin
-                  </button>
-                )}
-                <button
-                  className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                  onClick={() => {
-                    if (window.confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) {
-                      deleteUserMutation.mutate();
-                    } else {
-                      setShowActions(false);
-                    }
-                  }}
-                  disabled={deleteUserMutation.isPending}
-                >
-                  {deleteUserMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="mr-2 h-4 w-4" />
-                  )}
-                  Delete User
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </TableCell>
-    </TableRow>
-  );
 };
 
 const AdminUsers: React.FC = () => {
@@ -640,7 +517,7 @@ const AdminUsers: React.FC = () => {
                   <p className="text-gray-500">No users found</p>
                 </div>
               ) : (
-                <div className="border rounded-md">
+                <div className="border rounded-md overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -648,21 +525,73 @@ const AdminUsers: React.FC = () => {
                         <TableHead>Date Created</TableHead>
                         <TableHead>Stripe Customer</TableHead>
                         <TableHead>Subscription</TableHead>
-                        <TableHead></TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredUsers && filteredUsers.map((user: any) => {
-                        if (!user) return null;
-                        console.log("Rendering row for user ID:", user.id, "- Username:", user.username);
-                        return (
-                          <UserRow 
-                            key={user.id} 
-                            user={user}
-                            onManageUser={handleManageUser}
-                          />
-                        );
-                      })}
+                      {filteredUsers && filteredUsers.length > 0 ? (
+                        filteredUsers.map((user: any) => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mr-3">
+                                  {user.username?.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="font-medium">{user.username}</p>
+                                  <p className="text-sm text-gray-500">{user.email}</p>
+                                  <div className="mt-1 flex">
+                                    <Badge className={user.role === 'admin' ? 'bg-red-500' : 'bg-blue-500'}>
+                                      {user.role === 'admin' ? 'Admin' : 'User'}
+                                    </Badge>
+                                    <Badge className={`ml-2 ${user.isEmailVerified ? 'bg-green-500' : 'bg-yellow-500'}`}>
+                                      {user.isEmailVerified ? 'Verified' : 'Unverified'}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">
+                                {user.createdAt ? format(new Date(user.createdAt), 'MMM d, yyyy') : 'Unknown date'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <span className={`h-2.5 w-2.5 rounded-full ${user.stripeCustomerId ? 'bg-green-500' : 'bg-gray-300'} mr-2`}></span>
+                                <span className="text-sm">{user.stripeCustomerId ? 'Yes' : 'No'}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <span className={`h-2.5 w-2.5 rounded-full ${user.stripeSubscriptionId ? 'bg-green-500' : 'bg-gray-300'} mr-2`}></span>
+                                <span className="text-sm">{user.stripeSubscriptionId ? 'Active' : 'None'}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleManageUser(user.id)}
+                                  className="flex items-center gap-1 px-2"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                  <span>Manage</span>
+                                </Button>
+                                
+                                <AdminToggleButton user={user} />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-4 text-gray-500">
+                            No users found matching your criteria
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </div>
