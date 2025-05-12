@@ -1379,6 +1379,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching user details: " + error.message });
     }
   });
+  
+  // Admin API: Assign subscription plan to user
+  app.post("/api/admin/users/:id/subscriptions", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { planId, twitchChannel, geographicTargeting, status } = req.body;
+      
+      if (!planId) {
+        return res.status(400).json({ message: "Plan ID is required" });
+      }
+      
+      const plan = await storage.getSubscriptionPlan(planId);
+      if (!plan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      // Create start and end date (default: 30 days from now)
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30);
+      
+      const subscription = await storage.createUserSubscription({
+        userId,
+        planId,
+        status: status || "active",
+        startDate,
+        endDate,
+        twitchChannel,
+        isActive: true,
+        geographicTargeting
+      });
+      
+      // Log action in audit log
+      await storage.createAuditLog({
+        userId: req.user.id || 0,
+        action: "assign_subscription",
+        details: JSON.stringify({
+          targetUserId: userId,
+          planId,
+          subscriptionId: subscription.id
+        }),
+        ipAddress: req.ip || ""
+      });
+      
+      res.status(201).json(subscription);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin API: Update user subscription
+  app.put("/api/admin/users/:userId/subscriptions/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const subscriptionId = parseInt(req.params.id);
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if subscription exists and belongs to user
+      const subscriptions = await storage.getUserSubscriptions(userId);
+      const subscription = subscriptions.find(sub => sub.id === subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found or doesn't belong to this user" });
+      }
+      
+      // Update subscription
+      const updatedSubscription = await storage.updateUserSubscription(subscriptionId, req.body);
+      
+      if (!updatedSubscription) {
+        return res.status(500).json({ message: "Failed to update subscription" });
+      }
+      
+      // Log action in audit log
+      await storage.createAuditLog({
+        userId: req.user.id || 0,
+        action: "update_subscription",
+        details: JSON.stringify({
+          targetUserId: userId,
+          subscriptionId,
+          changes: req.body
+        }),
+        ipAddress: req.ip || ""
+      });
+      
+      res.json(updatedSubscription);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin API: Cancel user subscription
+  app.delete("/api/admin/users/:userId/subscriptions/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const subscriptionId = parseInt(req.params.id);
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if subscription exists and belongs to user
+      const subscriptions = await storage.getUserSubscriptions(userId);
+      const subscription = subscriptions.find(sub => sub.id === subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found or doesn't belong to this user" });
+      }
+      
+      // Instead of deleting, update status to cancelled and isActive to false
+      const updatedSubscription = await storage.updateUserSubscription(subscriptionId, {
+        status: "cancelled",
+        isActive: false
+      });
+      
+      if (!updatedSubscription) {
+        return res.status(500).json({ message: "Failed to cancel subscription" });
+      }
+      
+      // Log action in audit log
+      await storage.createAuditLog({
+        userId: req.user.id || 0,
+        action: "cancel_subscription",
+        details: JSON.stringify({
+          targetUserId: userId,
+          subscriptionId
+        }),
+        ipAddress: req.ip || ""
+      });
+      
+      res.json({ success: true, message: "Subscription cancelled successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   app.put("/api/admin/users/:id", isAdmin, async (req, res) => {
     try {
