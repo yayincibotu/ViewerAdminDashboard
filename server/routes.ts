@@ -1750,6 +1750,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Subscription plan not found" });
       }
       
+      // Check if there are any active subscriptions using this plan
+      const subscriptions = await storage.getUserSubscriptionsByPlan(planId);
+      if (subscriptions && subscriptions.length > 0) {
+        return res.status(409).json({ 
+          message: "Cannot delete this plan because it has active subscriptions", 
+          activeSubscriptions: subscriptions.length 
+        });
+      }
+      
       // Delete the plan
       const success = await storage.deleteSubscriptionPlan(planId);
       
@@ -1759,6 +1768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: "Failed to delete subscription plan" });
       }
     } catch (error: any) {
+      console.error("Error deleting subscription plan:", error);
       res.status(500).json({ message: "Error deleting subscription plan: " + error.message });
     }
   });
