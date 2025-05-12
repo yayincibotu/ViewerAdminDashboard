@@ -59,11 +59,19 @@ const AdminServices: React.FC = () => {
   // Fetch subscription plans
   const { data: plans = [] } = useQuery({
     queryKey: ['/api/subscription-plans'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/subscription-plans');
+      return response.json();
+    }
   });
   
   // Fetch platforms
   const { data: platforms = [] } = useQuery({
     queryKey: ['/api/platforms'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/platforms');
+      return response.json();
+    }
   });
   
   // Set up form for subscription plan
