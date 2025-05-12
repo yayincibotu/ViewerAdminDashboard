@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import AdminSidebar from '@/components/dashboard/AdminSidebar';
+import AdminLayout from '@/components/dashboard/AdminLayout';
+import AdminHeader from '@/components/dashboard/AdminHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
