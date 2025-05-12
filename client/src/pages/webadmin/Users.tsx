@@ -27,6 +27,15 @@ const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> =
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
+  // Güvenlik kontrolü - user undefined veya null ise boş div döndür
+  if (!user) {
+    console.error("UserRow received undefined or null user");
+    return <TableRow><TableCell colSpan={5}>Invalid user data</TableCell></TableRow>;
+  }
+  
+  // Debug - hangi kullanıcının render edildiğini logla
+  console.log("Rendering user row for:", user.username);
+  
   // Email verification mutation
   const verifyEmailMutation = useMutation({
     mutationFn: async () => {
@@ -406,7 +415,10 @@ const AdminUsers: React.FC = () => {
   
   // Filter users based on search query and role filter
   const filteredUsers = Array.isArray(users) ? users.filter((user: any) => {
-    if (!user || !user.username) return false;
+    if (!user || !user.username) {
+      console.error("Found invalid user in users array:", user);
+      return false;
+    }
     
     const matchesSearch = searchQuery
       ? (user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -415,8 +427,13 @@ const AdminUsers: React.FC = () => {
       
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     
-    return matchesSearch && matchesRole;
+    const matches = matchesSearch && matchesRole;
+    return matches;
   }) : [];
+  
+  // Debug log users before and after filtering
+  console.log("Users data:", users);
+  console.log("Filtered users:", filteredUsers);
   
   return (
     <AdminLayout>
@@ -609,13 +626,17 @@ const AdminUsers: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredUsers.map((user: any) => (
-                        <UserRow 
-                          key={user.id} 
-                          user={user}
-                          onManageUser={handleManageUser}
-                        />
-                      ))}
+                      {filteredUsers && filteredUsers.map((user: any) => {
+                        if (!user) return null;
+                        console.log("Rendering row for user ID:", user.id, "- Username:", user.username);
+                        return (
+                          <UserRow 
+                            key={user.id} 
+                            user={user}
+                            onManageUser={handleManageUser}
+                          />
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
