@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { LoaderCircle, RefreshCw, Calendar, ArrowRight, ArrowUpRight, ArrowDownRight, Users, CreditCard, Activity } from 'lucide-react';
 import AdminLayout from '@/components/dashboard/AdminLayout';
+import AdminHeader from '@/components/dashboard/AdminHeader';
 import { apiRequest } from '@/lib/queryClient';
 import {
   ResponsiveContainer,
@@ -1018,9 +1019,10 @@ const AnalyticsPage: React.FC = () => {
   
   return (
     <AdminLayout>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Analytics & Reports</h1>
+      <AdminHeader 
+        title="Analytics & Reports"
+        description="View detailed metrics and performance reports"
+        actions={
           <div className="flex items-center space-x-2">
             <DateRangePicker
               value={dateRange}
@@ -1035,7 +1037,9 @@ const AnalyticsPage: React.FC = () => {
               Refresh
             </Button>
           </div>
-        </div>
+        }
+      />
+      <div className="container mx-auto p-6">
         
         <Tabs defaultValue="users" className="w-full">
           <TabsList className="mb-6 grid w-full grid-cols-4">
