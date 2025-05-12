@@ -18,7 +18,7 @@ import {
   CheckCircle, ShieldAlert, ExternalLink, Eye, Loader2, Mail, Key, AlertTriangle 
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> = ({ user, onManageUser }) => {
@@ -261,11 +261,18 @@ const AdminUsers: React.FC = () => {
     isAdmin: false
   });
   
-  // Fetch users data
+  // Fetch users data with improved error handling
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['/api/admin/users'],
     retry: 3,
     staleTime: 10000,
+    onError: (error: any) => {
+      toast({
+        title: "Failed to load users",
+        description: error.message || "Please make sure you are logged in with an admin account",
+        variant: "destructive",
+      });
+    },
   });
   
   // Debug log
