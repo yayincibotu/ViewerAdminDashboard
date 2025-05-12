@@ -1,98 +1,118 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import AdminSidebar from '@/components/dashboard/AdminSidebar';
+import AdminLayout from '@/components/dashboard/AdminLayout';
+import AdminHeader from '@/components/dashboard/AdminHeader';
 import StatCard from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, DollarSign, CreditCard, BarChart4, TrendingUp, Clock, ActivitySquare } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
+import { Users, DollarSign, CreditCard, BarChart4, Clock, ActivitySquare, TrendingUp } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 
-// Sample data for admin dashboard visualizations
-const userGrowthData = [
-  { date: 'Jan', count: 50 },
-  { date: 'Feb', count: 75 },
-  { date: 'Mar', count: 90 },
-  { date: 'Apr', count: 120 },
-  { date: 'May', count: 150 },
-  { date: 'Jun', count: 200 },
-  { date: 'Jul', count: 250 },
-];
-
-const revenueData = [
-  { date: 'Jan', amount: 2500 },
-  { date: 'Feb', amount: 3200 },
-  { date: 'Mar', amount: 4000 },
-  { date: 'Apr', amount: 4800 },
-  { date: 'May', amount: 5500 },
-  { date: 'Jun', amount: 7000 },
-  { date: 'Jul', amount: 7800 },
-];
-
-const platformData = [
-  { name: 'Twitch', value: 65 },
-  { name: 'Kick', value: 15 },
-  { name: 'YouTube', value: 12 },
-  { name: 'Instagram', value: 8 },
-];
-
-const COLORS = ['#8b5cf6', '#3b82f6', '#ef4444', '#f97316'];
+const COLORS = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981', '#f59e0b'];
 
 const AdminDashboard: React.FC = () => {
-  // Fetch admin data
+  // Mock data - in production would come from API
+  const revenueData = [
+    { date: 'Jan', amount: 4000 },
+    { date: 'Feb', amount: 3000 },
+    { date: 'Mar', amount: 5000 },
+    { date: 'Apr', amount: 7000 },
+    { date: 'May', amount: 5000 },
+    { date: 'Jun', amount: 6000 },
+    { date: 'Jul', amount: 9000 },
+    { date: 'Aug', amount: 11000 },
+    { date: 'Sep', amount: 10000 },
+    { date: 'Oct', amount: 12000 },
+    { date: 'Nov', amount: 15000 },
+    { date: 'Dec', amount: 17000 },
+  ];
+  
+  const platformData = [
+    { name: 'Twitch', value: 50 },
+    { name: 'Kick', value: 30 },
+    { name: 'YouTube', value: 15 },
+    { name: 'Instagram', value: 5 },
+  ];
+  
+  const userGrowthData = [
+    { date: 'Jan', count: 80 },
+    { date: 'Feb', count: 120 },
+    { date: 'Mar', count: 160 },
+    { date: 'Apr', count: 190 },
+    { date: 'May', count: 220 },
+    { date: 'Jun', count: 270 },
+    { date: 'Jul', count: 310 },
+    { date: 'Aug', count: 370 },
+    { date: 'Sep', count: 400 },
+    { date: 'Oct', count: 450 },
+    { date: 'Nov', count: 510 },
+    { date: 'Dec', count: 580 },
+  ];
+  
+  // Fetch dashboard data
   const { data: users = [] } = useQuery({
     queryKey: ['/api/admin/users'],
-  });
-  
-  const { data: payments = [] } = useQuery({
-    queryKey: ['/api/admin/payments'],
   });
   
   const { data: subscriptions = [] } = useQuery({
     queryKey: ['/api/admin/subscriptions'],
   });
   
-  // Calculate summary stats
+  const { data: payments = [] } = useQuery({
+    queryKey: ['/api/admin/payments'],
+  });
+  
+  // Calculate metrics
   const totalUsers = users.length;
-  const totalRevenue = payments.reduce((sum, payment) => sum + payment.amount, 0) / 100; // Convert from cents
-  const activeSubscriptions = subscriptions.filter(sub => sub.status === 'active').length;
+  const totalRevenue = payments.reduce((sum: number, payment: any) => sum + payment.amount, 0) / 100; // Convert from cents
+  const activeSubscriptions = subscriptions.filter((sub: any) => sub.status === 'active').length;
   const conversionRate = totalUsers > 0 ? ((activeSubscriptions / totalUsers) * 100).toFixed(1) : 0;
   
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-              <p className="text-gray-500">Overview of platform performance and metrics</p>
-            </div>
+    <AdminLayout>
+      <AdminHeader
+        title="Admin Dashboard"
+        description="Overview of platform performance and metrics"
+        actions={
+          <div className="flex items-center space-x-4">
+            <Select defaultValue="30">
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="365">Last year</SelectItem>
+              </SelectContent>
+            </Select>
             
-            <div className="flex items-center space-x-4">
-              <Select defaultValue="30">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Last 7 days</SelectItem>
-                  <SelectItem value="30">Last 30 days</SelectItem>
-                  <SelectItem value="90">Last 90 days</SelectItem>
-                  <SelectItem value="365">Last year</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button>
-                <Clock className="mr-2 h-4 w-4" />
-                Generate Report
-              </Button>
-            </div>
+            <Button>
+              <Clock className="mr-2 h-4 w-4" />
+              Generate Report
+            </Button>
           </div>
-          
+        }
+      >
+        <div className="p-6 space-y-8">
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard 
               title="Total Users" 
               value={totalUsers}
@@ -149,7 +169,7 @@ const AdminDashboard: React.FC = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`$${value}`, "Revenue"]} />
+                      <Tooltip formatter={(value: any) => [`$${value}`, "Revenue"]} />
                       <Area type="monotone" dataKey="amount" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorRevenue)" />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -177,14 +197,14 @@ const AdminDashboard: React.FC = () => {
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       >
-                        {platformData.map((entry, index) => (
+                        {platformData.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Legend />
-                      <Tooltip formatter={(value) => [`${value}%`, "Percent"]} />
+                      <Tooltip formatter={(value: any) => [`${value}%`, "Percent"]} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -193,7 +213,7 @@ const AdminDashboard: React.FC = () => {
           </div>
           
           {/* User Growth & Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* User Growth */}
             <Card className="col-span-2">
               <CardHeader>
@@ -285,8 +305,8 @@ const AdminDashboard: React.FC = () => {
             </Card>
           </div>
         </div>
-      </div>
-    </div>
+      </AdminHeader>
+    </AdminLayout>
   );
 };
 
