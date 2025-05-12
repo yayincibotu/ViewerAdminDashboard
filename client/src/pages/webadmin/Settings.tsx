@@ -410,14 +410,10 @@ const SettingsPage: React.FC = () => {
   
   return (
     <AdminLayout>
-      <div className="p-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">System Settings</h1>
-            <p className="text-muted-foreground mt-1">
-              Configure all aspects of your website and services
-            </p>
-          </div>
+      <AdminHeader 
+        title="System Settings"
+        description="Configure all aspects of your website and services"
+        actions={
           <Button 
             variant="outline" 
             onClick={() => {
@@ -431,7 +427,9 @@ const SettingsPage: React.FC = () => {
             <CheckCircle size={16} className={isLoading ? 'animate-spin' : ''} />
             Refresh All Settings
           </Button>
-        </div>
+        }
+      />
+      <div className="p-6">
         
         <Tabs defaultValue="general" className="w-full">
           <TabsList className="mb-6">
