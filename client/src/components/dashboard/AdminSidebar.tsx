@@ -14,7 +14,7 @@ const AdminSidebar: React.FC = () => {
   if (!user || user.role !== 'admin') return null;
 
   return (
-    <div className="w-64 h-screen bg-sidebar flex flex-col border-r border-sidebar-border">
+    <div className="w-64 h-screen bg-sidebar flex flex-col border-r border-sidebar-border fixed left-0 top-0 overflow-y-auto">
       <div className="p-6 flex items-center">
         <Logo textColorClass="text-white" />
         <span className="ml-2 text-white text-xs bg-red-600 px-2 py-1 rounded-md">ADMIN</span>
