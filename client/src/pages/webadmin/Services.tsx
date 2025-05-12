@@ -34,6 +34,7 @@ const planFormSchema = z.object({
   platform: z.string(),
   isPopular: z.boolean().default(false),
   geographicTargeting: z.boolean().default(false),
+  isVisible: z.boolean().default(true),
   features: z.array(z.string()).min(1, "At least one feature is required")
 });
 
@@ -222,6 +223,11 @@ const AdminServices: React.FC = () => {
       setFeatures([...features, newFeature.trim()]);
       setNewFeature('');
     }
+  };
+  
+  // Remove a feature from the list
+  const removeFeature = (feature: string) => {
+    setFeatures(features.filter(f => f !== feature));
   };
   
   // Submit plan form
