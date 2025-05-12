@@ -48,7 +48,10 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      httpOnly: true,
+      secure: false, // Set to true in production with HTTPS
+      sameSite: 'lax'
     }
   };
 
@@ -165,16 +168,32 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log("Login attempt received:", req.body.username);
+    
     passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Invalid username or password" });
+      if (err) {
+        console.log("Login error:", err);
+        return next(err);
+      }
+      
+      if (!user) {
+        console.log("Login failed - invalid credentials");
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      console.log("Credentials valid, logging in user:", user.username);
       
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.log("Login session error:", err);
+          return next(err);
+        }
+        
         // Remove password from response
         const userResponse = { ...user };
         delete userResponse.password;
         
+        console.log("Login successful for user:", user.username);
         res.status(200).json(userResponse);
       });
     })(req, res, next);
@@ -188,7 +207,14 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    console.log("GET /api/user - isAuthenticated:", req.isAuthenticated());
+    
+    if (!req.isAuthenticated()) {
+      console.log("User not authenticated - returning 401");
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    console.log("User authenticated:", req.user.username);
     
     // Remove password from response
     const userResponse = { ...req.user };

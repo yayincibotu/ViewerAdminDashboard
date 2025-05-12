@@ -1249,12 +1249,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin API routes
   // Admin middleware to check admin permissions
   const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+    console.log("Admin middleware check - isAuthenticated:", req.isAuthenticated());
+    
     if (!req.isAuthenticated()) {
+      console.log("Admin access denied - not authenticated");
       return res.status(401).json({ message: "Unauthorized" });
     }
+    
+    console.log("User role check:", req.user.role);
+    
     if (req.user.role !== "admin") {
+      console.log("Admin access denied - not an admin user");
       return res.status(403).json({ message: "Forbidden - Admin access required" });
     }
+    
+    console.log("Admin access granted for user:", req.user.username);
     next();
   };
 
