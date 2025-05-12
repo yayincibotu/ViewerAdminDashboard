@@ -53,25 +53,21 @@ function Router() {
       <ProtectedRoute path="/subscribe/:planId" component={Subscribe} />
       
       {/* Admin Routes */}
-      {isAdmin && (
-        <>
-          <ProtectedRoute path="/webadmin" component={AdminDashboard} />
-          <ProtectedRoute path="/webadmin/users" component={AdminUsers} />
-          <ProtectedRoute path="/webadmin/users/:id" component={UserDetails} />
-          <ProtectedRoute path="/webadmin/payments" component={AdminPayments} />
-          <ProtectedRoute path="/webadmin/invoices" component={AdminInvoices} />
-          <ProtectedRoute path="/webadmin/services" component={AdminServices} />
-          <ProtectedRoute path="/webadmin/plans" component={AdminPlans} />
-          <ProtectedRoute path="/webadmin/page-contents" component={AdminPageContents} />
-          <ProtectedRoute path="/webadmin/blog" component={Blog} />
-          <ProtectedRoute path="/webadmin/blog-categories" component={BlogCategories} />
-          <ProtectedRoute path="/webadmin/faq" component={Faq} />
-          <ProtectedRoute path="/webadmin/faq-categories" component={FaqCategories} />
-          <ProtectedRoute path="/webadmin/contact-messages" component={ContactMessages} />
-          <ProtectedRoute path="/webadmin/settings" component={Settings} />
-          <ProtectedRoute path="/webadmin/analytics" component={Analytics} />
-        </>
-      )}
+      <ProtectedRoute path="/webadmin" component={AdminDashboard} />
+      <ProtectedRoute path="/webadmin/users" component={AdminUsers} />
+      <ProtectedRoute path="/webadmin/users/:id" component={UserDetails} />
+      <ProtectedRoute path="/webadmin/payments" component={AdminPayments} />
+      <ProtectedRoute path="/webadmin/invoices" component={AdminInvoices} />
+      <ProtectedRoute path="/webadmin/services" component={AdminServices} />
+      <ProtectedRoute path="/webadmin/plans" component={AdminPlans} />
+      <ProtectedRoute path="/webadmin/page-contents" component={AdminPageContents} />
+      <ProtectedRoute path="/webadmin/blog" component={Blog} />
+      <ProtectedRoute path="/webadmin/blog-categories" component={BlogCategories} />
+      <ProtectedRoute path="/webadmin/faq" component={Faq} />
+      <ProtectedRoute path="/webadmin/faq-categories" component={FaqCategories} />
+      <ProtectedRoute path="/webadmin/contact-messages" component={ContactMessages} />
+      <ProtectedRoute path="/webadmin/settings" component={Settings} />
+      <ProtectedRoute path="/webadmin/analytics" component={Analytics} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />
