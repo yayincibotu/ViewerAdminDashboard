@@ -269,6 +269,11 @@ const AdminUsers: React.FC = () => {
   // Debug log
   console.log("Users data:", users);
   
+  useEffect(() => {
+    // Log filtered users as well
+    console.log("Filtered users:", Array.isArray(users) ? users.filter((user: any) => true) : []);
+  }, [users]);
+  
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
