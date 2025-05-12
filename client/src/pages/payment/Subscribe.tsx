@@ -294,9 +294,11 @@ const SubscribePage: React.FC = () => {
   
   // Fetch plan details
   const { data: plan, isLoading: isPlanLoading } = useQuery({
-    queryKey: ['/api/subscription-plans', planId],
+    queryKey: [`/api/subscription-plans/${planId}`],
     enabled: !!planId,
   });
+  
+  const { toast } = useToast();
   
   useEffect(() => {
     // Make sure the user is logged in
