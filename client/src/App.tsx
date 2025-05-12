@@ -13,7 +13,7 @@ import BotControl from "@/pages/app/BotControl";
 import Billing from "@/pages/app/Billing";
 import Profile from "@/pages/app/Profile";
 import AdminDashboard from "@/pages/webadmin/Dashboard";
-import AdminUsers from "@/pages/webadmin/Users";
+import UsersPage from "@/pages/webadmin/Users";
 import UserDetails from "@/pages/webadmin/UserDetails";
 import AdminPayments from "@/pages/webadmin/Payments";
 import AdminInvoices from "@/pages/webadmin/Invoices";
@@ -54,7 +54,7 @@ function Router() {
       
       {/* Admin Routes */}
       <ProtectedRoute path="/webadmin" component={AdminDashboard} />
-      <ProtectedRoute path="/webadmin/users" component={AdminUsers} />
+      <ProtectedRoute path="/webadmin/users" component={UsersPage} />
       <ProtectedRoute path="/webadmin/users/:id" component={UserDetails} />
       <ProtectedRoute path="/webadmin/payments" component={AdminPayments} />
       <ProtectedRoute path="/webadmin/invoices" component={AdminInvoices} />
