@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import AdminLayout from '@/components/dashboard/AdminLayout';
 import AdminHeader from '@/components/dashboard/AdminHeader';
@@ -19,7 +19,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Download, Filter, Plus, Edit, Trash2, BookOpen, Tag, CheckCircle2, X, Box, Package } from 'lucide-react';
+import { Search, Download, Filter, Plus, Edit, Trash2, BookOpen, Tag, CheckCircle2, X, Box, Package, Loader2 } from 'lucide-react';
 
 // Schema for creating/editing subscription plan
 const planFormSchema = z.object({
@@ -37,6 +37,34 @@ const planFormSchema = z.object({
 });
 
 type PlanFormValues = z.infer<typeof planFormSchema>;
+
+interface Plan {
+  id: number;
+  name: string;
+  price: number;
+  platform: string;
+  description: string;
+  viewerCount: number;
+  chatCount: number;
+  followerCount: number;
+  features: string[];
+  isPopular: boolean;
+  geographicTargeting: boolean;
+  stripePriceId?: string;
+  stripeProductId?: string;
+  isVisible: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Platform {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  iconClass: string;
+  bgColor: string;
+}
 
 const AdminServices: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -57,19 +85,25 @@ const AdminServices: React.FC = () => {
   const { toast } = useToast();
   
   // Fetch subscription plans
-  const { data: plans = [] } = useQuery({
+  const { data: plans = [], isLoading: plansLoading } = useQuery<Plan[]>({
     queryKey: ['/api/subscription-plans'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/subscription-plans');
+      const response = await fetch('/api/subscription-plans');
+      if (!response.ok) {
+        throw new Error('Failed to fetch subscription plans');
+      }
       return response.json();
     }
   });
   
   // Fetch platforms
-  const { data: platforms = [] } = useQuery({
+  const { data: platforms = [], isLoading: platformsLoading } = useQuery<Platform[]>({
     queryKey: ['/api/platforms'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/platforms');
+      const response = await fetch('/api/platforms');
+      if (!response.ok) {
+        throw new Error('Failed to fetch platforms');
+      }
       return response.json();
     }
   });
@@ -117,7 +151,7 @@ const AdminServices: React.FC = () => {
   });
   
   // Filter plans based on search query and platform filter
-  const filteredPlans = plans.filter((plan: any) => {
+  const filteredPlans = plans.filter((plan: Plan) => {
     const matchesSearch = searchQuery
       ? plan.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
         plan.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -140,6 +174,18 @@ const AdminServices: React.FC = () => {
   const onSubmit = (data: PlanFormValues) => {
     createPlanMutation.mutate(data);
   };
+
+  // Check if loading
+  if (plansLoading || platformsLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading...</span>
+        </div>
+      </AdminLayout>
+    );
+  }
   
   return (
     <AdminLayout>
@@ -255,10 +301,11 @@ const AdminServices: React.FC = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="twitch">Twitch</SelectItem>
-                                <SelectItem value="kick">Kick</SelectItem>
-                                <SelectItem value="youtube">YouTube</SelectItem>
-                                <SelectItem value="instagram">Instagram</SelectItem>
+                                {platforms.map((platform) => (
+                                  <SelectItem key={platform.slug} value={platform.slug}>
+                                    {platform.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -356,6 +403,12 @@ const AdminServices: React.FC = () => {
                                     placeholder="Add a feature"
                                     value={newFeature}
                                     onChange={(e) => setNewFeature(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        addFeature();
+                                      }
+                                    }}
                                   />
                                   <Button type="button" onClick={addFeature}>Add</Button>
                                 </div>
@@ -370,15 +423,28 @@ const AdminServices: React.FC = () => {
                                           <FormItem className="flex items-center space-x-2 w-full">
                                             <FormControl>
                                               <div className="flex items-center justify-between border rounded-md p-2 w-full">
-                                                <label className="text-sm cursor-pointer flex-1">{feature}</label>
-                                                <Switch
-                                                  checked={field.value?.includes(feature)}
-                                                  onCheckedChange={(checked) => {
-                                                    const values = new Set(field.value || []);
-                                                    checked ? values.add(feature) : values.delete(feature);
-                                                    field.onChange(Array.from(values));
-                                                  }}
-                                                />
+                                                <span>{feature}</span>
+                                                <div className="flex items-center">
+                                                  <input
+                                                    type="checkbox"
+                                                    className="mr-2"
+                                                    checked={field.value.includes(feature)}
+                                                    onChange={(e) => {
+                                                      if (e.target.checked) {
+                                                        field.onChange([...field.value, feature]);
+                                                      } else {
+                                                        field.onChange(field.value.filter(f => f !== feature));
+                                                      }
+                                                    }}
+                                                  />
+                                                  <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    onClick={() => setFeatures(features.filter((_, i) => i !== index))}
+                                                  >
+                                                    <X className="h-4 w-4" />
+                                                  </Button>
+                                                </div>
                                               </div>
                                             </FormControl>
                                           </FormItem>
@@ -400,7 +466,8 @@ const AdminServices: React.FC = () => {
                         Cancel
                       </Button>
                       <Button type="submit" disabled={createPlanMutation.isPending}>
-                        {createPlanMutation.isPending ? "Saving..." : "Save Plan"}
+                        {createPlanMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Create Plan
                       </Button>
                     </DialogFooter>
                   </form>
@@ -409,178 +476,129 @@ const AdminServices: React.FC = () => {
             </Dialog>
           </div>
         }
-      >
-        <div className="space-y-8">
-          <div className="flex items-center space-x-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search plans..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            
-            <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-[180px]">
-                <div className="flex items-center">
-                  <Filter className="mr-2 h-4 w-4" />
-                  {platformFilter === 'all' ? 'All Platforms' : platformFilter.charAt(0).toUpperCase() + platformFilter.slice(1)}
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Platforms</SelectItem>
-                <SelectItem value="twitch">Twitch</SelectItem>
-                <SelectItem value="kick">Kick</SelectItem>
-                <SelectItem value="youtube">YouTube</SelectItem>
-                <SelectItem value="instagram">Instagram</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <Tabs value={currentTab} onValueChange={setCurrentTab}>
-            <TabsList className="mb-8">
-              <TabsTrigger value="plans" className="flex items-center">
-                <Package className="mr-2 h-4 w-4" /> Subscription Plans
-              </TabsTrigger>
-              <TabsTrigger value="platforms" className="flex items-center">
-                <Box className="mr-2 h-4 w-4" /> Platforms
-              </TabsTrigger>
-              <TabsTrigger value="services" className="flex items-center">
-                <BookOpen className="mr-2 h-4 w-4" /> Service Components
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="plans">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {filteredPlans.length === 0 ? (
-                  <div className="col-span-3 p-8 text-center">
-                    <p className="text-muted-foreground">No subscription plans found</p>
-                  </div>
-                ) : (
-                  filteredPlans.map((plan: any) => (
-                    <Card key={plan.id} className={plan.isPopular ? "border-primary" : ""}>
-                      {plan.isPopular && (
-                        <div className="bg-primary text-primary-foreground py-1 text-center text-sm font-medium">
-                          POPULAR
-                        </div>
-                      )}
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle>{plan.name}</CardTitle>
-                            <CardDescription className="mt-1">{plan.description}</CardDescription>
-                          </div>
-                          <Badge>{plan.platform}</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="mb-4">
-                          <span className="text-3xl font-bold">${plan.price}</span>
-                          <span className="text-muted-foreground">/month</span>
-                        </div>
-                        
-                        <ul className="space-y-2">
-                          {plan.features?.map((feature: string, index: number) => (
-                            <li key={index} className="flex items-center">
-                              <CheckCircle2 className="h-4 w-4 text-green-500 mr-2" />
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                      <CardFooter className="flex justify-between">
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4 mr-2" /> Edit
-                        </Button>
-                        <Button variant="destructive" size="sm">
-                          <Trash2 className="h-4 w-4 mr-2" /> Delete
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))
-                )}
+      />
+      
+      <div className="px-4 md:px-6 space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <Tabs value={currentTab} onValueChange={setCurrentTab}>
+                  <TabsList>
+                    <TabsTrigger value="plans">
+                      <Package className="mr-2 h-4 w-4" />
+                      Subscription Plans
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="platforms">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Supported Platforms</CardTitle>
-                  <CardDescription>Manage the streaming platforms supported by your service</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Platform Name</TableHead>
-                        <TableHead>Icon</TableHead>
-                        <TableHead>API Integration</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+              
+              <div className="flex items-center gap-2 max-w-md w-full">
+                <Input
+                  placeholder="Search plans..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-xs"
+                />
+                
+                <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                  <SelectTrigger className="max-w-[180px]">
+                    <SelectValue placeholder="All Platforms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Platforms</SelectItem>
+                    {platforms.map((platform) => (
+                      <SelectItem key={platform.slug} value={platform.slug}>
+                        {platform.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            <TabsContent value="plans" className="space-y-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Platform</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Viewers</TableHead>
+                    <TableHead>Features</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPlans.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="flex flex-col items-center justify-center">
+                          <Package className="h-8 w-8 text-muted-foreground mb-2" />
+                          <h3 className="text-lg font-medium">No plans found</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {searchQuery || platformFilter !== 'all'
+                              ? "Try adjusting your search or filter criteria"
+                              : "Add a new subscription plan to get started"}
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredPlans.map((plan) => (
+                      <TableRow key={plan.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {plan.name}
+                            {plan.isPopular && (
+                              <Badge variant="secondary">Popular</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {platforms.find(p => p.slug === plan.platform)?.name || plan.platform}
+                        </TableCell>
+                        <TableCell>${plan.price}/mo</TableCell>
+                        <TableCell>{plan.viewerCount}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {plan.features.slice(0, 2).map((feature, idx) => (
+                              <Badge key={idx} variant="outline" className="whitespace-nowrap">
+                                {feature}
+                              </Badge>
+                            ))}
+                            {plan.features.length > 2 && (
+                              <Badge variant="outline">+{plan.features.length - 2} more</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={plan.isVisible ? "success" : "secondary"}>
+                            {plan.isVisible ? "Visible" : "Hidden"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end items-center gap-2">
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {platforms.map((platform: any) => (
-                        <TableRow key={platform.id}>
-                          <TableCell>
-                            <div className="font-medium">{platform.name}</div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <i className={platform.iconClass}></i>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {platform.hasApiIntegration ? (
-                              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
-                                <CheckCircle2 className="h-3 w-3 mr-1" /> Integrated
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
-                                <X className="h-3 w-3 mr-1" /> Not Integrated
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {platform.isActive ? (
-                              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Active</Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">Inactive</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end">
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </TabsContent>
-            
-            <TabsContent value="services">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-4">
-                    <p className="text-muted-foreground mb-4">Service components are the technical building blocks that power your platform offerings.</p>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add New Service Component
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </AdminHeader>
+          </CardContent>
+        </Card>
+      </div>
     </AdminLayout>
   );
 };
