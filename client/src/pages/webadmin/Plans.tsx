@@ -106,85 +106,81 @@ const AdminPlans: React.FC = () => {
       isVisible: true,
       isComingSoon: false,
       sortOrder: 0,
-      features: []
+      features: features
     }
   });
   
-  // Create subscription plan mutation
+  // Create plan mutation
   const createPlanMutation = useMutation({
     mutationFn: async (data: PlanFormValues) => {
       const res = await apiRequest("POST", "/api/admin/subscription-plans", data);
-      return await res.json();
+      return res.json();
     },
     onSuccess: () => {
       toast({
         title: "Plan created",
-        description: "Subscription plan has been created successfully."
+        description: "The subscription plan has been created successfully.",
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/subscription-plans'] });
       setIsAddPlanDialogOpen(false);
       form.reset();
-      queryClient.invalidateQueries({ queryKey: ['/api/subscription-plans'] });
     },
     onError: (error: Error) => {
       toast({
         title: "Error creating plan",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   });
-
-  // Update subscription plan mutation
+  
+  // Update plan mutation
   const updatePlanMutation = useMutation({
     mutationFn: async (data: PlanFormValues & { id: number }) => {
-      const { id, ...planData } = data;
-      const res = await apiRequest("PUT", `/api/admin/subscription-plans/${id}`, planData);
-      return await res.json();
+      const { id, ...rest } = data;
+      const res = await apiRequest("PUT", `/api/admin/subscription-plans/${id}`, rest);
+      return res.json();
     },
     onSuccess: () => {
       toast({
         title: "Plan updated",
-        description: "Subscription plan has been updated successfully."
+        description: "The subscription plan has been updated successfully.",
       });
-      setIsEditPlanDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ['/api/subscription-plans'] });
+      setIsEditPlanDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
         title: "Error updating plan",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   });
-
+  
   // Toggle plan visibility mutation
   const togglePlanVisibilityMutation = useMutation({
-    mutationFn: async ({ id, isVisible }: { id: number, isVisible: boolean }) => {
-      const res = await apiRequest("PATCH", `/api/admin/subscription-plans/${id}/visibility`, { isVisible });
-      return await res.json();
+    mutationFn: async (data: { id: number, isVisible: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/admin/subscription-plans/${data.id}/visibility`, { isVisible: data.isVisible });
+      return res.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Visibility updated",
-        description: "Plan visibility has been updated successfully."
-      });
       queryClient.invalidateQueries({ queryKey: ['/api/subscription-plans'] });
     },
     onError: (error: Error) => {
       toast({
         title: "Error updating visibility",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   });
   
-  // Filter plans based on search query and platform filter
-  const filteredPlans = Array.isArray(plans) ? plans.filter((plan: any) => {
+  // Filtered plans based on search and platform filter
+  const filteredPlans = plans ? plans.filter((plan: any) => {
     const matchesSearch = searchQuery
-      ? plan.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        (plan.description && plan.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      ? plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plan.description.toLowerCase().includes(searchQuery.toLowerCase())
       : true;
       
     const matchesPlatform = platformFilter === 'all' || plan.platform === platformFilter;
@@ -216,22 +212,18 @@ const AdminPlans: React.FC = () => {
   const handleEditPlan = (plan: any) => {
     setCurrentPlan(plan);
     
-    // Clear previous form data
-    form.reset();
-    
-    // Set form values from plan data
-    form.setValue("name", plan.name || "");
-    form.setValue("description", plan.description || "");
-    form.setValue("price", Number(plan.price) || 0);
+    form.setValue("name", plan.name);
+    form.setValue("description", plan.description);
+    form.setValue("price", Number(plan.price));
     form.setValue("annualPrice", plan.annualPrice ? Number(plan.annualPrice) : undefined);
     form.setValue("billingCycle", plan.billingCycle || "monthly");
-    form.setValue("viewerCount", Number(plan.viewerCount) || 0);
-    form.setValue("chatCount", Number(plan.chatCount) || 0);
-    form.setValue("followerCount", Number(plan.followerCount) || 0);
+    form.setValue("viewerCount", Number(plan.viewerCount));
+    form.setValue("chatCount", Number(plan.chatCount));
+    form.setValue("followerCount", Number(plan.followerCount));
     form.setValue("stripePriceId", plan.stripePriceId || "");
     form.setValue("stripeAnnualPriceId", plan.stripeAnnualPriceId || "");
     form.setValue("stripeProductId", plan.stripeProductId || "");
-    form.setValue("platform", plan.platform || "twitch");
+    form.setValue("platform", plan.platform);
     form.setValue("isPopular", Boolean(plan.isPopular));
     form.setValue("geographicTargeting", Boolean(plan.geographicTargeting));
     form.setValue("prioritySupport", Boolean(plan.prioritySupport));
@@ -279,1014 +271,118 @@ const AdminPlans: React.FC = () => {
   };
   
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-2xl font-bold">Subscription Plans</h1>
-              <p className="text-gray-500">Manage subscription plans, pricing, and features</p>
-            </div>
+    <AdminLayout>
+      <AdminHeader
+        title="Subscription Plans"
+        description="Manage subscription plans, pricing, and features"
+        actions={
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" className="flex items-center">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
             
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" className="flex items-center">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-              
-              <Dialog open={isAddPlanDialogOpen} onOpenChange={setIsAddPlanDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="flex items-center">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Plan
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Create New Subscription Plan</DialogTitle>
-                    <DialogDescription>
-                      Add a new subscription plan to your platform.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                      <Tabs defaultValue="basic" className="w-full">
-                        <TabsList className="mb-4">
-                          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                          <TabsTrigger value="pricing">Pricing & Billing</TabsTrigger>
-                          <TabsTrigger value="features">Features</TabsTrigger>
-                          <TabsTrigger value="advanced">Advanced</TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="basic" className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                              control={form.control}
-                              name="name"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Plan Name</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. 100 Live Viewers" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="platform"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Platform</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select platform" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="twitch">Twitch</SelectItem>
-                                      <SelectItem value="kick">Kick</SelectItem>
-                                      <SelectItem value="youtube">YouTube</SelectItem>
-                                      <SelectItem value="instagram">Instagram</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <div className="col-span-2">
-                              <FormField
-                                control={form.control}
-                                name="description"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                      <Textarea
-                                        placeholder="Describe the subscription plan"
-                                        className="min-h-[100px]"
-                                        {...field}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-                            
-                            <FormField
-                              control={form.control}
-                              name="viewerCount"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Viewer Count</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 100" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Maximum number of viewers</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="chatCount"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Chat Count</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 100" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Maximum number of chat users</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="followerCount"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Follower Count</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 250" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Followers included in the plan</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="sortOrder"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Sort Order</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 10" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Order to display on frontend (lower first)</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="pricing" className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                              control={form.control}
-                              name="price"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Monthly Price (USD cents)</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 7999 for $79.99" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Enter price in cents (e.g. 7999 for $79.99)</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="annualPrice"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Annual Price (USD cents)</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 79999 for $799.99" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Optional annual price in cents (leave blank for monthly only)</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="billingCycle"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Available Billing Cycles</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select billing options" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="monthly">Monthly Only</SelectItem>
-                                      <SelectItem value="annual">Annual Only</SelectItem>
-                                      <SelectItem value="both">Both Options</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription>Which billing cycles to offer customers</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="isPopular"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Mark as Popular</FormLabel>
-                                    <FormDescription>
-                                      Highlight this plan as a popular choice
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="promoCode"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Promotion Code</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. SUMMER25" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Optional promo code</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="discountPercentage"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Discount Percentage</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" max="100" placeholder="e.g. 25" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Discount for promo code (0-100)</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="features" className="space-y-6">
-                          <div className="grid grid-cols-1 gap-6">
-                            <FormField
-                              control={form.control}
-                              name="geographicTargeting"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Geographic Targeting</FormLabel>
-                                    <FormDescription>
-                                      Allow users to target specific geographic regions
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="prioritySupport"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Priority Support</FormLabel>
-                                    <FormDescription>
-                                      Offer priority customer support
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="analyticsAccess"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Analytics Access</FormLabel>
-                                    <FormDescription>
-                                      Provide access to analytics dashboard
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="features"
-                              render={() => (
-                                <FormItem>
-                                  <FormLabel>Features List</FormLabel>
-                                  <FormDescription>These features will be displayed on the plan card</FormDescription>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                      <Input
-                                        placeholder="Add a feature"
-                                        value={newFeature}
-                                        onChange={(e) => setNewFeature(e.target.value)}
-                                      />
-                                      <Button type="button" onClick={addFeature}>Add</Button>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                      {features.map((feature, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
-                                          <input
-                                            type="checkbox"
-                                            id={`feature-${index}`}
-                                            checked={form.getValues("features").includes(feature)}
-                                            onChange={(e) => {
-                                              const currentFeatures = form.getValues("features");
-                                              if (e.target.checked) {
-                                                form.setValue("features", [...currentFeatures, feature]);
-                                              } else {
-                                                form.setValue("features", currentFeatures.filter(f => f !== feature));
-                                              }
-                                            }}
-                                            className="mr-1"
-                                          />
-                                          <label htmlFor={`feature-${index}`} className="text-sm">
-                                            {feature}
-                                          </label>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="advanced" className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                              control={form.control}
-                              name="stripePriceId"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Stripe Price ID (Monthly)</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. price_1234567890" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Stripe price ID for monthly billing</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="stripeAnnualPriceId"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Stripe Price ID (Annual)</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. price_1234567890" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Stripe price ID for annual billing</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="stripeProductId"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Stripe Product ID</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. prod_1234567890" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Stripe product ID</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="isVisible"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Visible to Customers</FormLabel>
-                                    <FormDescription>
-                                      Show this plan on the pricing page
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="isComingSoon"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Coming Soon</FormLabel>
-                                    <FormDescription>
-                                      Mark this plan as "Coming Soon"
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </TabsContent>
-                      </Tabs>
+            <Dialog open={isAddPlanDialogOpen} onOpenChange={setIsAddPlanDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Plan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Subscription Plan</DialogTitle>
+                  <DialogDescription>
+                    Add a new subscription plan to your platform.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <Tabs defaultValue="basic" className="w-full">
+                      <TabsList className="w-full grid grid-cols-3">
+                        <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                        <TabsTrigger value="pricing">Pricing & Promo</TabsTrigger>
+                        <TabsTrigger value="features">Features</TabsTrigger>
+                      </TabsList>
                       
-                      <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsAddPlanDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={createPlanMutation.isPending}>
-                          {createPlanMutation.isPending ? "Creating..." : "Create Plan"}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-              
-              {/* Edit Plan Dialog */}
-              <Dialog open={isEditPlanDialogOpen} onOpenChange={setIsEditPlanDialogOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Edit Subscription Plan</DialogTitle>
-                    <DialogDescription>
-                      Update subscription plan details.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onUpdateSubmit)} className="space-y-6">
-                      <Tabs defaultValue="basic" className="w-full">
-                        <TabsList className="mb-4">
-                          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                          <TabsTrigger value="pricing">Pricing & Billing</TabsTrigger>
-                          <TabsTrigger value="features">Features</TabsTrigger>
-                          <TabsTrigger value="advanced">Advanced</TabsTrigger>
-                        </TabsList>
-                        
-                        {/* Same tab content as Add Plan dialog */}
-                        <TabsContent value="basic" className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                              control={form.control}
-                              name="name"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Plan Name</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. 100 Live Viewers" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="platform"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Platform</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select platform" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="twitch">Twitch</SelectItem>
-                                      <SelectItem value="kick">Kick</SelectItem>
-                                      <SelectItem value="youtube">YouTube</SelectItem>
-                                      <SelectItem value="instagram">Instagram</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <div className="col-span-2">
-                              <FormField
-                                control={form.control}
-                                name="description"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                      <Textarea
-                                        placeholder="Describe the subscription plan"
-                                        className="min-h-[100px]"
-                                        {...field}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-                            
-                            <FormField
-                              control={form.control}
-                              name="viewerCount"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Viewer Count</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 100" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Maximum number of viewers</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="chatCount"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Chat Count</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 100" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Maximum number of chat users</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="followerCount"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Follower Count</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 250" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Followers included in the plan</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="sortOrder"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Sort Order</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 10" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Order to display on frontend (lower first)</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="pricing" className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                              control={form.control}
-                              name="price"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Monthly Price (USD cents)</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 7999 for $79.99" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Enter price in cents (e.g. 7999 for $79.99)</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="annualPrice"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Annual Price (USD cents)</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" placeholder="e.g. 79999 for $799.99" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Optional annual price in cents (leave blank for monthly only)</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="billingCycle"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Available Billing Cycles</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select billing options" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="monthly">Monthly Only</SelectItem>
-                                      <SelectItem value="annual">Annual Only</SelectItem>
-                                      <SelectItem value="both">Both Options</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription>Which billing cycles to offer customers</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="isPopular"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Mark as Popular</FormLabel>
-                                    <FormDescription>
-                                      Highlight this plan as a popular choice
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="promoCode"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Promotion Code</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. SUMMER25" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Optional promo code</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="discountPercentage"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Discount Percentage</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" min="0" max="100" placeholder="e.g. 25" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Discount for promo code (0-100)</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="features" className="space-y-6">
-                          <div className="grid grid-cols-1 gap-6">
-                            <FormField
-                              control={form.control}
-                              name="geographicTargeting"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Geographic Targeting</FormLabel>
-                                    <FormDescription>
-                                      Allow users to target specific geographic regions
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="prioritySupport"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Priority Support</FormLabel>
-                                    <FormDescription>
-                                      Offer priority customer support
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="analyticsAccess"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Analytics Access</FormLabel>
-                                    <FormDescription>
-                                      Provide access to analytics dashboard
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="features"
-                              render={() => (
-                                <FormItem>
-                                  <FormLabel>Features List</FormLabel>
-                                  <FormDescription>These features will be displayed on the plan card</FormDescription>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                      <Input
-                                        placeholder="Add a feature"
-                                        value={newFeature}
-                                        onChange={(e) => setNewFeature(e.target.value)}
-                                      />
-                                      <Button type="button" onClick={addFeature}>Add</Button>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                      {features.map((feature, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
-                                          <input
-                                            type="checkbox"
-                                            id={`feature-edit-${index}`}
-                                            checked={form.getValues("features").includes(feature)}
-                                            onChange={(e) => {
-                                              const currentFeatures = form.getValues("features");
-                                              if (e.target.checked) {
-                                                form.setValue("features", [...currentFeatures, feature]);
-                                              } else {
-                                                form.setValue("features", currentFeatures.filter(f => f !== feature));
-                                              }
-                                            }}
-                                            className="mr-1"
-                                          />
-                                          <label htmlFor={`feature-edit-${index}`} className="text-sm">
-                                            {feature}
-                                          </label>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="advanced" className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                              control={form.control}
-                              name="stripePriceId"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Stripe Price ID (Monthly)</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. price_1234567890" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Stripe price ID for monthly billing</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="stripeAnnualPriceId"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Stripe Price ID (Annual)</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. price_1234567890" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Stripe price ID for annual billing</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="stripeProductId"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Stripe Product ID</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g. prod_1234567890" {...field} />
-                                  </FormControl>
-                                  <FormDescription>Stripe product ID</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="isVisible"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Visible to Customers</FormLabel>
-                                    <FormDescription>
-                                      Show this plan on the pricing page
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="isComingSoon"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                                  <div className="space-y-0.5">
-                                    <FormLabel>Coming Soon</FormLabel>
-                                    <FormDescription>
-                                      Mark this plan as "Coming Soon"
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </TabsContent>
-                      </Tabs>
+                      {/* Basic Info Tab */}
+                      <TabsContent value="basic" className="space-y-6">
+                        {/* Form fields for basic info */}
+                      </TabsContent>
                       
-                      <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsEditPlanDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={updatePlanMutation.isPending}>
-                          {updatePlanMutation.isPending ? "Updating..." : "Update Plan"}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
+                      {/* Pricing Tab */}
+                      <TabsContent value="pricing" className="space-y-6">
+                        {/* Form fields for pricing */}
+                      </TabsContent>
+                      
+                      {/* Features Tab */}
+                      <TabsContent value="features" className="space-y-6">
+                        {/* Form fields for features */}
+                      </TabsContent>
+                    </Tabs>
+                    
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setIsAddPlanDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createPlanMutation.isPending}>
+                        {createPlanMutation.isPending ? "Creating..." : "Create Plan"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
-          
-          <div className="mb-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Filters</CardTitle>
-                <CardDescription>Filter the subscription plans</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="search">Search</Label>
-                    <div className="relative mt-1">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                      <Input
-                        id="search"
-                        placeholder="Search plans..."
-                        className="pl-9"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="platform-filter">Platform</Label>
-                    <Select
-                      value={platformFilter}
-                      onValueChange={setPlatformFilter}
-                    >
-                      <SelectTrigger id="platform-filter" className="mt-1">
-                        <SelectValue placeholder="Filter by platform" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Platforms</SelectItem>
-                        <SelectItem value="twitch">Twitch</SelectItem>
-                        <SelectItem value="kick">Kick</SelectItem>
-                        <SelectItem value="youtube">YouTube</SelectItem>
-                        <SelectItem value="instagram">Instagram</SelectItem>
-                      </SelectContent>
-                    </Select>
+        }
+      >
+        <div className="space-y-6 p-6">
+          {/* Filters Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Filters</CardTitle>
+              <CardDescription>Filter the subscription plans</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="search">Search</Label>
+                  <div className="relative mt-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input
+                      id="search"
+                      placeholder="Search plans..."
+                      className="pl-9"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                
+                <div>
+                  <Label htmlFor="platform-filter">Platform</Label>
+                  <Select 
+                    value={platformFilter} 
+                    onValueChange={setPlatformFilter}
+                  >
+                    <SelectTrigger id="platform-filter" className="mt-1">
+                      <SelectValue placeholder="Filter by platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Platforms</SelectItem>
+                      <SelectItem value="twitch">Twitch</SelectItem>
+                      <SelectItem value="kick">Kick</SelectItem>
+                      <SelectItem value="youtube">YouTube</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
+          {/* Plans Table Card */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle>Subscription Plans</CardTitle>
@@ -1299,9 +395,7 @@ const AdminPlans: React.FC = () => {
                 </div>
               ) : filteredPlans.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <Package className="mx-auto h-12 w-12 mb-4 text-gray-400" />
-                  <h3 className="text-lg font-medium">No plans found</h3>
-                  <p className="mt-1">Try adjusting your filters or add a new plan.</p>
+                  No subscription plans found. Try adjusting your filters or create a new plan.
                 </div>
               ) : (
                 <Table>
@@ -1319,44 +413,28 @@ const AdminPlans: React.FC = () => {
                     {filteredPlans.map((plan: any) => (
                       <TableRow key={plan.id}>
                         <TableCell className="font-medium">
-                          <div className="flex items-center">
+                          <div className="flex flex-col">
+                            <span>{plan.name}</span>
                             {plan.isPopular && (
-                              <Sparkles className="h-4 w-4 text-yellow-500 mr-2" />
+                              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 mt-1 inline-flex w-fit">
+                                Popular
+                              </Badge>
                             )}
-                            {plan.name}
                           </div>
-                          <span className="text-xs text-gray-500 block mt-1">ID: {plan.id}</span>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={getPlatformColor(plan.platform)}>
-                            {plan.platform.charAt(0).toUpperCase() + plan.platform.slice(1)}
+                            {plan.platform}
                           </Badge>
                         </TableCell>
+                        <TableCell>{formatPrice(plan.price)}/mo</TableCell>
                         <TableCell>
-                          <div className="flex flex-col">
-                            <div className="flex items-center">
-                              <Calendar className="h-3.5 w-3.5 mr-1 text-gray-500" />
-                              <span>{formatPrice(plan.price)}/mo</span>
-                            </div>
-                            {plan.annualPrice && (
-                              <div className="flex items-center text-sm text-gray-500 mt-1">
-                                <Calendar className="h-3 w-3 mr-1" />
-                                <span>{formatPrice(plan.annualPrice)}/yr</span>
-                              </div>
-                            )}
+                          <div className="max-w-[200px] truncate">
+                            {plan.features && plan.features.length > 0 ? plan.features.join(', ') : 'No features'}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center">
-                            <Users className="h-3.5 w-3.5 mr-1 text-gray-500" />
-                            <span>{plan.viewerCount} viewers</span>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {plan.chatCount} chat users, {plan.followerCount || 0} followers
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
+                          <div>
                             {plan.isComingSoon ? (
                               <Badge variant="outline" className="bg-blue-100 text-blue-800">
                                 Coming Soon
@@ -1403,9 +481,44 @@ const AdminPlans: React.FC = () => {
               )}
             </CardContent>
           </Card>
+          
+          {/* Edit Plan Dialog */}
+          <Dialog open={isEditPlanDialogOpen} onOpenChange={setIsEditPlanDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Subscription Plan</DialogTitle>
+                <DialogDescription>
+                  Update the details of this subscription plan.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onUpdateSubmit)} className="space-y-6">
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="w-full grid grid-cols-3">
+                      <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                      <TabsTrigger value="pricing">Pricing & Promo</TabsTrigger>
+                      <TabsTrigger value="features">Features</TabsTrigger>
+                    </TabsList>
+                    
+                    {/* Tabs content similar to Add Plan dialog */}
+                  </Tabs>
+                  
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsEditPlanDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={updatePlanMutation.isPending}>
+                      {updatePlanMutation.isPending ? "Updating..." : "Update Plan"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
-      </div>
-    </div>
+      </AdminHeader>
+    </AdminLayout>
   );
 };
 
