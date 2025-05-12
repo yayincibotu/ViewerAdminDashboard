@@ -33,6 +33,20 @@ const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> =
     return <TableRow><TableCell colSpan={5}>Invalid user data</TableCell></TableRow>;
   }
   
+  // Ekstra güvenlik kontrolü - user yapısında gerekli alanlar yoksa hata göster
+  if (!user.username || !user.id || !user.email) {
+    console.error("UserRow received user with missing required fields:", user);
+    return (
+      <TableRow>
+        <TableCell colSpan={5}>
+          <div className="p-2 bg-yellow-50 text-yellow-700 rounded">
+            User data is incomplete. ID: {user.id || 'unknown'}
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  }
+  
   // Debug - hangi kullanıcının render edildiğini logla
   console.log("Rendering user row for:", user.username);
   
@@ -140,7 +154,9 @@ const UserRow: React.FC<{ user: any, onManageUser: (userId: number) => void }> =
         </div>
       </TableCell>
       <TableCell>
-        <span className="text-sm">{format(new Date(user.createdAt), 'MMM d, yyyy')}</span>
+        <span className="text-sm">
+          {user.createdAt ? format(new Date(user.createdAt), 'MMM d, yyyy') : 'Unknown date'}
+        </span>
       </TableCell>
       <TableCell>
         <div className="flex items-center">
@@ -415,20 +431,23 @@ const AdminUsers: React.FC = () => {
   
   // Filter users based on search query and role filter
   const filteredUsers = Array.isArray(users) ? users.filter((user: any) => {
-    if (!user || !user.username) {
+    // Eksik veya hatalı kullanıcı verilerini filtreleme
+    if (!user || !user.username || !user.email || !user.id) {
       console.error("Found invalid user in users array:", user);
       return false;
     }
     
+    // Arama sorgusuna göre filtreleme
     const matchesSearch = searchQuery
       ? (user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchQuery.toLowerCase()))
+         user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         user.id.toString().includes(searchQuery.toLowerCase()))
       : true;
       
+    // Rol filtresine göre filtreleme
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     
-    const matches = matchesSearch && matchesRole;
-    return matches;
+    return matchesSearch && matchesRole;
   }) : [];
   
   // Debug log users before and after filtering
