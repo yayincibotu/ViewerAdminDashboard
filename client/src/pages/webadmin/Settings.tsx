@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoaderCircle, Save, Trash2, Plus, CheckCircle, Info, ShieldAlert, MailCheck, Zap, RefreshCw } from 'lucide-react';
 import AdminLayout from '@/components/dashboard/AdminLayout';
+import AdminHeader from '@/components/dashboard/AdminHeader';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
