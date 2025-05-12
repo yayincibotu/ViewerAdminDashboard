@@ -21,76 +21,7 @@ import { format } from 'date-fns';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
-// İleri düzey kullanıcı işlemleri için mutasyonlar ve bileşenler
-
-// Admin rolü toggle bileşeni
-const AdminToggleButton = ({ user }: { user: any }) => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-  
-  const toggleAdminMutation = useMutation({
-    mutationFn: async () => {
-      const newRole = user.role === 'admin' ? 'user' : 'admin';
-      const res = await apiRequest('PUT', `/api/admin/users/${user.id}`, { role: newRole });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
-      const actionType = user.role === 'admin' ? 'removed from' : 'added to';
-      toast({
-        title: 'Admin role updated',
-        description: `Admin privileges ${actionType} ${user.username}.`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error updating role',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  });
-  
-  return user.role !== 'admin' ? (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => {
-        if (window.confirm(`Make ${user.username} an admin?`)) {
-          toggleAdminMutation.mutate();
-        }
-      }}
-      className="flex items-center gap-1 px-2"
-      disabled={toggleAdminMutation.isPending}
-    >
-      {toggleAdminMutation.isPending ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      ) : (
-        <ShieldAlert className="h-3.5 w-3.5" />
-      )}
-      <span>Make Admin</span>
-    </Button>
-  ) : (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => {
-        if (window.confirm(`Remove admin privileges from ${user.username}?`)) {
-          toggleAdminMutation.mutate();
-        }
-      }}
-      className="flex items-center gap-1 px-2"
-      disabled={toggleAdminMutation.isPending}
-    >
-      {toggleAdminMutation.isPending ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      ) : (
-        <ShieldAlert className="h-3.5 w-3.5" />
-      )}
-      <span>Remove Admin</span>
-    </Button>
-  );
-};
+// İleri düzey kullanıcı işlemleri için utility fonksiyonlar
 
 // Kullanıcı e-posta doğrulama
 const useVerifyEmailMutation = (userId: number, username: string) => {
@@ -580,7 +511,15 @@ const AdminUsers: React.FC = () => {
                                   <span>Manage</span>
                                 </Button>
                                 
-                                <AdminToggleButton user={user} />
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleToggleAdmin(user.id, user.role)}
+                                  className="flex items-center gap-1 px-2"
+                                >
+                                  <ShieldAlert className="h-3.5 w-3.5" />
+                                  <span>{user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}</span>
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
