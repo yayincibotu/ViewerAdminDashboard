@@ -266,6 +266,9 @@ const AdminUsers: React.FC = () => {
     queryKey: ['/api/admin/users'],
   });
   
+  // Debug log
+  console.log("Users data:", users);
+  
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
