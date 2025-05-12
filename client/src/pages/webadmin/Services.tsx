@@ -519,83 +519,85 @@ const AdminServices: React.FC = () => {
           </CardHeader>
           
           <CardContent>
-            <TabsContent value="plans" className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Platform</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Viewers</TableHead>
-                    <TableHead>Features</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPlans.length === 0 ? (
+            <Tabs defaultValue="plans">
+              <TabsContent value="plans" className="space-y-4">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
-                        <div className="flex flex-col items-center justify-center">
-                          <Package className="h-8 w-8 text-muted-foreground mb-2" />
-                          <h3 className="text-lg font-medium">No plans found</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {searchQuery || platformFilter !== 'all'
-                              ? "Try adjusting your search or filter criteria"
-                              : "Add a new subscription plan to get started"}
-                          </p>
-                        </div>
-                      </TableCell>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Platform</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Viewers</TableHead>
+                      <TableHead>Features</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredPlans.map((plan) => (
-                      <TableRow key={plan.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {plan.name}
-                            {plan.isPopular && (
-                              <Badge variant="secondary">Popular</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {platforms.find(p => p.slug === plan.platform)?.name || plan.platform}
-                        </TableCell>
-                        <TableCell>${plan.price}/mo</TableCell>
-                        <TableCell>{plan.viewerCount}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {plan.features.slice(0, 2).map((feature, idx) => (
-                              <Badge key={idx} variant="outline" className="whitespace-nowrap">
-                                {feature}
-                              </Badge>
-                            ))}
-                            {plan.features.length > 2 && (
-                              <Badge variant="outline">+{plan.features.length - 2} more</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={plan.isVisible ? "success" : "secondary"}>
-                            {plan.isVisible ? "Visible" : "Hidden"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end items-center gap-2">
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPlans.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          <div className="flex flex-col items-center justify-center">
+                            <Package className="h-8 w-8 text-muted-foreground mb-2" />
+                            <h3 className="text-lg font-medium">No plans found</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {searchQuery || platformFilter !== 'all'
+                                ? "Try adjusting your search or filter criteria"
+                                : "Add a new subscription plan to get started"}
+                            </p>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
+                    ) : (
+                      filteredPlans.map((plan) => (
+                        <TableRow key={plan.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {plan.name}
+                              {plan.isPopular && (
+                                <Badge variant="secondary">Popular</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {platforms.find(p => p.slug === plan.platform)?.name || plan.platform}
+                          </TableCell>
+                          <TableCell>${plan.price}/mo</TableCell>
+                          <TableCell>{plan.viewerCount}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {plan.features.slice(0, 2).map((feature, idx) => (
+                                <Badge key={idx} variant="outline" className="whitespace-nowrap">
+                                  {feature}
+                                </Badge>
+                              ))}
+                              {plan.features.length > 2 && (
+                                <Badge variant="outline">+{plan.features.length - 2} more</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={plan.isVisible ? "default" : "secondary"} className={plan.isVisible ? "bg-green-500 hover:bg-green-600" : ""}>
+                              {plan.isVisible ? "Visible" : "Hidden"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end items-center gap-2">
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
