@@ -581,7 +581,7 @@ const AdminUsers: React.FC = () => {
             <div className="relative w-full md:w-96">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
               <Input
-                placeholder="Search users..."
+                placeholder="Search by username, email or ID..."
                 className="pl-8"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -590,24 +590,31 @@ const AdminUsers: React.FC = () => {
                 <button 
                   className="absolute right-2 top-2.5"
                   onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
                 >
                   <X className="h-4 w-4 text-gray-500" />
                 </button>
               )}
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="user">Users Only</SelectItem>
-                  <SelectItem value="admin">Admins Only</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="user">Users Only</SelectItem>
+                    <SelectItem value="admin">Admins Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="bg-gray-100 text-gray-700 text-xs rounded-full px-2.5 py-1 hidden md:block">
+                {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
+              </div>
             </div>
           </div>
           
