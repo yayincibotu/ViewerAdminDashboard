@@ -42,7 +42,9 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  await throwIfResNotOk(res);
+  // Copy the response to check if it's ok without consuming the body
+  const clonedRes = res.clone();
+  await throwIfResNotOk(clonedRes);
   return res;
 }
 
