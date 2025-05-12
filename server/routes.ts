@@ -1246,6 +1246,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Password reset endpoint - TEMPORARY, REMOVE IN PRODUCTION
+  app.post("/api/reset-admin-password", async (req, res) => {
+    try {
+      // Reset admin user password to "admin123"
+      const adminUser = await storage.getUserByUsername("admin");
+      
+      if (!adminUser) {
+        return res.status(404).json({ message: "Admin user not found" });
+      }
+      
+      const hashedPassword = await hashPassword("admin123");
+      
+      await db.update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.id, adminUser.id));
+      
+      console.log("Admin password has been reset");
+      
+      res.status(200).json({ message: "Admin password has been reset to 'admin123'" });
+    } catch (error) {
+      console.error("Error resetting admin password:", error);
+      res.status(500).json({ message: "Error resetting admin password" });
+    }
+  });
+  
   // Admin API routes
   // Admin middleware to check admin permissions
   const isAdmin = (req: Request, res: Response, next: NextFunction) => {
