@@ -35,17 +35,21 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export const subscriptionPlans = pgTable("subscription_plans", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  price: integer("price").notNull(), // Price in cents
+  price: integer("price").notNull(), // Price in cents (default monthly price)
+  dailyPrice: integer("daily_price"), // Daily price in cents (optional)
+  weeklyPrice: integer("weekly_price"), // Weekly price in cents (optional)
   annualPrice: integer("annual_price"), // Annual price in cents (optional)
-  billingCycle: text("billing_cycle").default("monthly"), // monthly or annual
+  billingCycle: text("billing_cycle").default("monthly"), // daily, weekly, monthly, annual
   viewerCount: integer("viewer_count").notNull(),
   chatCount: integer("chat_count").notNull(),
   followerCount: integer("follower_count").notNull(),
   description: text("description").notNull(),
   features: text("features").array().notNull(),
-  stripePriceId: text("stripe_price_id"),
+  stripePriceId: text("stripe_price_id"), // Monthly price ID
   stripeProductId: text("stripe_product_id"),
-  stripeAnnualPriceId: text("stripe_annual_price_id"),
+  stripeDailyPriceId: text("stripe_daily_price_id"), // Daily price ID
+  stripeWeeklyPriceId: text("stripe_weekly_price_id"), // Weekly price ID
+  stripeAnnualPriceId: text("stripe_annual_price_id"), // Annual price ID
   isPopular: boolean("is_popular").default(false),
   platform: text("platform").notNull(),
   geographicTargeting: boolean("geographic_targeting").default(false),
@@ -70,9 +74,13 @@ export const userSubscriptions = pgTable("user_subscriptions", {
   userId: integer("user_id").notNull(),
   planId: integer("plan_id").notNull(),
   status: text("status").notNull(),
+  billingCycle: text("billing_cycle").default("monthly"), // daily, weekly, monthly, annual
+  currentPrice: integer("current_price").notNull(), // Current price being charged
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
+  nextBillingDate: timestamp("next_billing_date"), // For recurring payments
   stripeSubscriptionId: text("stripe_subscription_id"),
+  stripeCurrentPriceId: text("stripe_current_price_id"), // Current Stripe price ID being used
   twitchChannel: text("twitch_channel"),
   isActive: boolean("is_active").default(false),
   lastActivated: timestamp("last_activated"),
