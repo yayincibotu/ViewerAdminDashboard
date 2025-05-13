@@ -800,19 +800,20 @@ const AdminServices: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
+                      <TableHead>Plan Adı</TableHead>
                       <TableHead>Platform</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Viewers</TableHead>
-                      <TableHead>Features</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Fatura Dönemi</TableHead>
+                      <TableHead>Fiyatlar</TableHead>
+                      <TableHead>İzleyici</TableHead>
+                      <TableHead>Özellikler</TableHead>
+                      <TableHead>Durum</TableHead>
+                      <TableHead className="text-right">İşlemler</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredPlans.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
+                        <TableCell colSpan={8} className="text-center py-8">
                           <div className="flex flex-col items-center justify-center">
                             <Package className="h-8 w-8 text-muted-foreground mb-2" />
                             <h3 className="text-lg font-medium">No plans found</h3>
@@ -838,7 +839,22 @@ const AdminServices: React.FC = () => {
                           <TableCell>
                             {platforms.find(p => p.slug === plan.platform)?.name || plan.platform}
                           </TableCell>
-                          <TableCell>${plan.price}/mo</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {plan.billingCycle === 'daily' ? 'Günlük' : 
+                              plan.billingCycle === 'weekly' ? 'Haftalık' : 
+                              plan.billingCycle === 'monthly' ? 'Aylık' : 
+                              plan.billingCycle === 'annual' ? 'Yıllık' : 'Aylık'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1 text-xs">
+                              {plan.dailyPrice && <span>Günlük: {plan.dailyPrice} ₺</span>}
+                              {plan.weeklyPrice && <span>Haftalık: {plan.weeklyPrice} ₺</span>}
+                              <span className="font-semibold">Aylık: {plan.price} ₺</span>
+                              {plan.annualPrice && <span>Yıllık: {plan.annualPrice} ₺</span>}
+                            </div>
+                          </TableCell>
                           <TableCell>{plan.viewerCount}</TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
