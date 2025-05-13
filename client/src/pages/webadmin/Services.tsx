@@ -204,32 +204,37 @@ const AdminServices: React.FC = () => {
         } catch (e) {
           // If JSON parsing fails, return a generic error based on status code
           if (res.status === 409) {
-            throw new Error("Cannot delete this plan because it has active subscribers");
+            throw new Error("Bu planı silemezsiniz çünkü aktif aboneleri var. Lütfen önce aboneleri başka bir plana taşıyın veya aboneliklerini iptal edin.");
           } else {
-            throw new Error(`Server error: ${res.status}`);
+            throw new Error(`Sunucu hatası: ${res.status}`);
           }
         }
         
         // If server returns 409 Conflict (plan has active subscriptions)
         if (res.status === 409) {
-          throw new Error(data.message || "Cannot delete this plan because it has active subscribers");
+          // Format a more specific error with subscription count if available
+          if (data.activeSubscriptions) {
+            throw new Error(`Bu planı silemezsiniz çünkü ${data.activeSubscriptions} aktif abonesi var. Lütfen önce aboneleri başka bir plana taşıyın veya aboneliklerini iptal edin.`);
+          } else {
+            throw new Error(data.message || "Bu planı silemezsiniz çünkü aktif aboneleri var. Lütfen önce aboneleri başka bir plana taşıyın veya aboneliklerini iptal edin.");
+          }
         }
         
         // For other error responses
-        throw new Error(data.message || "An error occurred while deleting the plan");
+        throw new Error(data.message || "Planı silerken bir hata oluştu");
       } catch (error: any) {
         // Catch and rethrow to ensure consistent error format
         if (error instanceof Error) {
           throw error;
         } else {
-          throw new Error("An unexpected error occurred");
+          throw new Error("Beklenmeyen bir hata oluştu");
         }
       }
     },
     onSuccess: () => {
       toast({
-        title: "Plan deleted",
-        description: "Subscription plan has been deleted successfully."
+        title: "Plan silindi",
+        description: "Abonelik planı başarıyla silindi."
       });
       setIsDeleteDialogOpen(false);
       setSelectedPlan(null);
@@ -238,7 +243,7 @@ const AdminServices: React.FC = () => {
     onError: (error: Error) => {
       setIsDeleteDialogOpen(false); // Close the dialog even on error
       toast({
-        title: "Error deleting plan",
+        title: "Plan silme hatası",
         description: error.message,
         variant: "destructive"
       });
@@ -1002,21 +1007,20 @@ const AdminServices: React.FC = () => {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the 
-              subscription plan and remove all associated data.
+              Bu işlem geri alınamaz. Abonelik planı kalıcı olarak silinecek ve 
+              ilişkili tüm veriler kaldırılacaktır.
             </AlertDialogDescription>
             <div className="mt-3">
               <div className="font-medium text-amber-600">
-                Note: Plans with active subscribers cannot be deleted. You must
-                either migrate subscribers to a different plan or cancel their 
-                subscriptions first.
+                Not: Aktif abonesi olan planlar silinemez. Önce aboneleri başka 
+                bir plana taşımanız veya aboneliklerini iptal etmeniz gerekir.
               </div>
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDeletePlan}
               className="bg-red-600 hover:bg-red-700"
@@ -1025,7 +1029,7 @@ const AdminServices: React.FC = () => {
               {deletePlanMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Delete
+              Sil
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
