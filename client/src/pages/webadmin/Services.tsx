@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -25,10 +25,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 // Schema for creating/editing subscription plan
 const planFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  price: z.string().transform(val => parseInt(val)),
-  viewerCount: z.string().transform(val => parseInt(val)),
-  chatCount: z.string().transform(val => parseInt(val)),
-  followerCount: z.string().transform(val => parseInt(val)),
+  price: z.coerce.number().min(0, "Price must be a positive number"),
+  viewerCount: z.coerce.number().min(0, "Viewer count must be a positive number"),
+  chatCount: z.coerce.number().min(0, "Chat count must be a positive number"),
+  followerCount: z.coerce.number().min(0, "Follower count must be a positive number"),
   description: z.string().min(5, "Description must be at least 5 characters"),
   stripePriceId: z.string().optional(),
   platform: z.string(),
@@ -118,15 +118,16 @@ const AdminServices: React.FC = () => {
     resolver: zodResolver(planFormSchema),
     defaultValues: {
       name: "",
-      price: "0",
-      viewerCount: "0",
-      chatCount: "0",
-      followerCount: "0",
+      price: 0,
+      viewerCount: 0,
+      chatCount: 0,
+      followerCount: 0,
       description: "",
       stripePriceId: "",
       platform: "twitch",
       isPopular: false,
       geographicTargeting: false,
+      isVisible: true,
       features: []
     }
   });
@@ -184,23 +185,46 @@ const AdminServices: React.FC = () => {
   // Delete subscription plan mutation
   const deletePlanMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/admin/subscription-plans/${id}`);
-      
-      // For 204 No Content response (success case)
-      if (res.status === 204) {
-        return { success: true };
+      try {
+        const res = await apiRequest("DELETE", `/api/admin/subscription-plans/${id}`);
+        
+        // For 204 No Content response (success case)
+        if (res.status === 204) {
+          return { success: true };
+        }
+        
+        // Clone the response before reading the body
+        // This prevents the "body stream already read" error
+        const clonedResponse = res.clone();
+        
+        // Try to parse the JSON response
+        let data;
+        try {
+          data = await res.json();
+        } catch (e) {
+          // If JSON parsing fails, return a generic error based on status code
+          if (res.status === 409) {
+            throw new Error("Cannot delete this plan because it has active subscribers");
+          } else {
+            throw new Error(`Server error: ${res.status}`);
+          }
+        }
+        
+        // If server returns 409 Conflict (plan has active subscriptions)
+        if (res.status === 409) {
+          throw new Error(data.message || "Cannot delete this plan because it has active subscribers");
+        }
+        
+        // For other error responses
+        throw new Error(data.message || "An error occurred while deleting the plan");
+      } catch (error: any) {
+        // Catch and rethrow to ensure consistent error format
+        if (error instanceof Error) {
+          throw error;
+        } else {
+          throw new Error("An unexpected error occurred");
+        }
       }
-      
-      // For error responses with JSON content
-      const data = await res.json();
-      
-      // If server returns 409 Conflict (plan has active subscriptions)
-      if (res.status === 409) {
-        throw new Error(data.message || "Cannot delete this plan because it has active subscribers");
-      }
-      
-      // For other error responses
-      throw new Error(data.message || "An error occurred while deleting the plan");
     },
     onSuccess: () => {
       toast({
@@ -977,17 +1001,17 @@ const AdminServices: React.FC = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                This action cannot be undone. This will permanently delete the 
-                subscription plan and remove all associated data.
-              </p>
-              <p className="font-medium text-amber-600">
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the 
+              subscription plan and remove all associated data.
+            </AlertDialogDescription>
+            <div className="mt-3">
+              <div className="font-medium text-amber-600">
                 Note: Plans with active subscribers cannot be deleted. You must
                 either migrate subscribers to a different plan or cancel their 
                 subscriptions first.
-              </p>
-            </AlertDialogDescription>
+              </div>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
