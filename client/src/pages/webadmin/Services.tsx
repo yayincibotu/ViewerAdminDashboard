@@ -271,7 +271,7 @@ const AdminServices: React.FC = () => {
   };
   
   // Submit plan form
-  const onSubmit = (data: PlanFormValues) => {
+  const onSubmit: SubmitHandler<PlanFormValues> = (data) => {
     if (selectedPlan) {
       updatePlanMutation.mutate({ ...data, id: selectedPlan.id });
     } else {
@@ -286,18 +286,20 @@ const AdminServices: React.FC = () => {
     if (plan.features && Array.isArray(plan.features)) {
       setFeatures(plan.features);
     }
+    
+    // Explicitly cast numeric fields to numbers for the form
     form.reset({
       name: plan.name,
-      price: plan.price,
+      price: Number(plan.price),
       platform: plan.platform,
       description: plan.description,
-      viewerCount: plan.viewerCount,
-      chatCount: plan.chatCount,
-      followerCount: plan.followerCount,
-      isPopular: plan.isPopular,
-      geographicTargeting: plan.geographicTargeting,
-      isVisible: plan.isVisible,
-      features: plan.features || []
+      viewerCount: Number(plan.viewerCount),
+      chatCount: Number(plan.chatCount),
+      followerCount: Number(plan.followerCount),
+      isPopular: Boolean(plan.isPopular),
+      geographicTargeting: Boolean(plan.geographicTargeting),
+      isVisible: Boolean(plan.isVisible),
+      features: Array.isArray(plan.features) ? plan.features : []
     });
     setIsEditPlanDialogOpen(true);
   };
