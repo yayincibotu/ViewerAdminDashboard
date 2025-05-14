@@ -13,7 +13,29 @@ const EMAIL_VERIFICATION = {
   RESET_PERIOD_MS: 3600000,  // 1 hour reset period
   MAX_ATTEMPTS: 5,           // 5 attempts maximum
   STORAGE_KEY: 'email_verification_last_sent',
-  DISMISSED_KEY: 'email_verification_dismissed' // New key for persisting dismiss state
+  DISMISSED_KEY: 'email_verification_dismissed' // Key for persisting dismiss state
+};
+
+// Function to safely get item from localStorage
+const safeGetLocalStorage = (key: string, defaultValue = null) => {
+  try {
+    const value = localStorage.getItem(key);
+    return value !== null ? value : defaultValue;
+  } catch (e) {
+    console.error(`Error getting ${key} from localStorage:`, e);
+    return defaultValue;
+  }
+};
+
+// Function to safely set item in localStorage
+const safeSetLocalStorage = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    console.error(`Error setting ${key} in localStorage:`, e);
+    return false;
+  }
 };
 
 const EmailVerificationTopbar = () => {
@@ -22,38 +44,40 @@ const EmailVerificationTopbar = () => {
   const [isAnimating, setIsAnimating] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
+  const [shouldShow, setShouldShow] = useState(false);
   
   // Load dismissed state from localStorage
   const [dismissed, setDismissed] = useState(() => {
-    try {
-      return localStorage.getItem(EMAIL_VERIFICATION.DISMISSED_KEY) === 'true';
-    } catch (e) {
-      return false;
-    }
+    return safeGetLocalStorage(EMAIL_VERIFICATION.DISMISSED_KEY) === 'true';
   });
+
+  // Effect to determine if component should show
+  useEffect(() => {
+    // Only show if:
+    // 1. User is logged in
+    // 2. User email is not verified 
+    // 3. Banner hasn't been dismissed
+    if (user && !user.isEmailVerified && !dismissed) {
+      setShouldShow(true);
+    } else {
+      setShouldShow(false);
+    }
+  }, [user, dismissed]);
   
   // Persist dismissed state to localStorage when it changes
   useEffect(() => {
     if (dismissed) {
-      try {
-        localStorage.setItem(EMAIL_VERIFICATION.DISMISSED_KEY, 'true');
-      } catch (e) {
-        console.error('Failed to save dismissed state to localStorage:', e);
-      }
+      safeSetLocalStorage(EMAIL_VERIFICATION.DISMISSED_KEY, 'true');
     }
   }, [dismissed]);
 
-  // Don't run any other effects if the component is dismissed or user is not logged in
-  // or email is already verified
-  if (!user || user.isEmailVerified || dismissed) {
-    return null;
-  }
-
-  // Check if user is in cooldown period
+  // Handle the cooldown period check
   useEffect(() => {
+    // Don't run if we shouldn't show the component
+    if (!shouldShow) return;
+    
     const checkCooldown = () => {
-      // Check client-side timestamp
-      const lastSentTime = localStorage.getItem(EMAIL_VERIFICATION.STORAGE_KEY);
+      const lastSentTime = safeGetLocalStorage(EMAIL_VERIFICATION.STORAGE_KEY);
       
       if (lastSentTime) {
         const elapsed = Date.now() - parseInt(lastSentTime, 10);
@@ -64,7 +88,11 @@ const EmailVerificationTopbar = () => {
         } else {
           // Also check if there's a server restriction before removing local cooldown
           // Only reset the client state if both client and server cooldowns are expired
-          localStorage.removeItem(EMAIL_VERIFICATION.STORAGE_KEY);
+          try {
+            localStorage.removeItem(EMAIL_VERIFICATION.STORAGE_KEY);
+          } catch (e) {
+            console.error('Error removing item from localStorage:', e);
+          }
           setTimeRemaining(null);
           setCountdown(0);
         }
@@ -74,39 +102,41 @@ const EmailVerificationTopbar = () => {
     checkCooldown();
     const interval = setInterval(checkCooldown, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [shouldShow]);
   
-  // Check for server rate limits on component mount (reload won't clear server restrictions)
+  // Check for server rate limits
   useEffect(() => {
-    // Only check if the user is not already in cooldown
-    if (timeRemaining === null) {
-      // Make a lightweight request to check rate limit status
-      fetch('/api/verification-status')
-        .then(res => {
-          if (res.status === 429) {
-            // We're rate limited by the server
-            return res.json().then(data => {
-              if (data.remainingSeconds) {
-                setTimeRemaining(data.remainingSeconds);
-                setCountdown(data.remainingSeconds);
-                // Update localStorage to match server state
-                localStorage.setItem(
-                  EMAIL_VERIFICATION.STORAGE_KEY, 
-                  (Date.now() - (EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString()
-                );
-              }
-            });
-          }
-          return null;
-        })
-        .catch(() => {
-          // Ignore errors, default to allowing verification emails
-        });
-    }
-  }, [timeRemaining]);
+    // Don't run if we shouldn't show the component
+    if (!shouldShow || timeRemaining !== null) return;
+    
+    // Make a lightweight request to check rate limit status
+    fetch('/api/verification-status')
+      .then(res => {
+        if (res.status === 429) {
+          // We're rate limited by the server
+          return res.json().then(data => {
+            if (data.remainingSeconds) {
+              setTimeRemaining(data.remainingSeconds);
+              setCountdown(data.remainingSeconds);
+              // Update localStorage to match server state
+              safeSetLocalStorage(
+                EMAIL_VERIFICATION.STORAGE_KEY, 
+                (Date.now() - (EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString()
+              );
+            }
+          });
+        }
+        return null;
+      })
+      .catch(() => {
+        // Ignore errors, default to allowing verification emails
+      });
+  }, [shouldShow, timeRemaining]);
 
   // Countdown timer for cooldown period
   useEffect(() => {
+    if (!shouldShow) return;
+    
     if (countdown > 0) {
       const timer = setTimeout(() => {
         setCountdown(countdown - 1);
@@ -116,22 +146,24 @@ const EmailVerificationTopbar = () => {
     } else if (countdown === 0 && timeRemaining !== null) {
       setTimeRemaining(null);
     }
-  }, [countdown, timeRemaining]);
+  }, [countdown, timeRemaining, shouldShow]);
 
   // Animation effect
   useEffect(() => {
+    if (!shouldShow) return;
+    
     const interval = setInterval(() => {
       setIsAnimating(prev => !prev);
     }, 2000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [shouldShow]);
 
-  // Email verification mutation - defined outside of conditional rendering
+  // Email verification mutation
   const resendVerificationMutation = useMutation({
     mutationFn: async () => {
       // Set the last sent timestamp
-      localStorage.setItem(EMAIL_VERIFICATION.STORAGE_KEY, Date.now().toString());
+      safeSetLocalStorage(EMAIL_VERIFICATION.STORAGE_KEY, Date.now().toString());
       setTimeRemaining(EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS / 1000);
       setCountdown(EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS / 1000);
       
@@ -168,7 +200,7 @@ const EmailVerificationTopbar = () => {
             // Set the countdown based on server response
             setTimeRemaining(data.remainingSeconds);
             setCountdown(data.remainingSeconds);
-            localStorage.setItem(EMAIL_VERIFICATION.STORAGE_KEY, 
+            safeSetLocalStorage(EMAIL_VERIFICATION.STORAGE_KEY, 
               (Date.now() - (EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString());
             
             toast({
@@ -196,7 +228,11 @@ const EmailVerificationTopbar = () => {
       }
       
       // Default error handling
-      localStorage.removeItem(EMAIL_VERIFICATION.STORAGE_KEY);
+      try {
+        localStorage.removeItem(EMAIL_VERIFICATION.STORAGE_KEY);
+      } catch (e) {
+        console.error('Error removing item from localStorage:', e);
+      }
       setTimeRemaining(null);
       setCountdown(0);
       
@@ -212,12 +248,13 @@ const EmailVerificationTopbar = () => {
   // Handle dismiss topbar
   const handleDismiss = () => {
     setDismissed(true);
-    try {
-      localStorage.setItem(EMAIL_VERIFICATION.DISMISSED_KEY, 'true');
-    } catch (e) {
-      console.error('Failed to save dismissed state to localStorage:', e);
-    }
+    safeSetLocalStorage(EMAIL_VERIFICATION.DISMISSED_KEY, 'true');
   };
+  
+  // Don't render anything if we shouldn't show the component
+  if (!shouldShow) {
+    return null;
+  }
 
   return (
     <div className="w-full bg-gradient-to-r from-red-500 to-amber-500 shadow-md">
