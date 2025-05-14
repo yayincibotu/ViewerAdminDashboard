@@ -548,7 +548,7 @@ const Billing = () => {
                       <div className="space-y-4">
                         <div className="flex justify-between items-baseline">
                           <div className="text-2xl font-bold">
-                            ${((sub.plan?.price || 0) / 100).toFixed(2)}
+                            ${sub.plan?.price ? Number(sub.plan.price).toFixed(2) : "0.00"}
                             <span className="text-gray-500 text-sm font-normal">
                               /{sub.plan?.billingCycle || "month"}
                             </span>
@@ -919,7 +919,7 @@ const Billing = () => {
               <div className="mb-4 p-4 bg-gray-50 rounded-md">
                 <h3 className="font-medium text-lg">{subscriptionToCancel.plan?.name}</h3>
                 <p className="text-sm text-gray-500">
-                  ${((subscriptionToCancel.plan?.price || 0) / 100).toFixed(2)}/{subscriptionToCancel.plan?.billingCycle || "month"}
+                  ${subscriptionToCancel.plan?.price ? Number(subscriptionToCancel.plan.price).toFixed(2) : "0.00"}/{subscriptionToCancel.plan?.billingCycle || "month"}
                 </p>
                 
                 {subscriptionToCancel.subscription.endDate && (

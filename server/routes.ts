@@ -1530,9 +1530,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Instead of deleting, update status to cancelled and keep it active until end of billing period
       // Calculate the end date (if no endDate is set, set one month from now)
       const subscription_plan = await storage.getSubscriptionPlan(subscription.planId);
-      let endDate = subscription.endDate;
       
-      if (!endDate) {
+      // Default to one month from now if plan or billing cycle info is missing
+      const defaultEndDate = new Date();
+      defaultEndDate.setDate(defaultEndDate.getDate() + 30);
+      
+      let endDate = subscription.endDate || defaultEndDate;
+      
+      // If we have plan info, calculate more precisely based on billing cycle
+      if (subscription_plan && subscription_plan.billingCycle) {
         // If no endDate is set, calculate based on billing cycle
         const billingPeriodDays = 
           subscription_plan.billingCycle === 'day' ? 1 :
@@ -1540,8 +1546,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscription_plan.billingCycle === 'month' ? 30 :
           subscription_plan.billingCycle === 'year' ? 365 : 30;
           
-        const today = new Date();
-        endDate = new Date(today.setDate(today.getDate() + billingPeriodDays));
+        // Only set a new end date if one doesn't exist
+        if (!subscription.endDate) {
+          const today = new Date();
+          endDate = new Date(today.setDate(today.getDate() + billingPeriodDays));
+        }
       }
       
       const updatedSubscription = await storage.updateUserSubscription(subscriptionId, {
