@@ -134,9 +134,9 @@ const SortableTableRow: React.FC<SortableRowProps> = ({ id, plan, onEdit, onDele
       <TableCell>
         <div className="flex flex-col">
           {plan.price > 0 && <span>Aylık: {plan.price} TL</span>}
-          {plan.dailyPrice > 0 && <span>Günlük: {plan.dailyPrice} TL</span>}
-          {plan.weeklyPrice > 0 && <span>Haftalık: {plan.weeklyPrice} TL</span>}
-          {plan.annualPrice > 0 && <span>Yıllık: {plan.annualPrice} TL</span>}
+          {plan.dailyPrice && plan.dailyPrice > 0 && <span>Günlük: {plan.dailyPrice} TL</span>}
+          {plan.weeklyPrice && plan.weeklyPrice > 0 && <span>Haftalık: {plan.weeklyPrice} TL</span>}
+          {plan.annualPrice && plan.annualPrice > 0 && <span>Yıllık: {plan.annualPrice} TL</span>}
         </div>
       </TableCell>
       <TableCell>{plan.viewerCount}</TableCell>
@@ -153,7 +153,7 @@ const SortableTableRow: React.FC<SortableRowProps> = ({ id, plan, onEdit, onDele
         </div>
       </TableCell>
       <TableCell>
-        <Badge variant={plan.isVisible ? "success" : "destructive"}>
+        <Badge variant={plan.isVisible ? "outline" : "destructive"} className={plan.isVisible ? "bg-green-100 text-green-800" : ""}>
           {plan.isVisible ? "Aktif" : "Gizli"}
         </Badge>
       </TableCell>
@@ -331,7 +331,7 @@ const AdminServices: React.FC = () => {
   // Reorder plans mutation
   const reorderPlansMutation = useMutation({
     mutationFn: async (planOrders: { id: number, sortOrder: number }[]) => {
-      const res = await apiRequest("POST", "/api/admin/subscription-plans/reorder", { plans: planOrders });
+      const res = await apiRequest("PATCH", "/api/admin/subscription-plans/reorder", { planOrders });
       return await res.json();
     },
     onSuccess: () => {
@@ -467,18 +467,18 @@ const AdminServices: React.FC = () => {
   // Add a feature to the list
   const addFeature = () => {
     if (newFeature.trim()) {
-      setFeatures([...features, newFeature.trim()]);
+      setFeatures([...features, newFeature]);
       setNewFeature('');
     }
   };
   
   // Remove a feature from the list
-  const removeFeature = (feature: string) => {
-    setFeatures(features.filter(f => f !== feature));
+  const removeFeature = (index: number) => {
+    setFeatures(features.filter((f, i) => i !== index));
   };
   
-  // Submit plan form
-  const onSubmit: SubmitHandler<PlanFormValues> = (data) => {
+  // Handle form submission
+  const onSubmit = (data: PlanFormValues) => {
     if (selectedPlan) {
       updatePlanMutation.mutate({ ...data, id: selectedPlan.id });
     } else {
@@ -486,712 +486,410 @@ const AdminServices: React.FC = () => {
     }
   };
   
-  // Handle edit plan button click
+  // Open edit plan dialog
   const handleEditPlan = (plan: Plan) => {
     setSelectedPlan(plan);
-    // Update features state with the plan features
-    if (plan.features && Array.isArray(plan.features)) {
-      setFeatures(plan.features);
-    }
+    setFeatures(plan.features);
     
-    // Explicitly cast numeric fields to numbers for the form
+    // Reset form with plan data
     form.reset({
       name: plan.name,
-      price: Number(plan.price),
-      dailyPrice: plan.dailyPrice ? Number(plan.dailyPrice) : undefined,
-      weeklyPrice: plan.weeklyPrice ? Number(plan.weeklyPrice) : undefined, 
-      annualPrice: plan.annualPrice ? Number(plan.annualPrice) : undefined,
-      billingCycle: (plan.billingCycle as "daily" | "weekly" | "monthly" | "annual") || "monthly",
-      platform: plan.platform,
+      price: plan.price,
+      dailyPrice: plan.dailyPrice || 0,
+      weeklyPrice: plan.weeklyPrice || 0,
+      annualPrice: plan.annualPrice || 0,
+      billingCycle: plan.billingCycle as any,
+      viewerCount: plan.viewerCount,
+      chatCount: plan.chatCount,
+      followerCount: plan.followerCount,
       description: plan.description,
-      viewerCount: Number(plan.viewerCount),
-      chatCount: Number(plan.chatCount),
-      followerCount: Number(plan.followerCount),
-      stripePriceId: plan.stripePriceId || "",
-      stripeDailyPriceId: plan.stripeDailyPriceId || "",
-      stripeWeeklyPriceId: plan.stripeWeeklyPriceId || "",
-      stripeAnnualPriceId: plan.stripeAnnualPriceId || "",
-      isPopular: Boolean(plan.isPopular),
-      geographicTargeting: Boolean(plan.geographicTargeting),
-      isVisible: Boolean(plan.isVisible),
-      features: Array.isArray(plan.features) ? plan.features : []
+      stripePriceId: plan.stripePriceId || '',
+      stripeDailyPriceId: plan.stripeDailyPriceId || '',
+      stripeWeeklyPriceId: plan.stripeWeeklyPriceId || '',
+      stripeAnnualPriceId: plan.stripeAnnualPriceId || '',
+      platform: plan.platform,
+      isPopular: plan.isPopular,
+      geographicTargeting: plan.geographicTargeting,
+      isVisible: plan.isVisible,
+      features: plan.features
     });
+    
     setIsEditPlanDialogOpen(true);
   };
   
-  // Handle delete plan button click
+  // Open delete plan dialog
   const handleDeletePlan = (plan: Plan) => {
     setSelectedPlan(plan);
     setIsDeleteDialogOpen(true);
   };
   
-  // Confirm delete plan
-  const confirmDeletePlan = () => {
-    if (selectedPlan) {
-      deletePlanMutation.mutate(selectedPlan.id);
-    }
-  };
-
-  // Check if loading
+  // Loading indicator
   if (plansLoading || platformsLoading) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading...</span>
+          <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
         </div>
       </AdminLayout>
     );
   }
-  
+
   return (
     <AdminLayout>
       <AdminHeader
-        title="Services & Plans"
-        description="Manage subscription plans and available services"
-        actions={
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" className="flex items-center">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            
-            <Dialog open={isAddPlanDialogOpen} onOpenChange={setIsAddPlanDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Plan
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New Subscription Plan</DialogTitle>
-                  <DialogDescription>
-                    Add a new subscription plan to your platform.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Plan Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="e.g. 100 Live Viewers" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="billingCycle"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Faturalama Periyodu</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Faturalama periyodunu seçin" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="daily">Günlük</SelectItem>
-                                <SelectItem value="weekly">Haftalık</SelectItem>
-                                <SelectItem value="monthly">Aylık</SelectItem>
-                                <SelectItem value="annual">Yıllık</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>Bu plan için varsayılan faturalama periyodu</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="price"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Aylık Fiyat (TL)</FormLabel>
-                            <FormControl>
-                              <Input type="number" min="0" placeholder="ör. 750" {...field} />
-                            </FormControl>
-                            <FormDescription>Aylık fiyat (TL)</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="dailyPrice"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Günlük Fiyat (TL)</FormLabel>
-                            <FormControl>
-                              <Input type="number" min="0" placeholder="ör. 50" {...field} />
-                            </FormControl>
-                            <FormDescription>Günlük fiyat (TL)</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="weeklyPrice"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Haftalık Fiyat (TL)</FormLabel>
-                            <FormControl>
-                              <Input type="number" min="0" placeholder="ör. 250" {...field} />
-                            </FormControl>
-                            <FormDescription>Haftalık fiyat (TL)</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="annualPrice"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Yıllık Fiyat (TL)</FormLabel>
-                            <FormControl>
-                              <Input type="number" min="0" placeholder="ör. 7500" {...field} />
-                            </FormControl>
-                            <FormDescription>Yıllık fiyat (TL) - indirimli olarak ayarlayabilirsiniz</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="viewerCount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Viewer Count</FormLabel>
-                            <FormControl>
-                              <Input type="number" min="0" placeholder="e.g. 100" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="chatCount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Chat Count</FormLabel>
-                            <FormControl>
-                              <Input type="number" min="0" placeholder="e.g. 100" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="followerCount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Follower Count</FormLabel>
-                            <FormControl>
-                              <Input type="number" min="0" placeholder="e.g. 250" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="platform"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Platform</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select platform" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {platforms.map((platform) => (
-                                  <SelectItem key={platform.slug} value={platform.slug}>
-                                    {platform.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="stripePriceId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Stripe Aylık Fiyat ID</FormLabel>
-                            <FormControl>
-                              <Input placeholder="ör. price_1234567890" {...field} />
-                            </FormControl>
-                            <FormDescription>Aylık fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="stripeDailyPriceId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Stripe Günlük Fiyat ID</FormLabel>
-                            <FormControl>
-                              <Input placeholder="ör. price_1234567890" {...field} />
-                            </FormControl>
-                            <FormDescription>Günlük fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="stripeWeeklyPriceId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Stripe Haftalık Fiyat ID</FormLabel>
-                            <FormControl>
-                              <Input placeholder="ör. price_1234567890" {...field} />
-                            </FormControl>
-                            <FormDescription>Haftalık fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="stripeAnnualPriceId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Stripe Yıllık Fiyat ID</FormLabel>
-                            <FormControl>
-                              <Input placeholder="ör. price_1234567890" {...field} />
-                            </FormControl>
-                            <FormDescription>Yıllık fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="col-span-2">
-                        <FormField
-                          control={form.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="Describe the subscription plan"
-                                  className="min-h-[100px]"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <FormField
-                        control={form.control}
-                        name="isPopular"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                            <div className="space-y-0.5">
-                              <FormLabel>Mark as Popular</FormLabel>
-                              <FormDescription>
-                                Highlight this plan as a popular choice
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="geographicTargeting"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border">
-                            <div className="space-y-0.5">
-                              <FormLabel>Geographic Targeting</FormLabel>
-                              <FormDescription>
-                                Allow users to target specific geographic regions
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="col-span-2">
-                        <FormField
-                          control={form.control}
-                          name="features"
-                          render={() => (
-                            <FormItem>
-                              <FormLabel>Features</FormLabel>
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    placeholder="Add a feature"
-                                    value={newFeature}
-                                    onChange={(e) => setNewFeature(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        addFeature();
-                                      }
-                                    }}
-                                  />
-                                  <Button type="button" onClick={addFeature}>Add</Button>
-                                </div>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                  {features.map((feature, index) => (
-                                    <div key={index} className="flex items-center gap-2">
-                                      <FormField
-                                        control={form.control}
-                                        name="features"
-                                        render={({ field }) => (
-                                          <FormItem className="flex items-center space-x-2 w-full">
-                                            <FormControl>
-                                              <div className="flex items-center justify-between border rounded-md p-2 w-full">
-                                                <span>{feature}</span>
-                                                <div className="flex items-center">
-                                                  <input
-                                                    type="checkbox"
-                                                    className="mr-2"
-                                                    checked={field.value.includes(feature)}
-                                                    onChange={(e) => {
-                                                      if (e.target.checked) {
-                                                        field.onChange([...field.value, feature]);
-                                                      } else {
-                                                        field.onChange(field.value.filter(f => f !== feature));
-                                                      }
-                                                    }}
-                                                  />
-                                                  <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    onClick={() => setFeatures(features.filter((_, i) => i !== index))}
-                                                  >
-                                                    <X className="h-4 w-4" />
-                                                  </Button>
-                                                </div>
-                                              </div>
-                                            </FormControl>
-                                          </FormItem>
-                                        )}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                    
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setIsAddPlanDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={createPlanMutation.isPending}>
-                        {createPlanMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Create Plan
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        }
+        title="Subscription Plans & Services"
+        description="Manage subscription plans for different platforms."
       />
-      
-      <div className="px-4 md:px-6 space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <Tabs value={currentTab} onValueChange={setCurrentTab}>
-                  <TabsList>
-                    <TabsTrigger value="plans">
-                      <Package className="mr-2 h-4 w-4" />
-                      Subscription Plans
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-              
-              <div className="flex items-center gap-2 max-w-md w-full">
-                {!sortMode && (
-                  <>
-                    <Input
-                      placeholder="Search plans..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="max-w-xs"
-                    />
-                    
-                    <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                      <SelectTrigger className="max-w-[180px]">
-                        <SelectValue placeholder="All Platforms" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Platforms</SelectItem>
-                        {platforms.map((platform) => (
-                          <SelectItem key={platform.slug} value={platform.slug}>
-                            {platform.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </>
-                )}
-                
-                {sortMode ? (
-                  <Button 
-                    onClick={() => {
-                      // Save the new order
-                      const planOrders = sortablePlans.map((plan, index) => ({
-                        id: plan.id,
-                        sortOrder: index
-                      }));
-                      reorderPlansMutation.mutate(planOrders);
-                    }}
-                    variant="outline"
-                    disabled={reorderPlansMutation.isPending}
-                  >
-                    {reorderPlansMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                    )}
-                    Sıralamayı Kaydet
-                  </Button>
+
+      <div className="grid gap-6">
+        <Tabs defaultValue={currentTab} onValueChange={setCurrentTab}>
+          <div className="flex justify-between items-center">
+            <TabsList>
+              <TabsTrigger value="plans">Subscription Plans</TabsTrigger>
+              <TabsTrigger value="features">Features</TabsTrigger>
+            </TabsList>
+            
+            <div className="flex items-center gap-2">
+              {currentTab === 'plans' && (
+                sortMode ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => {
+                        // Create the array of plan orders for the API
+                        const planOrders = sortablePlans.map((plan, index) => ({
+                          id: plan.id,
+                          sortOrder: index
+                        }));
+                        
+                        // Submit to the API
+                        reorderPlansMutation.mutate(planOrders);
+                      }}
+                      variant="outline"
+                      disabled={reorderPlansMutation.isPending}
+                    >
+                      {reorderPlansMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                      )}
+                      Sıralamayı Kaydet
+                    </Button>
+                  </div>
                 ) : (
                   <Button 
-                    onClick={() => setSortMode(true)}
+                    onClick={() => setSortMode(true)} 
                     variant="outline"
                   >
                     <ArrowUp className="mr-2 h-4 w-4" />
-                    <ArrowDown className="mr-2 h-4 w-4" />
-                    Sıralamayı Düzenle
+                    Sıralama Düzenle
                   </Button>
-                )}
-              </div>
+                )
+              )}
+              
+              {sortMode ? (
+                <Button 
+                  onClick={() => setSortMode(false)} 
+                  variant="outline"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  İptal
+                </Button>
+              ) : (
+                <Button onClick={() => setIsAddPlanDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add New Plan
+                </Button>
+              )}
             </div>
-          </CardHeader>
-          
-          <CardContent>
-            <Tabs defaultValue="plans">
-              <TabsContent value="plans" className="space-y-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {sortMode && <TableHead className="w-12"></TableHead>}
-                      <TableHead>Plan Adı</TableHead>
-                      <TableHead>Platform</TableHead>
-                      <TableHead>Fatura Dönemi</TableHead>
-                      <TableHead>Fiyatlar</TableHead>
-                      <TableHead>İzleyici</TableHead>
-                      <TableHead>Özellikler</TableHead>
-                      <TableHead>Durum</TableHead>
-                      <TableHead className="text-right">İşlemler</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPlans.length === 0 ? (
+          </div>
+
+          <TabsContent value="plans" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Subscription Plans</CardTitle>
+                <CardDescription>
+                  Create and manage subscription plans for your services.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                  <div className="relative w-full sm:w-1/2">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Search plans..."
+                      className="pl-8"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <Select
+                    value={platformFilter}
+                    onValueChange={setPlatformFilter}
+                  >
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All platforms</SelectItem>
+                      {platforms.map((platform) => (
+                        <SelectItem key={platform.id} value={platform.slug}>
+                          {platform.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          <div className="flex flex-col items-center justify-center">
-                            <Package className="h-8 w-8 text-muted-foreground mb-2" />
-                            <h3 className="text-lg font-medium">No plans found</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {searchQuery || platformFilter !== 'all'
-                                ? "Try adjusting your search or filter criteria"
-                                : "Add a new subscription plan to get started"}
-                            </p>
-                          </div>
-                        </TableCell>
+                        {sortMode && <TableHead className="w-12"></TableHead>}
+                        <TableHead>Name</TableHead>
+                        <TableHead>Platform</TableHead>
+                        <TableHead>Billing Cycle</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Viewers</TableHead>
+                        <TableHead>Features</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ) : sortMode ? (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                      >
-                        <SortableContext 
-                          items={sortablePlans.map(plan => plan.id)}
-                          strategy={verticalListSortingStrategy}
+                    </TableHeader>
+                    <TableBody>
+                      {sortMode ? (
+                        <DndContext 
+                          sensors={sensors} 
+                          collisionDetection={closestCenter} 
+                          onDragEnd={handleDragEnd}
                         >
-                          {sortablePlans.map((plan) => (
-                            <SortableTableRow 
-                              key={plan.id}
-                              id={plan.id}
-                              plan={plan}
-                              onEdit={handleEditPlan}
-                              onDelete={(plan) => {
-                                setSelectedPlan(plan);
-                                setIsDeleteDialogOpen(true);
-                              }}
-                            />
-                          ))}
-                        </SortableContext>
-                      </DndContext>
-                    ) : (
-                      filteredPlans.map((plan) => (
-                        <TableRow key={plan.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              {plan.name}
-                              {plan.isPopular && (
-                                <Badge variant="secondary">Popular</Badge>
+                          <SortableContext 
+                            items={sortablePlans.map(plan => plan.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {sortablePlans.map((plan) => (
+                              <SortableTableRow 
+                                key={plan.id}
+                                id={plan.id}
+                                plan={plan}
+                                onEdit={handleEditPlan}
+                                onDelete={(plan) => {
+                                  setSelectedPlan(plan);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                              />
+                            ))}
+                          </SortableContext>
+                        </DndContext>
+                      ) : (
+                        filteredPlans.map((plan) => (
+                          <TableRow key={plan.id}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                {plan.name}
+                                {plan.isPopular && (
+                                  <Badge variant="secondary">Popular</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {platforms.find(p => p.slug === plan.platform)?.name || plan.platform}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize">
+                                {plan.billingCycle === 'daily' ? 'Günlük' : 
+                                plan.billingCycle === 'weekly' ? 'Haftalık' : 
+                                plan.billingCycle === 'monthly' ? 'Aylık' : 
+                                plan.billingCycle === 'annual' ? 'Yıllık' : 'Aylık'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                {plan.price > 0 && <span>Aylık: {plan.price} TL</span>}
+                                {plan.dailyPrice && plan.dailyPrice > 0 && <span>Günlük: {plan.dailyPrice} TL</span>}
+                                {plan.weeklyPrice && plan.weeklyPrice > 0 && <span>Haftalık: {plan.weeklyPrice} TL</span>}
+                                {plan.annualPrice && plan.annualPrice > 0 && <span>Yıllık: {plan.annualPrice} TL</span>}
+                              </div>
+                            </TableCell>
+                            <TableCell>{plan.viewerCount}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {plan.features.slice(0, 2).map((feature, i) => (
+                                  <Badge key={i} variant="outline" className="whitespace-nowrap">
+                                    {feature}
+                                  </Badge>
+                                ))}
+                                {plan.features.length > 2 && (
+                                  <Badge variant="outline">+{plan.features.length - 2}</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={plan.isVisible ? "outline" : "destructive"} className={plan.isVisible ? "bg-green-100 text-green-800" : ""}>
+                                {plan.isVisible ? "Aktif" : "Gizli"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditPlan(plan)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  <span className="sr-only">Edit</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeletePlan(plan)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Delete</span>
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                      {filteredPlans.length === 0 && !sortMode && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-6">
+                            <div className="flex flex-col items-center justify-center text-muted-foreground">
+                              <Package className="h-10 w-10 mb-2" />
+                              <h3 className="font-medium">No plans found</h3>
+                              <p className="text-sm mb-4">
+                                {searchQuery || platformFilter !== 'all'
+                                  ? "Try adjusting your search or filter."
+                                  : "Start by adding a new subscription plan."}
+                              </p>
+                              {!sortMode && (
+                                <Button onClick={() => setIsAddPlanDialogOpen(true)}>
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add New Plan
+                                </Button>
                               )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {platforms.find(p => p.slug === plan.platform)?.name || plan.platform}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              {plan.billingCycle === 'daily' ? 'Günlük' : 
-                              plan.billingCycle === 'weekly' ? 'Haftalık' : 
-                              plan.billingCycle === 'monthly' ? 'Aylık' : 
-                              plan.billingCycle === 'annual' ? 'Yıllık' : 'Aylık'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1 text-xs">
-                              {plan.dailyPrice && <span>Günlük: {plan.dailyPrice} ₺</span>}
-                              {plan.weeklyPrice && <span>Haftalık: {plan.weeklyPrice} ₺</span>}
-                              <span className="font-semibold">Aylık: {plan.price} ₺</span>
-                              {plan.annualPrice && <span>Yıllık: {plan.annualPrice} ₺</span>}
-                            </div>
-                          </TableCell>
-                          <TableCell>{plan.viewerCount}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {plan.features.slice(0, 2).map((feature, idx) => (
-                                <Badge key={idx} variant="outline" className="whitespace-nowrap">
-                                  {feature}
-                                </Badge>
-                              ))}
-                              {plan.features.length > 2 && (
-                                <Badge variant="outline">+{plan.features.length - 2} more</Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={plan.isVisible ? "default" : "secondary"} className={plan.isVisible ? "bg-green-500 hover:bg-green-600" : ""}>
-                              {plan.isVisible ? "Visible" : "Hidden"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end items-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleEditPlan(plan)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleDeletePlan(plan)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="features" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Feature Library</CardTitle>
+                <CardDescription>
+                  Create and manage features that can be added to subscription plans.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 mb-4">
+                  <Input
+                    placeholder="Add new feature..."
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        addFeature();
+                      }
+                    }}
+                  />
+                  <Button onClick={addFeature} type="button">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add
+                  </Button>
+                </div>
+
+                <div className="grid gap-3 mt-6">
+                  {features.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between px-4 py-3 border rounded-md"
+                    >
+                      <span>{feature}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFeature(index)}
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Remove</span>
+                      </Button>
+                    </div>
+                  ))}
+                  {features.length === 0 && (
+                    <div className="flex flex-col items-center justify-center text-muted-foreground py-10">
+                      <Tag className="h-10 w-10 mb-2" />
+                      <h3 className="font-medium">No features found</h3>
+                      <p className="text-sm mb-4">
+                        Start by adding features for your subscription plans.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-      
-      {/* Edit Plan Dialog */}
-      <Dialog open={isEditPlanDialogOpen} onOpenChange={setIsEditPlanDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[80vh] overflow-y-auto">
+
+      {/* Add/Edit Plan Dialog */}
+      <Dialog
+        open={isAddPlanDialogOpen || isEditPlanDialogOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setIsAddPlanDialogOpen(false);
+            setIsEditPlanDialogOpen(false);
+            setSelectedPlan(null);
+            form.reset();
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Subscription Plan</DialogTitle>
+            <DialogTitle>
+              {isEditPlanDialogOpen ? "Edit Subscription Plan" : "Add Subscription Plan"}
+            </DialogTitle>
             <DialogDescription>
-              Make changes to the subscription plan. Click save when you're done.
+              {isEditPlanDialogOpen
+                ? "Update the details of this subscription plan."
+                : "Fill in the details to create a new subscription plan."}
             </DialogDescription>
           </DialogHeader>
-          
+
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Plan Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter plan name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Plan Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Basic Plan" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="platform"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Platform</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select platform" />
@@ -1199,7 +897,7 @@ const AdminServices: React.FC = () => {
                         </FormControl>
                         <SelectContent>
                           {platforms.map((platform) => (
-                            <SelectItem key={platform.slug} value={platform.slug}>
+                            <SelectItem key={platform.id} value={platform.slug}>
                               {platform.name}
                             </SelectItem>
                           ))}
@@ -1209,215 +907,185 @@ const AdminServices: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="billingCycle"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Faturalama Periyodu</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel>Default Billing Cycle</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Faturalama periyodunu seçin" />
+                            <SelectValue placeholder="Select billing cycle" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="daily">Günlük</SelectItem>
-                          <SelectItem value="weekly">Haftalık</SelectItem>
-                          <SelectItem value="monthly">Aylık</SelectItem>
-                          <SelectItem value="annual">Yıllık</SelectItem>
+                          <SelectItem value="daily">Günlük (Daily)</SelectItem>
+                          <SelectItem value="weekly">Haftalık (Weekly)</SelectItem>
+                          <SelectItem value="monthly">Aylık (Monthly)</SelectItem>
+                          <SelectItem value="annual">Yıllık (Annual)</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormDescription>Bu plan için varsayılan faturalama periyodu</FormDescription>
+                      <FormDescription>
+                        This is the default billing cycle shown to customers.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Aylık Fiyat (TL)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="750" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
-                        />
-                      </FormControl>
-                      <FormDescription>Aylık fiyat (TL)</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="dailyPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Günlük Fiyat (TL)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="50" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
-                        />
-                      </FormControl>
-                      <FormDescription>Günlük fiyat (TL)</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Monthly Price (TL)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="dailyPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Daily Price (TL)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="weeklyPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Weekly Price (TL)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="annualPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Annual Price (TL)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="stripePriceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stripe Monthly Price ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="price_..." {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Stripe Price ID for the monthly billing cycle
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="stripeDailyPriceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stripe Daily Price ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="price_..." {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Stripe Price ID for the daily billing cycle
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="stripeWeeklyPriceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stripe Weekly Price ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="price_..." {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Stripe Price ID for the weekly billing cycle
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="stripeAnnualPriceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stripe Annual Price ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="price_..." {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Stripe Price ID for the annual billing cycle
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="weeklyPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Haftalık Fiyat (TL)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="250" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
-                        />
-                      </FormControl>
-                      <FormDescription>Haftalık fiyat (TL)</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="annualPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Yıllık Fiyat (TL)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="7500" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
-                        />
-                      </FormControl>
-                      <FormDescription>Yıllık fiyat (TL) - indirimli olarak ayarlayabilirsiniz</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="stripePriceId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Stripe Aylık Fiyat ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ör. price_1234567890" {...field} />
-                      </FormControl>
-                      <FormDescription>Aylık fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="stripeDailyPriceId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Stripe Günlük Fiyat ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ör. price_1234567890" {...field} />
-                      </FormControl>
-                      <FormDescription>Günlük fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="stripeWeeklyPriceId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Stripe Haftalık Fiyat ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ör. price_1234567890" {...field} />
-                      </FormControl>
-                      <FormDescription>Haftalık fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="stripeAnnualPriceId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Stripe Yıllık Fiyat ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ör. price_1234567890" {...field} />
-                      </FormControl>
-                      <FormDescription>Yıllık fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter plan description" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-3 gap-4">
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="viewerCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Viewers</FormLabel>
+                      <FormLabel>Viewer Count</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="100" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))} 
-                        />
+                        <Input type="number" placeholder="0" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="chatCount"
@@ -1425,45 +1093,121 @@ const AdminServices: React.FC = () => {
                     <FormItem>
                       <FormLabel>Chat Count</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="50" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))} 
-                        />
+                        <Input type="number" placeholder="0" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="followerCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Followers</FormLabel>
+                      <FormLabel>Follower Count</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="200" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))} 
-                        />
+                        <Input type="number" placeholder="0" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-              
-              <div className="grid grid-cols-3 gap-4">
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter plan description..."
+                        {...field}
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="features"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Features</FormLabel>
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add new feature..."
+                          value={newFeature}
+                          onChange={(e) => setNewFeature(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addFeature();
+                            }
+                          }}
+                        />
+                        <Button onClick={addFeature} type="button">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-3 mt-2">
+                        {features.map((feature, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between px-4 py-3 border rounded-md"
+                          >
+                            <span>{feature}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFeature(index)}
+                              type="button"
+                            >
+                              <X className="h-4 w-4" />
+                              <span className="sr-only">Remove</span>
+                            </Button>
+                          </div>
+                        ))}
+                        {features.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground">
+                            No features added yet
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        type="hidden"
+                        {...form.register("features")}
+                        value={JSON.stringify(features)}
+                      />
+                    </div>
+                    <FormDescription>
+                      Features will be shown to customers on the pricing page.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="isPopular"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between space-y-0 space-x-2">
-                      <FormLabel>Popular Plan</FormLabel>
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Popular Plan</FormLabel>
+                        <FormDescription>
+                          Highlight this plan on the pricing page
+                        </FormDescription>
+                      </div>
                       <FormControl>
                         <Switch
                           checked={field.value}
@@ -1473,13 +1217,20 @@ const AdminServices: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="geographicTargeting"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between space-y-0 space-x-2">
-                      <FormLabel>Geo Targeting</FormLabel>
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Geographic Targeting
+                        </FormLabel>
+                        <FormDescription>
+                          Enable country-based targeting
+                        </FormDescription>
+                      </div>
                       <FormControl>
                         <Switch
                           checked={field.value}
@@ -1489,13 +1240,18 @@ const AdminServices: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="isVisible"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between space-y-0 space-x-2">
-                      <FormLabel>Visible</FormLabel>
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Visible</FormLabel>
+                        <FormDescription>
+                          Show this plan on the pricing page
+                        </FormDescription>
+                      </div>
                       <FormControl>
                         <Switch
                           checked={field.value}
@@ -1506,85 +1262,50 @@ const AdminServices: React.FC = () => {
                   )}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label>Features</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    value={newFeature}
-                    onChange={(e) => setNewFeature(e.target.value)}
-                    placeholder="Add a feature"
-                  />
-                  <Button type="button" onClick={addFeature} variant="outline">
-                    Add
-                  </Button>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {features.map((feature, i) => (
-                    <Badge key={i} variant="outline" className="flex items-center gap-1">
-                      {feature}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0"
-                        onClick={() => removeFeature(feature)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button 
-                  variant="outline" 
-                  type="button" 
-                  onClick={() => setIsEditPlanDialogOpen(false)}
+
+              <DialogFooter>
+                <Button
+                  type="submit"
+                  disabled={createPlanMutation.isPending || updatePlanMutation.isPending}
                 >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updatePlanMutation.isPending}>
-                  {updatePlanMutation.isPending && (
+                  {(createPlanMutation.isPending || updatePlanMutation.isPending) && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Save Changes
+                  {isEditPlanDialogOpen ? "Update Plan" : "Create Plan"}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      
-      {/* Delete Confirmation Dialog */}
+
+      {/* Delete Plan Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu işlem geri alınamaz. Abonelik planı kalıcı olarak silinecek ve 
-              ilişkili tüm veriler kaldırılacaktır.
+              This will permanently delete the &quot;{selectedPlan?.name}&quot; plan
+              and all its data. This action cannot be undone.
             </AlertDialogDescription>
-            <div className="mt-3">
-              <div className="font-medium text-amber-600">
-                Not: Aktif abonesi olan planlar silinemez. Önce aboneleri başka 
-                bir plana taşımanız veya aboneliklerini iptal etmeniz gerekir.
-              </div>
-            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDeletePlan}
-              className="bg-red-600 hover:bg-red-700"
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedPlan) {
+                  deletePlanMutation.mutate(selectedPlan.id);
+                }
+              }}
               disabled={deletePlanMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deletePlanMutation.isPending && (
+              {deletePlanMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Sil
+              Delete Plan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
