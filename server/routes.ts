@@ -1750,13 +1750,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Subscription plan not found" });
       }
       
-      // Check if there are any active subscriptions using this plan
+      // Get all subscriptions using this plan
       const subscriptions = await storage.getUserSubscriptionsByPlan(planId);
+      
+      // If there are subscriptions, cancel/deactivate them all
       if (subscriptions && subscriptions.length > 0) {
-        return res.status(409).json({ 
-          message: "Cannot delete this plan because it has active subscriptions", 
-          activeSubscriptions: subscriptions.length 
-        });
+        for (const subscription of subscriptions) {
+          await storage.updateUserSubscription(subscription.id, {
+            status: "cancelled",
+            isActive: false
+          });
+          
+          // Log action for each cancelled subscription
+          await storage.createAuditLog({
+            userId: req.user.id || 0,
+            action: "auto_cancel_subscription_plan_delete",
+            details: JSON.stringify({
+              targetUserId: subscription.userId,
+              subscriptionId: subscription.id,
+              planId: planId,
+              planName: existingPlan.name
+            }),
+            ipAddress: req.ip || ""
+          });
+        }
       }
       
       // Delete the plan
