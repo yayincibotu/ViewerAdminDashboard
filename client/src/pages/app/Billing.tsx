@@ -193,6 +193,345 @@ const AddCardForm = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
+// EditBillingForm component
+interface EditBillingFormProps {
+  initialData: any;
+  user: any;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingFormProps) {
+  const { toast } = useToast();
+  const [isCompany, setIsCompany] = useState(
+    initialData?.isCompany === true || 
+    (initialData?.isCompany !== false && !!initialData?.companyName)
+  );
+  
+  const [formData, setFormData] = useState({
+    fullName: initialData?.fullName || user?.username || '',
+    email: initialData?.email || user?.email || '',
+    address1: initialData?.address1 || '',
+    address2: initialData?.address2 || '',
+    city: initialData?.city || '',
+    state: initialData?.state || '',
+    zip: initialData?.zip || '',
+    country: initialData?.country || '',
+    taxId: initialData?.taxId || '',
+    isCompany: initialData?.isCompany === true || 
+               (initialData?.isCompany !== false && !!initialData?.companyName),
+    companyName: initialData?.companyName || '',
+    companyRegistrationNumber: initialData?.companyRegistrationNumber || '',
+    companyVatNumber: initialData?.companyVatNumber || '',
+  });
+  
+  const [countries, setCountries] = useState<any[]>(Country.getAllCountries());
+  const [states, setStates] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const updateBillingMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('POST', '/api/billing-info', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Billing information updated',
+        description: 'Your billing information has been updated successfully.',
+      });
+      onSuccess();
+      queryClient.invalidateQueries({ queryKey: ['/api/billing-info'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to update billing information',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+    },
+  });
+  
+  useEffect(() => {
+    if (formData.country) {
+      const countryStates = State.getStatesOfCountry(formData.country);
+      setStates(countryStates);
+      
+      if (formData.state && countryStates.some(s => s.isoCode === formData.state)) {
+        const stateCities = City.getCitiesOfState(formData.country, formData.state);
+        setCities(stateCities);
+      } else {
+        setCities([]);
+      }
+    }
+  }, [formData.country, formData.state]);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // If not a company, clear company fields
+    const dataToSubmit = { ...formData };
+    if (!isCompany) {
+      dataToSubmit.companyName = '';
+      dataToSubmit.companyRegistrationNumber = '';
+      dataToSubmit.companyVatNumber = '';
+    }
+    
+    updateBillingMutation.mutate(dataToSubmit);
+  };
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    const fieldName = id.replace('billing', '').charAt(0).toLowerCase() + id.replace('billing', '').slice(1);
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+  };
+  
+  // Handle country selection
+  const handleCountryChange = (value: string) => {
+    const countryStates = State.getStatesOfCountry(value);
+    setStates(countryStates);
+    setCities([]);
+    
+    setFormData(prev => ({
+      ...prev,
+      country: value,
+      state: '',
+      city: ''
+    }));
+  };
+  
+  // Handle state selection
+  const handleStateChange = (value: string) => {
+    const stateCities = City.getCitiesOfState(formData.country, value);
+    setCities(stateCities);
+    
+    setFormData(prev => ({
+      ...prev,
+      state: value,
+      city: ''
+    }));
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="max-h-[80vh] overflow-y-auto">
+      <div className="grid gap-4 py-4">
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="companyBilling">Company Billing</Label>
+              <Switch 
+                id="companyBilling" 
+                checked={isCompany} 
+                onCheckedChange={(checked) => {
+                  setIsCompany(checked);
+                  setFormData(prev => ({...prev, isCompany: checked}));
+                }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {isCompany ? 'Billing to a company' : 'Billing to an individual'}
+            </span>
+          </div>
+        </div>
+        
+        {isCompany && (
+          <>
+            <div className="grid gap-2">
+              <Label htmlFor="billingCompanyName">Company Name</Label>
+              <Input
+                id="billingCompanyName"
+                value={formData.companyName}
+                onChange={handleChange}
+                placeholder="Company Name"
+                required={isCompany}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="billingCompanyRegistrationNumber">Company Registration Number</Label>
+              <Input
+                id="billingCompanyRegistrationNumber"
+                value={formData.companyRegistrationNumber}
+                onChange={handleChange}
+                placeholder="Registration Number (optional)"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="billingCompanyVatNumber">VAT Number</Label>
+              <Input
+                id="billingCompanyVatNumber"
+                value={formData.companyVatNumber}
+                onChange={handleChange}
+                placeholder="VAT Number (optional)"
+              />
+            </div>
+          </>
+        )}
+        
+        <div className="grid gap-2">
+          <Label htmlFor="billingFullName">Contact Name</Label>
+          <Input
+            id="billingFullName"
+            value={formData.fullName}
+            onChange={handleChange}
+            placeholder="Full Name"
+            required
+          />
+        </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="billingEmail">Email</Label>
+          <Input
+            id="billingEmail"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="Email address"
+            required
+          />
+        </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="billingAddress1">Address Line 1</Label>
+          <Input
+            id="billingAddress1"
+            value={formData.address1}
+            onChange={handleChange}
+            placeholder="Street address"
+          />
+        </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="billingAddress2">Address Line 2</Label>
+          <Input
+            id="billingAddress2"
+            value={formData.address2}
+            onChange={handleChange}
+            placeholder="Apt, Suite, etc. (optional)"
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="billingCountry">Country</Label>
+            <Select 
+              value={formData.country}
+              onValueChange={handleCountryChange}
+            >
+              <SelectTrigger id="billingCountry">
+                <SelectValue placeholder="Select Country" />
+              </SelectTrigger>
+              <SelectContent className="max-h-80">
+                {countries.map((country) => (
+                  <SelectItem key={country.isoCode} value={country.isoCode}>
+                    <div className="flex items-center">
+                      <ReactCountryFlag 
+                        countryCode={country.isoCode}
+                        svg
+                        style={{
+                          width: '1em',
+                          height: '1em',
+                          marginRight: '0.5em'
+                        }}
+                      />
+                      {country.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="billingState">State / Province</Label>
+            <Select 
+              value={formData.state}
+              onValueChange={handleStateChange}
+              disabled={!formData.country || states.length === 0}
+            >
+              <SelectTrigger id="billingState">
+                <SelectValue placeholder="Select State" />
+              </SelectTrigger>
+              <SelectContent className="max-h-80">
+                {states.map((state) => (
+                  <SelectItem key={state.isoCode} value={state.isoCode}>
+                    {state.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="billingCity">City</Label>
+            <Select 
+              value={formData.city}
+              onValueChange={(value) => setFormData(prev => ({...prev, city: value}))}
+              disabled={!formData.state || cities.length === 0}
+            >
+              <SelectTrigger id="billingCity">
+                <SelectValue placeholder="Select City" />
+              </SelectTrigger>
+              <SelectContent className="max-h-80">
+                {cities.map((city) => (
+                  <SelectItem key={city.name} value={city.name}>
+                    {city.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="billingZip">Postal / ZIP Code</Label>
+            <Input
+              id="billingZip"
+              value={formData.zip}
+              onChange={handleChange}
+              placeholder="ZIP / Postal code"
+            />
+          </div>
+        </div>
+        
+        {isCompany && (
+          <div className="grid gap-2 mt-2">
+            <Label htmlFor="billingTaxId">Tax ID (optional)</Label>
+            <Input
+              id="billingTaxId"
+              value={formData.taxId}
+              onChange={handleChange}
+              placeholder="Tax ID number"
+            />
+          </div>
+        )}
+      </div>
+      
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
 const Billing = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -227,8 +566,6 @@ const Billing = () => {
     queryKey: ['/api/billing-info'],
     enabled: !!user
   });
-  
-  // Debug log removed for production
   
   // Fetch real payment methods from the API
   const { data: paymentMethods = [], isLoading: paymentMethodsLoading } = useQuery<any[]>({
@@ -470,27 +807,22 @@ const Billing = () => {
                                     marginRight: '0.5em'
                                   }}
                                 />
-                                {Country.getCountryByCode(billingInfo.country)?.name || billingInfo.country}
+                                {Country.getCountryByCode(billingInfo.country)?.name}
                               </>
                             ) : (
-                              // Handle legacy country format or numeric values
-                              <>{billingInfo.country}</>
+                              billingInfo.country
                             )}
                           </>
                         )}
                       </div>
                     </div>
                   )}
-
-                  {!billingInfo?.address1 && (
-                    <div className="text-gray-500 italic">
-                      No billing address on file. Add your billing information for invoices.
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
-            
+          </div>
+          
+          <div className="space-y-6">
             {/* Subscription Section Header */}
             <div className="mt-8 mb-4">
               <div className="flex items-center gap-2 mb-2">
@@ -521,249 +853,217 @@ const Billing = () => {
                   <CardDescription>Your subscription details</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8 text-gray-500">
-                    <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No active subscriptions found</p>
-                    <p className="text-sm mt-1">Subscribe to a plan to access our services</p>
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="bg-gray-100 p-3 rounded-full mb-4">
+                      <CreditCard className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">No active subscriptions</h3>
+                    <p className="text-sm text-gray-500 max-w-md mb-6">
+                      You don't have any active subscription plans. Subscribe to our services to get started.
+                    </p>
+                    <Button>
+                      Browse Plans
+                    </Button>
                   </div>
                 </CardContent>
-                <CardFooter className="pt-0 flex justify-center">
-                  <Button asChild>
-                    <a href="/#pricing">View Plans</a>
-                  </Button>
-                </CardFooter>
               </Card>
             ) : (
-              <>
-                {subscriptions.map((sub: any, index: number) => (
-                  <Card key={sub.subscription.id} className="border-l-4 border-l-primary">
-                    <CardHeader className="pb-4">
-                      <div className="flex justify-between items-center">
-                        <CardTitle className="text-lg">
-                          {sub.plan?.name || "Subscription Plan"}
-                        </CardTitle>
-                        <div className={`px-2 py-1 rounded text-xs font-medium ${
-                          sub.subscription.status === 'active' 
-                            ? 'bg-green-100 text-green-600' 
-                            : sub.subscription.status === 'pending' 
-                            ? 'bg-yellow-100 text-yellow-600'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {sub.subscription.status.charAt(0).toUpperCase() + sub.subscription.status.slice(1)}
-                        </div>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {subscriptions.map((subscription) => (
+                  <Card key={subscription.id} className="overflow-hidden">
+                    <CardHeader className="pb-4 relative">
+                      <div className="absolute top-0 right-0 p-4">
+                        {subscription.status === 'active' ? (
+                          <div className="flex items-center gap-1.5 text-green-600">
+                            <div className="h-2.5 w-2.5 rounded-full bg-green-600 animate-pulse"></div>
+                            <span className="text-xs font-medium">Active</span>
+                          </div>
+                        ) : subscription.status === 'canceled' ? (
+                          <div className="flex items-center gap-1.5 text-red-500">
+                            <div className="h-2.5 w-2.5 rounded-full bg-red-500"></div>
+                            <span className="text-xs font-medium">Canceled</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-yellow-500">
+                            <div className="h-2.5 w-2.5 rounded-full bg-yellow-500"></div>
+                            <span className="text-xs font-medium">{subscription.status}</span>
+                          </div>
+                        )}
                       </div>
-
+                      <CardTitle className="text-lg">
+                        {subscription.plan?.name || 'Unknown Plan'}
+                      </CardTitle>
+                      <CardDescription>
+                        {subscription.plan?.description || 'Plan details'}
+                      </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-baseline">
-                          <div className="text-2xl font-bold">
-                            ${sub.plan?.price ? Number(sub.plan.price).toFixed(2) : "0.00"}
-                            <span className="text-gray-500 text-sm font-normal">
-                              /{sub.plan?.billingCycle || "month"}
-                            </span>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {sub.subscription.status === 'cancelled' 
-                              ? `Expires on ${new Date(sub.subscription.endDate).toLocaleDateString()}` 
-                              : sub.subscription.endDate 
-                              ? `Renews on ${new Date(sub.subscription.endDate).toLocaleDateString()}`
-                              : ""}
-                          </div>
+                    <CardContent className="pb-3">
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between">
+                          <span className="font-medium text-gray-500">Price:</span>
+                          <span className="font-semibold">
+                            ${Number(subscription.amount / 100).toFixed(2)} / 
+                            {subscription.cycle === 'monthly' ? 'month' : 
+                             subscription.cycle === 'yearly' ? 'year' : 
+                             subscription.cycle === 'weekly' ? 'week' : 'day'}
+                          </span>
                         </div>
                         
-                        <div className="pt-2 flex flex-col gap-1.5">
-                          {sub.plan?.viewerCount && (
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                              <span>{sub.plan.viewerCount} viewers per stream</span>
-                            </div>
-                          )}
-                          {sub.plan?.features?.includes('chatbot') && (
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                              <span>Chat Bot included</span>
-                            </div>
-                          )}
-                          {sub.plan?.features?.includes('geographic') && (
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                              <span>Geographic targeting</span>
-                            </div>
-                          )}
-                          {sub.plan?.features?.includes('follower') && (
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                              <span>Follower Bot included</span>
-                            </div>
-                          )}
-                          {sub.plan?.features?.includes('support') && (
-                            <div className="flex items-center text-sm">
-                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                              <span>Priority support</span>
-                            </div>
-                          )}
+                        <div className="flex justify-between">
+                          <span className="font-medium text-gray-500">Start Date:</span>
+                          <span>
+                            {new Date(subscription.startDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                        
+                        {subscription.status === 'canceled' && subscription.endDate && (
+                          <div className="flex justify-between">
+                            <span className="font-medium text-gray-500">End Date:</span>
+                            <span>
+                              {new Date(subscription.endDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between">
+                          <span className="font-medium text-gray-500">Next Billing:</span>
+                          <span>
+                            {subscription.status === 'canceled' ? 'No further billing' : 
+                              new Date(subscription.nextBillingDate).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
                     </CardContent>
-                    <CardFooter className="pt-0 flex justify-between">
-                      {sub.subscription.status === 'cancelled' ? (
+                    <CardFooter className="flex justify-between pt-3 border-t">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => window.open(`/app/plan/${subscription.plan?.id}`, '_blank')}
+                      >
+                        <Eye className="h-4 w-4 mr-1.5" /> View Plan
+                      </Button>
+                      
+                      {subscription.status === 'active' && (
                         <Button 
-                          variant="outline"
-                          disabled
-                          className="opacity-50 cursor-not-allowed"
-                        >
-                          Cancelled
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="outline"
+                          size="sm" 
+                          variant="destructive"
                           onClick={() => {
-                            setSubscriptionToCancel(sub);
+                            setSubscriptionToCancel(subscription);
                             setShowCancelDialog(true);
                           }}
                         >
                           Cancel Plan
                         </Button>
                       )}
-                      <Button asChild>
-                        <a href={`/app/bot-control?id=${sub.subscription.id}`}>
-                          Manage
-                        </a>
-                      </Button>
                     </CardFooter>
                   </Card>
                 ))}
-              </>
+              </div>
             )}
-
+            
             {/* Payment Methods Section Header */}
-            <div className="mt-8 mb-4">
+            <div className="mt-12 mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <CreditCard className="h-5 w-5 text-primary" />
                 <h2 className="text-xl font-semibold">Payment Methods</h2>
               </div>
               <div className="h-1 w-32 bg-gradient-to-r from-primary to-primary/30 rounded mb-1"></div>
-              <p className="text-sm text-gray-500">Manage your payment cards and billing options</p>
+              <p className="text-sm text-gray-500">Manage your saved payment methods</p>
             </div>
             
-            {/* Payment Method Card */}
+            {/* Payment Methods Card */}
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-4">
                 <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Payment Cards</CardTitle>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <CardTitle className="text-lg">Your Payment Methods</CardTitle>
+                  <Button
+                    size="sm"
                     onClick={() => setShowAddCardDialog(true)}
                   >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Add New
+                    Add Payment Method
                   </Button>
                 </div>
-                <CardDescription>Manage your payment methods</CardDescription>
+                <CardDescription>Manage your credit cards and payment options</CardDescription>
               </CardHeader>
               <CardContent>
                 {paymentMethodsLoading ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
+                ) : paymentMethods.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="bg-gray-100 p-3 rounded-full mb-4">
+                      <CreditCard className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">No payment methods found</h3>
+                    <p className="text-sm text-gray-500 max-w-md mb-6">
+                      You haven't added any payment methods yet. Add a payment method to subscribe to plans.
+                    </p>
+                    <Button size="sm" onClick={() => setShowAddCardDialog(true)}>
+                      Add Payment Method
+                    </Button>
+                  </div>
                 ) : (
                   <div className="space-y-4">
-                    {paymentMethods.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                        <p>No payment methods found</p>
-                        <p className="text-sm mt-1">Add a card to manage your subscriptions</p>
-                      </div>
-                    ) : (
-                      paymentMethods.map((method: any) => (
-                        <div 
-                          key={method.id} 
-                          className={`border rounded-lg p-4 relative ${method.billing_details?.name ? 'border-primary/50 bg-primary/5' : ''}`}
-                        >
-                          {method.billing_details?.name && (
-                            <div className="absolute top-3 right-3 text-xs font-medium text-primary">
-                              <div className="flex items-center gap-1">
-                                <Star className="h-3 w-3" />
-                                <span>Default</span>
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 mr-3 text-xl">
-                              {getCardLogo(method.card?.brand || '')}
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {method.card?.brand?.charAt(0).toUpperCase() + method.card?.brand?.slice(1) || 'Card'} •••• {method.card?.last4}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                Expires {method.card?.exp_month}/{method.card?.exp_year}
-                              </div>
-                              {method.billing_details?.name && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {method.billing_details.name}
-                                </div>
-                              )}
-                            </div>
+                    {paymentMethods.map((method) => (
+                      <div key={method.id} className="flex justify-between items-center p-4 border rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex-shrink-0 font-medium">
+                            {getCardLogo(method.card.brand)}
                           </div>
-                          <div className="mt-3 flex justify-end space-x-2">
-                            {!method.billing_details?.name && (
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-8"
-                                onClick={() => handleSetDefaultCard(method.id)}
-                                disabled={setDefaultPaymentMethodMutation.isPending}
-                              >
-                                {setDefaultPaymentMethodMutation.isPending && method.id === setDefaultPaymentMethodMutation.variables ? (
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                ) : null}
-                                Set as default
-                              </Button>
-                            )}
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-8 text-destructive"
-                              onClick={() => handleRemoveCard(method.id)}
-                              disabled={removePaymentMethodMutation.isPending}
-                            >
-                              {removePaymentMethodMutation.isPending && method.id === removePaymentMethodMutation.variables ? (
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-3 w-3 mr-1" />
-                              )}
-                              Remove
-                            </Button>
+                          <div>
+                            <div className="font-medium">
+                              {method.card.brand.charAt(0).toUpperCase() + method.card.brand.slice(1)} ••••{method.card.last4}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Expires {method.card.exp_month}/{method.card.exp_year}
+                            </div>
                           </div>
                         </div>
-                      ))
-                    )}
+                        <div className="flex items-center space-x-3">
+                          {method.isDefault ? (
+                            <div className="text-xs bg-green-100 text-green-800 py-0.5 px-2 rounded-full">
+                              Default
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSetDefaultCard(method.id)}
+                            >
+                              Set as Default
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveCard(method.id)}
+                            disabled={method.isDefault}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
             </Card>
-
-
-          </div>
-
-          {/* Billing History Section Header */}
-          <div className="mt-8 mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Receipt className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">Billing History</h2>
+            
+            {/* Billing History Section Header */}
+            <div className="mt-12 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Receipt className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Billing History</h2>
+              </div>
+              <div className="h-1 w-32 bg-gradient-to-r from-primary to-primary/30 rounded mb-1"></div>
+              <p className="text-sm text-gray-500">View your past invoices and payment history</p>
             </div>
-            <div className="h-1 w-32 bg-gradient-to-r from-primary to-primary/30 rounded mb-1"></div>
-            <p className="text-sm text-gray-500">View and download your payment history</p>
-          </div>
-          
-          {/* Billing History */}
-          <div>
+            
+            {/* Billing History Card */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Invoice History</CardTitle>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Your Billing History</CardTitle>
                 <CardDescription>View and download your invoices</CardDescription>
               </CardHeader>
               <CardContent>
@@ -771,101 +1071,68 @@ const Billing = () => {
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
+                ) : billingHistory.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="bg-gray-100 p-3 rounded-full mb-4">
+                      <Receipt className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">No billing history</h3>
+                    <p className="text-sm text-gray-500 max-w-md">
+                      You don't have any billing history yet. Your invoices will appear here after your first payment.
+                    </p>
+                  </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-4 font-medium">Date</th>
-                          <th className="text-left py-3 px-4 font-medium">Description</th>
-                          <th className="text-left py-3 px-4 font-medium">Amount</th>
-                          <th className="text-left py-3 px-4 font-medium">Status</th>
-                          <th className="text-right py-3 px-4 font-medium">Invoice</th>
+                        <tr className="text-left border-b">
+                          <th className="pb-2 font-medium text-sm text-gray-500">Date</th>
+                          <th className="pb-2 font-medium text-sm text-gray-500">Description</th>
+                          <th className="pb-2 font-medium text-sm text-gray-500">Amount</th>
+                          <th className="pb-2 font-medium text-sm text-gray-500">Status</th>
+                          <th className="pb-2 font-medium text-sm text-gray-500"></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {billingHistory.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="py-8 text-center text-gray-500">
-                              <ArrowDownCircle className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                              <p>No billing history found</p>
+                        {billingHistory.map((invoice) => (
+                          <tr key={invoice.id} className="border-b">
+                            <td className="py-3 text-sm">
+                              {new Date(invoice.date).toLocaleDateString()}
+                            </td>
+                            <td className="py-3 text-sm">
+                              {invoice.description || `Invoice #${invoice.number}`}
+                            </td>
+                            <td className="py-3 text-sm font-medium">
+                              ${Number(invoice.amount / 100).toFixed(2)} {invoice.currency.toUpperCase()}
+                            </td>
+                            <td className="py-3 text-sm">
+                              {getInvoiceStatusBadge(invoice.status)}
+                            </td>
+                            <td className="py-3 text-sm">
+                              <div className="flex space-x-2 justify-end">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setSelectedInvoice(invoice);
+                                    setShowInvoiceDetailsDialog(true);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                {invoice.invoiceUrl && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => window.open(invoice.invoiceUrl, '_blank')}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </td>
                           </tr>
-                        ) : (
-                          billingHistory.map((invoice: any) => {
-                            // Format date from Stripe timestamp (seconds)
-                            const invoiceDate = invoice.created 
-                              ? new Date(invoice.created * 1000) 
-                              : new Date();
-                            
-                            // Format amount from Stripe (cents to dollars)
-                            const amount = invoice.amount_paid 
-                              ? (invoice.amount_paid / 100).toFixed(2) 
-                              : "0.00";
-                              
-                            return (
-                              <tr key={invoice.id} className="border-b hover:bg-gray-50">
-                                <td className="py-3 px-4">
-                                  <div>{invoiceDate.toLocaleDateString()}</div>
-                                  <div className="text-xs text-gray-500">
-                                    {formatDistance(invoiceDate, new Date(), { addSuffix: true })}
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4">
-                                  {invoice.lines?.data?.[0]?.description || "Subscription Payment"}
-                                </td>
-                                <td className="py-3 px-4 font-medium">${amount}</td>
-                                <td className="py-3 px-4">
-                                  {getInvoiceStatusBadge(invoice.status || "unknown")}
-                                </td>
-                                <td className="py-3 px-4 text-right">
-                                  <div className="flex justify-end gap-2">
-                                    {invoice.hosted_invoice_url && (
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => window.open(invoice.hosted_invoice_url, '_blank')}
-                                        title="View invoice in Stripe"
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                    )}
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => window.open(`/api/invoice/${invoice.id}/pdf`, '_blank')}
-                                      title="Download invoice PDF"
-                                    >
-                                      <Download className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        apiRequest('GET', `/api/billing-history/${invoice.id}`)
-                                          .then(res => res.json())
-                                          .then(data => {
-                                            setSelectedInvoice(data);
-                                            setShowInvoiceDetailsDialog(true);
-                                          })
-                                          .catch(error => {
-                                            toast({
-                                              title: "Error fetching invoice details",
-                                              description: error.message,
-                                              variant: "destructive"
-                                            });
-                                          });
-                                      }}
-                                    >
-                                      <Info className="h-4 w-4 mr-2" />
-                                      Details
-                                    </Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -876,13 +1143,13 @@ const Billing = () => {
         </div>
       </div>
 
-      {/* Add New Card Dialog */}
+      {/* Add Card Dialog */}
       <Dialog open={showAddCardDialog} onOpenChange={setShowAddCardDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Payment Method</DialogTitle>
             <DialogDescription>
-              Enter your card details to add a new payment method.
+              Add a new credit or debit card to your account.
             </DialogDescription>
           </DialogHeader>
           {stripePromise ? (
@@ -890,106 +1157,67 @@ const Billing = () => {
               <AddCardForm onClose={() => setShowAddCardDialog(false)} />
             </Elements>
           ) : (
-            <div className="p-6 text-center text-red-500">
-              <AlertTriangle className="h-10 w-10 mx-auto mb-2" />
-              <p>Stripe is not configured properly.</p>
-              <p className="text-sm">Please check your environment variables.</p>
+            <div className="py-4">
+              <p className="text-red-500">Stripe is not properly configured. Please contact support.</p>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Edit Billing Info Dialog */}
+      {/* Edit Billing Information Dialog */}
       <Dialog open={showEditBillingDialog} onOpenChange={setShowEditBillingDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Billing Information</DialogTitle>
             <DialogDescription>
-              Update your billing information for invoices.
+              Update your billing address and information.
             </DialogDescription>
           </DialogHeader>
           <EditBillingForm 
             initialData={billingInfo} 
             user={user}
             onClose={() => setShowEditBillingDialog(false)}
-            onSuccess={() => {
-              setShowEditBillingDialog(false);
-              queryClient.invalidateQueries({ queryKey: ['/api/billing-info'] });
-              
-              // Sync billing information with Stripe
-              if (user.stripeCustomerId) {
-                apiRequest('POST', '/api/sync-billing-with-stripe')
-                  .then(() => {
-                    toast({
-                      title: 'Billing information synced',
-                      description: 'Your billing information has been synced with payment provider.',
-                    });
-                  })
-                  .catch(error => {
-                    console.error('Failed to sync billing info with Stripe:', error);
-                  });
-              }
-            }}
+            onSuccess={() => setShowEditBillingDialog(false)}
           />
         </DialogContent>
       </Dialog>
-      
-      {/* Subscription Cancel Dialog */}
+
+      {/* Cancel Subscription Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="sm:max-w-[450px]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Cancel Subscription</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this subscription?
+              Are you sure you want to cancel your subscription?
             </DialogDescription>
           </DialogHeader>
-          
-          {subscriptionToCancel && (
-            <div className="py-4">
-              <div className="mb-4 p-4 bg-gray-50 rounded-md">
-                <h3 className="font-medium text-lg">{subscriptionToCancel.plan?.name}</h3>
-                <p className="text-sm text-gray-500">
-                  ${subscriptionToCancel.plan?.price ? Number(subscriptionToCancel.plan.price).toFixed(2) : "0.00"}/{subscriptionToCancel.plan?.billingCycle || "month"}
-                </p>
-                
-                {subscriptionToCancel.subscription.endDate && (
-                  <div className="mt-2 text-sm">
-                    <p>Your subscription will remain active until:</p>
-                    <p className="font-medium">{new Date(subscriptionToCancel.subscription.endDate).toLocaleDateString()}</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="text-sm text-gray-500 space-y-2">
-                <p>By canceling:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>You will lose access to this service when the billing period ends</li>
-                  <li>No further charges will be made for this subscription</li>
-                  <li>Any data associated with this subscription may be removed</li>
-                </ul>
+          <div className="py-4">
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+              <div className="flex items-start">
+                <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-yellow-800 mb-1">Important information about cancellation</h4>
+                  <p className="text-sm text-yellow-700">
+                    Your subscription will remain active until the end of the current billing period. 
+                    You will not be charged again after that date.
+                  </p>
+                </div>
               </div>
             </div>
-          )}
-          
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => {
-                setShowCancelDialog(false);
-                setSubscriptionToCancel(null);
-              }}
-            >
+            <p className="text-sm text-gray-500 mb-2">Plan: <span className="font-medium">{subscriptionToCancel?.plan?.name}</span></p>
+            <p className="text-sm text-gray-500">
+              Current period ends: <span className="font-medium">
+                {subscriptionToCancel?.nextBillingDate ? new Date(subscriptionToCancel.nextBillingDate).toLocaleDateString() : 'Unknown'}
+              </span>
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
               Keep Subscription
             </Button>
             <Button 
-              type="button" 
-              variant="destructive"
-              onClick={() => {
-                if (subscriptionToCancel) {
-                  cancelSubscriptionMutation.mutate(subscriptionToCancel.subscription.id);
-                }
-              }}
+              variant="destructive" 
+              onClick={() => subscriptionToCancel && cancelSubscriptionMutation.mutate(subscriptionToCancel.id)}
               disabled={cancelSubscriptionMutation.isPending}
             >
               {cancelSubscriptionMutation.isPending ? (
@@ -998,7 +1226,7 @@ const Billing = () => {
                   Canceling...
                 </>
               ) : (
-                "Confirm Cancellation"
+                'Cancel Subscription'
               )}
             </Button>
           </DialogFooter>
@@ -1007,153 +1235,152 @@ const Billing = () => {
 
       {/* Invoice Details Dialog */}
       <Dialog open={showInvoiceDetailsDialog} onOpenChange={setShowInvoiceDetailsDialog}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Invoice Details</DialogTitle>
             <DialogDescription>
-              Complete information about this invoice
+              Detailed information about this invoice
             </DialogDescription>
           </DialogHeader>
           
-          {selectedInvoice ? (
-            <div className="space-y-6">
-              {/* Invoice Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b">
+          {selectedInvoice && (
+            <div className="py-4">
+              <div className="flex justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Invoice #{selectedInvoice.number}</h3>
+                  <h3 className="text-xl font-bold mb-1">Invoice #{selectedInvoice.number}</h3>
                   <p className="text-sm text-gray-500">
-                    {new Date(selectedInvoice.created * 1000).toLocaleDateString()} ({formatDistance(new Date(selectedInvoice.created * 1000), new Date(), { addSuffix: true })})
+                    {new Date(selectedInvoice.date).toLocaleDateString()}
                   </p>
                 </div>
-                <div className="flex items-center mt-2 sm:mt-0">
-                  {getInvoiceStatusBadge(selectedInvoice.status)}
+                <div className="text-right">
+                  <div className="mb-2">{getInvoiceStatusBadge(selectedInvoice.status)}</div>
+                  {selectedInvoice.invoiceUrl && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => window.open(selectedInvoice.invoiceUrl, '_blank')}
+                      className="flex items-center"
+                    >
+                      <FileText className="h-4 w-4 mr-1.5" />
+                      PDF Invoice
+                    </Button>
+                  )}
                 </div>
               </div>
               
-              {/* Invoice Summary */}
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium">Bill To</h4>
-                  <p className="text-sm">{selectedInvoice.customer_name || user.username}</p>
-                  <p className="text-sm">{selectedInvoice.customer_email || user.email}</p>
-                  {selectedInvoice.customer_address?.line1 && (
+              <div className="grid grid-cols-2 gap-8 mb-6">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 mb-2">Billed To</h4>
+                  <p className="font-medium">{selectedInvoice.customer?.name || user.username}</p>
+                  <p>{selectedInvoice.customer?.email || user.email}</p>
+                  {selectedInvoice.customer?.address && (
                     <>
-                      <p className="text-sm">{selectedInvoice.customer_address.line1}</p>
-                      {selectedInvoice.customer_address.line2 && (
-                        <p className="text-sm">{selectedInvoice.customer_address.line2}</p>
+                      <p>{selectedInvoice.customer.address.line1}</p>
+                      {selectedInvoice.customer.address.line2 && (
+                        <p>{selectedInvoice.customer.address.line2}</p>
                       )}
-                      <p className="text-sm">
-                        {selectedInvoice.customer_address.city}, {selectedInvoice.customer_address.state} {selectedInvoice.customer_address.postal_code}
+                      <p>
+                        {selectedInvoice.customer.address.city}
+                        {selectedInvoice.customer.address.state && `, ${selectedInvoice.customer.address.state}`}
+                        {selectedInvoice.customer.address.postal_code && ` ${selectedInvoice.customer.address.postal_code}`}
                       </p>
-                      <p className="text-sm">{selectedInvoice.customer_address.country}</p>
+                      <p>{selectedInvoice.customer.address.country}</p>
                     </>
                   )}
                 </div>
-                
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium">Payment Details</h4>
-                  <div className="flex items-center gap-1.5">
-                    <CreditCardIcon className="h-4 w-4 text-gray-500" />
-                    <p className="text-sm">
-                      {selectedInvoice.payment_intent?.payment_method_details?.card?.brand
-                        ? `${selectedInvoice.payment_intent.payment_method_details.card.brand.toUpperCase()} •••• ${selectedInvoice.payment_intent.payment_method_details.card.last4}`
-                        : "Payment method information not available"}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-1.5">
-                    <CalendarIcon className="h-4 w-4 text-gray-500" />
-                    <p className="text-sm">
-                      {selectedInvoice.payment_intent?.created 
-                        ? `Paid on ${new Date(selectedInvoice.payment_intent.created * 1000).toLocaleDateString()}`
-                        : "Payment date not available"}
-                    </p>
-                  </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 mb-2">Payment Information</h4>
+                  {selectedInvoice.paymentMethod ? (
+                    <div>
+                      <p className="font-medium">
+                        {selectedInvoice.paymentMethod.card.brand.charAt(0).toUpperCase() + 
+                         selectedInvoice.paymentMethod.card.brand.slice(1)} ••••{selectedInvoice.paymentMethod.card.last4}
+                      </p>
+                      <p>Exp: {selectedInvoice.paymentMethod.card.exp_month}/{selectedInvoice.paymentMethod.card.exp_year}</p>
+                    </div>
+                  ) : (
+                    <p>Payment method details not available</p>
+                  )}
                 </div>
               </div>
               
-              {/* Invoice Line Items */}
-              <div>
-                <h4 className="text-sm font-medium mb-2">Invoice Items</h4>
-                <div className="rounded-md border">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <div className="border rounded-md mb-6">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 text-left">
+                      <th className="px-4 py-3 text-sm font-medium text-gray-500">Description</th>
+                      <th className="px-4 py-3 text-sm font-medium text-gray-500">Period</th>
+                      <th className="px-4 py-3 text-sm font-medium text-gray-500 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedInvoice.items?.map((item: any, index: number) => (
+                      <tr key={index} className="border-t">
+                        <td className="px-4 py-3">
+                          <div className="font-medium">{item.description}</div>
+                          {item.plan && (
+                            <div className="text-sm text-gray-500">
+                              {item.plan.interval_count > 1 ? `${item.plan.interval_count} ` : ''}
+                              {item.plan.interval === 'month' 
+                                ? item.plan.interval_count > 1 ? 'months' : 'month'
+                                : item.plan.interval === 'year'
+                                  ? item.plan.interval_count > 1 ? 'years' : 'year'
+                                  : item.plan.interval === 'week'
+                                    ? item.plan.interval_count > 1 ? 'weeks' : 'week'
+                                    : item.plan.interval_count > 1 ? 'days' : 'day'
+                              }
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {item.period && (
+                            <>
+                              {new Date(item.period.start * 1000).toLocaleDateString()} - {new Date(item.period.end * 1000).toLocaleDateString()}
+                            </>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          ${Number(item.amount / 100).toFixed(2)}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {selectedInvoice.lines?.data?.map((item: any, index: number) => (
-                        <tr key={index}>
-                          <td className="px-4 py-3 text-sm text-gray-900">
-                            <div className="font-medium">{item.description}</div>
-                            {item.period?.start && item.period?.end && (
-                              <div className="text-xs text-gray-500">
-                                {new Date(item.period.start * 1000).toLocaleDateString()} - {new Date(item.period.end * 1000).toLocaleDateString()}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right font-medium">${(item.amount / 100).toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-gray-50">
-                      <tr>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">Subtotal</td>
-                        <td className="px-4 py-3 text-sm text-right font-medium">${(selectedInvoice.subtotal / 100).toFixed(2)}</td>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t bg-gray-50">
+                      <td colSpan={2} className="px-4 py-3 text-right font-medium">
+                        Subtotal
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        ${Number(selectedInvoice.subtotal / 100).toFixed(2)}
+                      </td>
+                    </tr>
+                    {selectedInvoice.tax && (
+                      <tr className="border-t bg-gray-50">
+                        <td colSpan={2} className="px-4 py-3 text-right font-medium">
+                          Tax
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          ${Number(selectedInvoice.tax / 100).toFixed(2)}
+                        </td>
                       </tr>
-                      {selectedInvoice.tax && (
-                        <tr>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">Tax</td>
-                          <td className="px-4 py-3 text-sm text-right font-medium">${(selectedInvoice.tax / 100).toFixed(2)}</td>
-                        </tr>
-                      )}
-                      {selectedInvoice.total_discount_amounts && selectedInvoice.total_discount_amounts > 0 && (
-                        <tr>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">Discounts</td>
-                          <td className="px-4 py-3 text-sm text-right font-medium text-green-600">-${(selectedInvoice.total_discount_amounts / 100).toFixed(2)}</td>
-                        </tr>
-                      )}
-                      <tr className="border-t">
-                        <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
-                        <td className="px-4 py-3 text-sm text-right font-bold">${(selectedInvoice.total / 100).toFixed(2)}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
+                    )}
+                    <tr className="border-t bg-gray-50">
+                      <td colSpan={2} className="px-4 py-3 text-right font-semibold">
+                        Total
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold">
+                        ${Number(selectedInvoice.amount / 100).toFixed(2)} {selectedInvoice.currency.toUpperCase()}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
-              
-              {/* Download and View Actions */}
-              <div className="flex justify-end gap-3">
-                {selectedInvoice.hosted_invoice_url && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => window.open(selectedInvoice.hosted_invoice_url, '_blank')}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View in Browser
-                  </Button>
-                )}
-                <Button 
-                  variant="default"
-                  onClick={() => window.open(`/api/invoice/${selectedInvoice.id}/pdf`, '_blank')}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-6 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-              <p>Loading invoice details...</p>
             </div>
           )}
           
           <DialogFooter>
             <Button 
-              variant="outline" 
+              type="button" 
               onClick={() => setShowInvoiceDetailsDialog(false)}
             >
               Close
@@ -1164,372 +1391,5 @@ const Billing = () => {
     </div>
   );
 };
-
-// EditBillingForm component
-interface EditBillingFormProps {
-  initialData: any;
-  user: any;
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-function EditBillingForm({ initialData, user, onClose, onSuccess }: EditBillingFormProps) {
-  const { toast } = useToast();
-  // isCompany değişkenini initialData.isCompany'den almak daha doğru olacaktır
-  // eğer bu değer yoksa, ancak companyName varsa şirket modunu açık kabul edelim
-  const [isCompany, setIsCompany] = useState(
-    initialData?.isCompany === true || 
-    (initialData?.isCompany !== false && !!initialData?.companyName)
-  );
-  
-  // Form verilerindeki isCompany değeri de aynı mantıkla belirlensin
-  const [formData, setFormData] = useState({
-    fullName: initialData?.fullName || user?.username || '',
-    email: initialData?.email || user?.email || '',
-    address1: initialData?.address1 || '',
-    address2: initialData?.address2 || '',
-    city: initialData?.city || '',
-    state: initialData?.state || '',
-    zip: initialData?.zip || '',
-    country: initialData?.country || '',
-    // isCompany değeri doğrudan initialData'dan gelsin
-    isCompany: initialData?.isCompany === true || 
-               (initialData?.isCompany !== false && !!initialData?.companyName),
-    companyName: initialData?.companyName || '',
-    companyRegistrationNumber: initialData?.companyRegistrationNumber || '',
-    companyVatNumber: initialData?.companyVatNumber || '',
-  });
-  
-  const [states, setStates] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Initial setup of states and cities based on country and state
-  useEffect(() => {
-    if (formData.country) {
-      const countryStates = State.getStatesOfCountry(formData.country);
-      setStates(countryStates);
-      
-      if (formData.state && countryStates.length > 0) {
-        const stateCities = City.getCitiesOfState(formData.country, formData.state);
-        setCities(stateCities);
-      }
-    }
-  }, []);
-  
-  // Form submission handler
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // İstek gitmeden önce şirket durum bilgisinin güncel olduğundan emin olalım
-      const dataToSend = {
-        ...formData,
-        isCompany: isCompany // UI state ile senkronize et
-      };
-      
-      // Log the data being sent to verify company info is included
-      console.log("Sending form data to server:", dataToSend);
-      
-      const response = await apiRequest('POST', '/api/billing-info', dataToSend);
-      const data = await response.json();
-      
-      console.log("Server response:", data);
-      
-      toast({
-        title: 'Billing information updated',
-        description: 'Your billing information has been updated successfully.',
-      });
-      
-      onSuccess();
-    } catch (error: any) {
-      toast({
-        title: 'Error updating billing information',
-        description: error.message || 'An unknown error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Toggle company info
-  const handleCompanyToggle = (checked: boolean) => {
-    console.log("Company toggle changed to:", checked);
-    setIsCompany(checked);
-    setFormData(prev => ({
-      ...prev,
-      isCompany: checked,
-      // Eğer şirket modu kapatılıyorsa, şirket alanlarını boşaltmadan koru
-      // Bu sayede kullanıcı şirket modunu tekrar açtığında bilgiler korunur
-    }));
-  };
-
-  // Handle input change
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    // Extract field name from ID by removing billing prefix
-    let field = id.startsWith('billing') ? id.slice(7) : id;
-    // Convert first letter to lowercase for camelCase
-    field = field.charAt(0).toLowerCase() + field.slice(1);
-    
-    console.log(`Input change: ID=${id}, field=${field}, value=${value}`);
-    
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-  
-  // Handle country selection
-  const handleCountryChange = (value: string) => {
-    const countryStates = State.getStatesOfCountry(value);
-    setStates(countryStates);
-    setCities([]);
-    
-    setFormData(prev => ({
-      ...prev,
-      country: value,
-      state: '',
-      city: ''
-    }));
-  };
-  
-  // Handle state selection
-  const handleStateChange = (value: string) => {
-    const stateCities = City.getCitiesOfState(formData.country, value);
-    setCities(stateCities);
-    
-    setFormData(prev => ({
-      ...prev,
-      state: value,
-      city: ''
-    }));
-  };
-  
-  // Handle city selection
-  const handleCityChange = (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      city: value
-    }));
-  };
-  
-  return (
-    <form onSubmit={handleSubmit}>
-      <div className="grid gap-4 py-4">
-        <div className="grid gap-2">
-          <Label htmlFor="billingFullName">Full Name</Label>
-          <Input
-            id="billingFullName"
-            value={formData.fullName}
-            onChange={handleChange}
-            placeholder="Full Name"
-          />
-        </div>
-        
-        <div className="grid gap-2">
-          <Label htmlFor="billingEmail">Email</Label>
-          <Input
-            id="billingEmail"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="email@example.com"
-          />
-        </div>
-        
-        <div className="grid gap-2">
-          <Label htmlFor="billingAddress1">Address Line 1</Label>
-          <Input
-            id="billingAddress1"
-            value={formData.address1}
-            onChange={handleChange}
-            placeholder="Street address"
-          />
-        </div>
-        
-        <div className="grid gap-2">
-          <Label htmlFor="billingAddress2">Address Line 2</Label>
-          <Input
-            id="billingAddress2"
-            value={formData.address2}
-            onChange={handleChange}
-            placeholder="Apt, Suite, etc. (optional)"
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="billingCountry">Country</Label>
-            <Select 
-              value={formData.country}
-              onValueChange={handleCountryChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a country" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[200px] overflow-y-auto">
-                {Country.getAllCountries()
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((country) => (
-                    <SelectItem key={country.isoCode} value={country.isoCode}>
-                      <div className="flex items-center gap-2">
-                        <ReactCountryFlag 
-                          countryCode={country.isoCode}
-                          svg
-                          style={{
-                            width: '1.2em',
-                            height: '1.2em',
-                          }}
-                        />
-                        {country.name}
-                      </div>
-                    </SelectItem>
-                  ))
-                }
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="billingState">State / Province</Label>
-            {states.length > 0 ? (
-              <Select 
-                value={formData.state}
-                onValueChange={handleStateChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a state" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  {states.map((state) => (
-                    <SelectItem key={state.isoCode} value={state.isoCode}>
-                      {state.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                id="billingState"
-                value={formData.state}
-                onChange={handleChange}
-                placeholder="Enter state/province"
-              />
-            )}
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="billingCity">City</Label>
-            {cities.length > 0 ? (
-              <Select 
-                value={formData.city}
-                onValueChange={handleCityChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a city" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  {cities.map((city) => (
-                    <SelectItem key={city.name} value={city.name}>
-                      {city.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                id="billingCity"
-                value={formData.city}
-                onChange={handleChange}
-                placeholder="Enter city"
-              />
-            )}
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="billingZip">ZIP / Postal</Label>
-            <Input
-              id="billingZip"
-              value={formData.zip}
-              onChange={handleChange}
-              placeholder="ZIP/Postal Code"
-            />
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-2 py-2 border-t border-b my-2">
-          <Switch 
-            id="company-mode" 
-            checked={isCompany}
-            onCheckedChange={handleCompanyToggle}
-          />
-          <div className="grid gap-0.5">
-            <Label htmlFor="company-mode" className="text-sm font-medium flex items-center gap-1">
-              <Building2 className="h-4 w-4 text-primary" />
-              Company Billing
-            </Label>
-            <span className="text-xs text-gray-500">Purchase as a company/business</span>
-          </div>
-        </div>
-        
-        {isCompany && (
-          <>
-            <div className="grid gap-2">
-              <Label htmlFor="billingCompanyName">Company Name</Label>
-              <Input
-                id="billingCompanyName"
-                value={formData.companyName}
-                onChange={handleChange}
-                placeholder="Company Name"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="billingCompanyRegistrationNumber">Registration Number</Label>
-                <Input
-                  id="billingCompanyRegistrationNumber"
-                  value={formData.companyRegistrationNumber}
-                  onChange={handleChange}
-                  placeholder="Company Registration Number"
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="billingCompanyVatNumber">VAT Number</Label>
-                <Input
-                  id="billingCompanyVatNumber"
-                  value={formData.companyVatNumber}
-                  onChange={handleChange}
-                  placeholder="VAT/GST Number"
-                />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-      
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            'Save Changes'
-          )}
-        </Button>
-      </DialogFooter>
-    </form>
-  );
-}
 
 export default Billing;
