@@ -171,8 +171,8 @@ const EmailVerificationTopbar = () => {
     },
     onSuccess: (data) => {
       toast({
-        title: "Doğrulama e-postası gönderildi",
-        description: "Lütfen e-posta kutunuzu kontrol edin ve doğrulama bağlantısına tıklayın.",
+        title: "Verification email sent",
+        description: "Please check your inbox for the verification link.",
         duration: 6000,
       });
       
@@ -181,8 +181,8 @@ const EmailVerificationTopbar = () => {
         const { attemptsUsed, attemptsMax } = data.rateLimitInfo;
         if (attemptsUsed && attemptsMax) {
           toast({
-            title: "Gönderim limiti bilgisi",
-            description: `${attemptsMax} gönderim hakkından ${attemptsUsed} tanesini kullandınız.`,
+            title: "Rate limit information",
+            description: `You have used ${attemptsUsed} of ${attemptsMax} verification attempts.`,
             duration: 4000,
           });
         }
@@ -203,8 +203,8 @@ const EmailVerificationTopbar = () => {
               (Date.now() - (EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString());
             
             toast({
-              title: "Gönderim limiti aşıldı",
-              description: data.message || `Lütfen ${data.remainingSeconds} saniye bekleyin ve tekrar deneyin.`,
+              title: "Rate limited",
+              description: data.message || `Please wait ${data.remainingSeconds} seconds before trying again.`,
               variant: "destructive",
               duration: 6000,
             });
@@ -213,8 +213,8 @@ const EmailVerificationTopbar = () => {
             const resetTime = new Date(data.resetTime);
             
             toast({
-              title: "Doğrulama limiti aşıldı",
-              description: data.message || `Maksimum gönderim limiti aşıldı. Lütfen daha sonra tekrar deneyin.`,
+              title: "Verification limit reached",
+              description: data.message || `Maximum attempts reached. Please try again later.`,
               variant: "destructive",
               duration: 8000,
             });
@@ -232,7 +232,7 @@ const EmailVerificationTopbar = () => {
       setCountdown(0);
       
       toast({
-        title: "Doğrulama e-postası gönderilemedi",
+        title: "Failed to send verification email",
         description: error.message,
         variant: "destructive",
         duration: 5000,
@@ -260,9 +260,9 @@ const EmailVerificationTopbar = () => {
               <AlertTriangle className="h-5 w-5 text-red-500" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-md">DİKKAT: E-posta adresiniz doğrulanmadı!</h3>
+              <h3 className="font-bold text-white text-md">ATTENTION: Your email is not verified!</h3>
               <AlertDescription className="text-white text-sm">
-                Hesap güvenliğinizi sağlamak ve önemli bildirimleri almak için e-posta adresinizi doğrulayın.
+                Verify your email address to ensure account security and receive important notifications.
               </AlertDescription>
             </div>
           </div>
@@ -276,17 +276,17 @@ const EmailVerificationTopbar = () => {
             >
               {resendVerificationMutation.isPending ? (
                 <>
-                  <span className="animate-pulse">Gönderiliyor...</span>
+                  <span className="animate-pulse">Sending...</span>
                 </>
               ) : timeRemaining !== null ? (
                 <>
                   <Clock className="h-4 w-4 mr-1" />
-                  {countdown}s bekleyin
+                  Wait {countdown}s
                 </>
               ) : (
                 <>
                   <Mail className="h-4 w-4 mr-1" />
-                  Doğrulama Bağlantısı Gönder
+                  Send Verification Link
                 </>
               )}
             </Button>
