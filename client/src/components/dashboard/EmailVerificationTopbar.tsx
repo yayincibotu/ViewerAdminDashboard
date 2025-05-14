@@ -12,16 +12,42 @@ const EMAIL_VERIFICATION = {
   COOLDOWN_PERIOD_MS: 60000, // 1 minute cooldown
   RESET_PERIOD_MS: 3600000,  // 1 hour reset period
   MAX_ATTEMPTS: 5,           // 5 attempts maximum
-  STORAGE_KEY: 'email_verification_last_sent'
+  STORAGE_KEY: 'email_verification_last_sent',
+  DISMISSED_KEY: 'email_verification_dismissed' // New key for persisting dismiss state
 };
 
 const EmailVerificationTopbar = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [dismissed, setDismissed] = useState(false);
   const [isAnimating, setIsAnimating] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
+  
+  // Load dismissed state from localStorage
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(EMAIL_VERIFICATION.DISMISSED_KEY) === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+  
+  // Persist dismissed state to localStorage when it changes
+  useEffect(() => {
+    if (dismissed) {
+      try {
+        localStorage.setItem(EMAIL_VERIFICATION.DISMISSED_KEY, 'true');
+      } catch (e) {
+        console.error('Failed to save dismissed state to localStorage:', e);
+      }
+    }
+  }, [dismissed]);
+
+  // Don't run any other effects if the component is dismissed or user is not logged in
+  // or email is already verified
+  if (!user || user.isEmailVerified || dismissed) {
+    return null;
+  }
 
   // Check if user is in cooldown period
   useEffect(() => {
@@ -53,7 +79,7 @@ const EmailVerificationTopbar = () => {
   // Check for server rate limits on component mount (reload won't clear server restrictions)
   useEffect(() => {
     // Only check if the user is not already in cooldown
-    if (timeRemaining === null && user && !user.isEmailVerified) {
+    if (timeRemaining === null) {
       // Make a lightweight request to check rate limit status
       fetch('/api/verification-status')
         .then(res => {
@@ -77,7 +103,7 @@ const EmailVerificationTopbar = () => {
           // Ignore errors, default to allowing verification emails
         });
     }
-  }, [user, timeRemaining]);
+  }, [timeRemaining]);
 
   // Countdown timer for cooldown period
   useEffect(() => {
@@ -101,12 +127,7 @@ const EmailVerificationTopbar = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Don't show anything if email is already verified or no user is logged in
-  if (!user || user.isEmailVerified || dismissed) {
-    return null;
-  }
-
-  // Email verification mutation
+  // Email verification mutation - defined outside of conditional rendering
   const resendVerificationMutation = useMutation({
     mutationFn: async () => {
       // Set the last sent timestamp
@@ -188,6 +209,16 @@ const EmailVerificationTopbar = () => {
     },
   });
 
+  // Handle dismiss topbar
+  const handleDismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem(EMAIL_VERIFICATION.DISMISSED_KEY, 'true');
+    } catch (e) {
+      console.error('Failed to save dismissed state to localStorage:', e);
+    }
+  };
+
   return (
     <div className="w-full bg-gradient-to-r from-red-500 to-amber-500 shadow-md">
       <Alert className="max-w-screen-xl mx-auto border-none rounded-none bg-transparent py-3">
@@ -231,7 +262,7 @@ const EmailVerificationTopbar = () => {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-white hover:bg-red-600/20 hover:text-white"
-              onClick={() => setDismissed(true)}
+              onClick={handleDismiss}
             >
               <X className="h-4 w-4" />
               <span className="sr-only">Dismiss</span>
