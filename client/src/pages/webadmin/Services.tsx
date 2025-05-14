@@ -946,25 +946,6 @@ const AdminServices: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Price (USD)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="29.99" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
                   name="platform"
                   render={({ field }) => (
                     <FormItem>
@@ -983,6 +964,179 @@ const AdminServices: React.FC = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="billingCycle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Faturalama Periyodu</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Faturalama periyodunu seçin" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="daily">Günlük</SelectItem>
+                          <SelectItem value="weekly">Haftalık</SelectItem>
+                          <SelectItem value="monthly">Aylık</SelectItem>
+                          <SelectItem value="annual">Yıllık</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Bu plan için varsayılan faturalama periyodu</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Aylık Fiyat (TL)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="750" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormDescription>Aylık fiyat (TL)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="dailyPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Günlük Fiyat (TL)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="50" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormDescription>Günlük fiyat (TL)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="weeklyPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Haftalık Fiyat (TL)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="250" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormDescription>Haftalık fiyat (TL)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="annualPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Yıllık Fiyat (TL)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="7500" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormDescription>Yıllık fiyat (TL) - indirimli olarak ayarlayabilirsiniz</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="stripePriceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stripe Aylık Fiyat ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ör. price_1234567890" {...field} />
+                      </FormControl>
+                      <FormDescription>Aylık fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="stripeDailyPriceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stripe Günlük Fiyat ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ör. price_1234567890" {...field} />
+                      </FormControl>
+                      <FormDescription>Günlük fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="stripeWeeklyPriceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stripe Haftalık Fiyat ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ör. price_1234567890" {...field} />
+                      </FormControl>
+                      <FormDescription>Haftalık fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="stripeAnnualPriceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stripe Yıllık Fiyat ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ör. price_1234567890" {...field} />
+                      </FormControl>
+                      <FormDescription>Yıllık fatura döngüsü için Stripe Fiyat ID'si</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
