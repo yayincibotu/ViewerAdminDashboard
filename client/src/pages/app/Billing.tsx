@@ -491,6 +491,16 @@ const Billing = () => {
               </CardContent>
             </Card>
             
+            {/* Subscription Section Header */}
+            <div className="mt-8 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCardIcon className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Your Subscription Plans</h2>
+              </div>
+              <div className="h-1 w-32 bg-gradient-to-r from-primary to-primary/30 rounded mb-1"></div>
+              <p className="text-sm text-gray-500">Manage your active subscriptions and services</p>
+            </div>
+            
             {/* Current Plan Card */}
             {subscriptionsLoading ? (
               <Card>
@@ -526,7 +536,7 @@ const Billing = () => {
             ) : (
               <>
                 {subscriptions.map((sub: any, index: number) => (
-                  <Card key={sub.subscription.id}>
+                  <Card key={sub.subscription.id} className="border-l-4 border-l-primary">
                     <CardHeader className="pb-4">
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-lg">
@@ -627,11 +637,21 @@ const Billing = () => {
               </>
             )}
 
+            {/* Payment Methods Section Header */}
+            <div className="mt-8 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Payment Methods</h2>
+              </div>
+              <div className="h-1 w-32 bg-gradient-to-r from-primary to-primary/30 rounded mb-1"></div>
+              <p className="text-sm text-gray-500">Manage your payment cards and billing options</p>
+            </div>
+            
             {/* Payment Method Card */}
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Payment Methods</CardTitle>
+                  <CardTitle className="text-lg">Payment Cards</CardTitle>
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -729,11 +749,21 @@ const Billing = () => {
 
           </div>
 
+          {/* Billing History Section Header */}
+          <div className="mt-8 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">Billing History</h2>
+            </div>
+            <div className="h-1 w-32 bg-gradient-to-r from-primary to-primary/30 rounded mb-1"></div>
+            <p className="text-sm text-gray-500">View and download your payment history</p>
+          </div>
+          
           {/* Billing History */}
-          <div className="mt-8">
+          <div>
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Billing History</CardTitle>
+                <CardTitle className="text-lg">Invoice History</CardTitle>
                 <CardDescription>View and download your invoices</CardDescription>
               </CardHeader>
               <CardContent>
