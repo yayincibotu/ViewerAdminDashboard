@@ -13,7 +13,7 @@ const EMAIL_VERIFICATION = {
   RESET_PERIOD_MS: 3600000,  // 1 hour reset period
   MAX_ATTEMPTS: 5,           // 5 attempts maximum
   STORAGE_KEY: 'email_verification_last_sent',
-  DISMISSED_KEY: 'email_verification_dismissed' // Key for persisting dismiss state
+  // Deliberately not using localStorage for dismissed state so it reappears on page refresh
 };
 
 // Function to safely get item from localStorage
@@ -38,6 +38,17 @@ const safeSetLocalStorage = (key: string, value: string) => {
   }
 };
 
+// Function to safely remove item from localStorage
+const safeRemoveLocalStorage = (key: string) => {
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (e) {
+    console.error(`Error removing ${key} from localStorage:`, e);
+    return false;
+  }
+};
+
 const EmailVerificationTopbar = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -46,30 +57,22 @@ const EmailVerificationTopbar = () => {
   const [countdown, setCountdown] = useState<number>(0);
   const [shouldShow, setShouldShow] = useState(false);
   
-  // Load dismissed state from localStorage
-  const [dismissed, setDismissed] = useState(() => {
-    return safeGetLocalStorage(EMAIL_VERIFICATION.DISMISSED_KEY) === 'true';
-  });
+  // Use state for dismissed instead of localStorage
+  // This ensures the banner will reappear on page refresh
+  const [dismissed, setDismissed] = useState(false);
 
   // Effect to determine if component should show
   useEffect(() => {
     // Only show if:
     // 1. User is logged in
     // 2. User email is not verified 
-    // 3. Banner hasn't been dismissed
+    // 3. Banner hasn't been dismissed in current session
     if (user && !user.isEmailVerified && !dismissed) {
       setShouldShow(true);
     } else {
       setShouldShow(false);
     }
   }, [user, dismissed]);
-  
-  // Persist dismissed state to localStorage when it changes
-  useEffect(() => {
-    if (dismissed) {
-      safeSetLocalStorage(EMAIL_VERIFICATION.DISMISSED_KEY, 'true');
-    }
-  }, [dismissed]);
 
   // Handle the cooldown period check
   useEffect(() => {
@@ -88,11 +91,7 @@ const EmailVerificationTopbar = () => {
         } else {
           // Also check if there's a server restriction before removing local cooldown
           // Only reset the client state if both client and server cooldowns are expired
-          try {
-            localStorage.removeItem(EMAIL_VERIFICATION.STORAGE_KEY);
-          } catch (e) {
-            console.error('Error removing item from localStorage:', e);
-          }
+          safeRemoveLocalStorage(EMAIL_VERIFICATION.STORAGE_KEY);
           setTimeRemaining(null);
           setCountdown(0);
         }
@@ -172,8 +171,8 @@ const EmailVerificationTopbar = () => {
     },
     onSuccess: (data) => {
       toast({
-        title: "Verification email sent",
-        description: "Please check your inbox for the verification link.",
+        title: "Doğrulama e-postası gönderildi",
+        description: "Lütfen e-posta kutunuzu kontrol edin ve doğrulama bağlantısına tıklayın.",
         duration: 6000,
       });
       
@@ -182,8 +181,8 @@ const EmailVerificationTopbar = () => {
         const { attemptsUsed, attemptsMax } = data.rateLimitInfo;
         if (attemptsUsed && attemptsMax) {
           toast({
-            title: "Rate limit information",
-            description: `You have used ${attemptsUsed} of ${attemptsMax} verification attempts.`,
+            title: "Gönderim limiti bilgisi",
+            description: `${attemptsMax} gönderim hakkından ${attemptsUsed} tanesini kullandınız.`,
             duration: 4000,
           });
         }
@@ -204,8 +203,8 @@ const EmailVerificationTopbar = () => {
               (Date.now() - (EMAIL_VERIFICATION.COOLDOWN_PERIOD_MS - data.remainingSeconds * 1000)).toString());
             
             toast({
-              title: "Rate limited",
-              description: data.message || `Please wait ${data.remainingSeconds} seconds before trying again.`,
+              title: "Gönderim limiti aşıldı",
+              description: data.message || `Lütfen ${data.remainingSeconds} saniye bekleyin ve tekrar deneyin.`,
               variant: "destructive",
               duration: 6000,
             });
@@ -214,8 +213,8 @@ const EmailVerificationTopbar = () => {
             const resetTime = new Date(data.resetTime);
             
             toast({
-              title: "Verification limit reached",
-              description: data.message || `Maximum attempts reached. Please try again later.`,
+              title: "Doğrulama limiti aşıldı",
+              description: data.message || `Maksimum gönderim limiti aşıldı. Lütfen daha sonra tekrar deneyin.`,
               variant: "destructive",
               duration: 8000,
             });
@@ -228,16 +227,12 @@ const EmailVerificationTopbar = () => {
       }
       
       // Default error handling
-      try {
-        localStorage.removeItem(EMAIL_VERIFICATION.STORAGE_KEY);
-      } catch (e) {
-        console.error('Error removing item from localStorage:', e);
-      }
+      safeRemoveLocalStorage(EMAIL_VERIFICATION.STORAGE_KEY);
       setTimeRemaining(null);
       setCountdown(0);
       
       toast({
-        title: "Failed to send verification email",
+        title: "Doğrulama e-postası gönderilemedi",
         description: error.message,
         variant: "destructive",
         duration: 5000,
@@ -245,10 +240,10 @@ const EmailVerificationTopbar = () => {
     },
   });
 
-  // Handle dismiss topbar
+  // Handle dismiss topbar - only for current session
   const handleDismiss = () => {
     setDismissed(true);
-    safeSetLocalStorage(EMAIL_VERIFICATION.DISMISSED_KEY, 'true');
+    // We deliberately don't store this in localStorage so it reappears on page refresh
   };
   
   // Don't render anything if we shouldn't show the component
@@ -265,9 +260,9 @@ const EmailVerificationTopbar = () => {
               <AlertTriangle className="h-5 w-5 text-red-500" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-md">ATTENTION: Your email is not verified!</h3>
+              <h3 className="font-bold text-white text-md">DİKKAT: E-posta adresiniz doğrulanmadı!</h3>
               <AlertDescription className="text-white text-sm">
-                Verify your email address to ensure account security and receive important notifications.
+                Hesap güvenliğinizi sağlamak ve önemli bildirimleri almak için e-posta adresinizi doğrulayın.
               </AlertDescription>
             </div>
           </div>
@@ -281,17 +276,17 @@ const EmailVerificationTopbar = () => {
             >
               {resendVerificationMutation.isPending ? (
                 <>
-                  <span className="animate-pulse">Sending...</span>
+                  <span className="animate-pulse">Gönderiliyor...</span>
                 </>
               ) : timeRemaining !== null ? (
                 <>
                   <Clock className="h-4 w-4 mr-1" />
-                  Wait {countdown}s
+                  {countdown}s bekleyin
                 </>
               ) : (
                 <>
                   <Mail className="h-4 w-4 mr-1" />
-                  Send Verification Link
+                  Doğrulama Bağlantısı Gönder
                 </>
               )}
             </Button>
