@@ -611,7 +611,8 @@ const Billing = () => {
                       <Button 
                         variant="outline"
                         onClick={() => {
-                          // Show cancel confirmation here
+                          setSubscriptionToCancel(sub);
+                          setShowCancelDialog(true);
                         }}
                       >
                         Cancel Plan
@@ -904,6 +905,77 @@ const Billing = () => {
         </DialogContent>
       </Dialog>
       
+      {/* Subscription Cancel Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Cancel Subscription</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this subscription?
+            </DialogDescription>
+          </DialogHeader>
+          
+          {subscriptionToCancel && (
+            <div className="py-4">
+              <div className="mb-4 p-4 bg-gray-50 rounded-md">
+                <h3 className="font-medium text-lg">{subscriptionToCancel.plan?.name}</h3>
+                <p className="text-sm text-gray-500">
+                  ${((subscriptionToCancel.plan?.price || 0) / 100).toFixed(2)}/{subscriptionToCancel.plan?.billingCycle || "month"}
+                </p>
+                
+                {subscriptionToCancel.subscription.endDate && (
+                  <div className="mt-2 text-sm">
+                    <p>Your subscription will remain active until:</p>
+                    <p className="font-medium">{new Date(subscriptionToCancel.subscription.endDate).toLocaleDateString()}</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-sm text-gray-500 space-y-2">
+                <p>By canceling:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>You will lose access to this service when the billing period ends</li>
+                  <li>No further charges will be made for this subscription</li>
+                  <li>Any data associated with this subscription may be removed</li>
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setShowCancelDialog(false);
+                setSubscriptionToCancel(null);
+              }}
+            >
+              Keep Subscription
+            </Button>
+            <Button 
+              type="button" 
+              variant="destructive"
+              onClick={() => {
+                if (subscriptionToCancel) {
+                  cancelSubscriptionMutation.mutate(subscriptionToCancel.subscription.id);
+                }
+              }}
+              disabled={cancelSubscriptionMutation.isPending}
+            >
+              {cancelSubscriptionMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Canceling...
+                </>
+              ) : (
+                "Confirm Cancellation"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Invoice Details Dialog */}
       <Dialog open={showInvoiceDetailsDialog} onOpenChange={setShowInvoiceDetailsDialog}>
         <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
