@@ -1024,6 +1024,7 @@ const AdminServices: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {sortMode && <TableHead className="w-12"></TableHead>}
                       <TableHead>Plan Adı</TableHead>
                       <TableHead>Platform</TableHead>
                       <TableHead>Fatura Dönemi</TableHead>
@@ -1049,6 +1050,30 @@ const AdminServices: React.FC = () => {
                           </div>
                         </TableCell>
                       </TableRow>
+                    ) : sortMode ? (
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext 
+                          items={sortablePlans.map(plan => plan.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {sortablePlans.map((plan) => (
+                            <SortableTableRow 
+                              key={plan.id}
+                              id={plan.id}
+                              plan={plan}
+                              onEdit={handleEditPlan}
+                              onDelete={(plan) => {
+                                setSelectedPlan(plan);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
                     ) : (
                       filteredPlans.map((plan) => (
                         <TableRow key={plan.id}>
