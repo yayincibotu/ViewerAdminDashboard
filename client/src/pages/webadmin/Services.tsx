@@ -180,6 +180,7 @@ const AdminServices: React.FC = () => {
   const [isEditPlanDialogOpen, setIsEditPlanDialogOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [sortMode, setSortMode] = useState<boolean>(false);
   const [features, setFeatures] = useState<string[]>([
     "Up to X Live Viewers",
     "Realistic Chatters",
@@ -195,7 +196,7 @@ const AdminServices: React.FC = () => {
   const { toast } = useToast();
   
   // Fetch subscription plans
-  const { data: plans = [], isLoading: plansLoading } = useQuery<Plan[]>({
+  const { data: plans = [], isLoading: plansLoading, refetch } = useQuery<Plan[]>({
     queryKey: ['/api/subscription-plans'],
     queryFn: async () => {
       const response = await fetch('/api/subscription-plans');
@@ -205,6 +206,39 @@ const AdminServices: React.FC = () => {
       return response.json();
     }
   });
+  
+  // Set up drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+  
+  // State for sortable plans
+  const [sortablePlans, setSortablePlans] = useState<Plan[]>([]);
+  
+  // Initialize sortable plans when plans data changes
+  useEffect(() => {
+    if (plans.length > 0) {
+      // Create a copy with sortOrder property assigned if missing
+      const orderedPlans = plans.map((plan, index) => ({
+        ...plan,
+        sortOrder: plan.sortOrder !== undefined ? plan.sortOrder : index,
+      }));
+      
+      // Sort by sortOrder
+      const sorted = [...orderedPlans].sort((a, b) => 
+        (a.sortOrder || 0) - (b.sortOrder || 0)
+      );
+      
+      setSortablePlans(sorted);
+    }
+  }, [plans]);
   
   // Fetch platforms
   const { data: platforms = [], isLoading: platformsLoading } = useQuery<Platform[]>({
@@ -372,6 +406,67 @@ const AdminServices: React.FC = () => {
     const matchesPlatform = platformFilter === 'all' || plan.platform === platformFilter;
     
     return matchesSearch && matchesPlatform;
+  });
+  
+  // Handle drag end for reordering
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) {
+      return;
+    }
+    
+    // Find indices in the current array
+    const oldIndex = sortablePlans.findIndex(p => p.id === active.id);
+    const newIndex = sortablePlans.findIndex(p => p.id === over.id);
+    
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+    
+    // Create new array with updated positions
+    const newSortablePlans = [...sortablePlans];
+    const [movedItem] = newSortablePlans.splice(oldIndex, 1);
+    newSortablePlans.splice(newIndex, 0, movedItem);
+    
+    // Update sort orders
+    const withNewSortOrders = newSortablePlans.map((plan, index) => ({
+      ...plan,
+      sortOrder: index
+    }));
+    
+    setSortablePlans(withNewSortOrders);
+    
+    // Prepare data for API
+    const planOrders = withNewSortOrders.map(plan => ({
+      id: plan.id,
+      sortOrder: plan.sortOrder || 0
+    }));
+    
+    // Update on the server
+    updatePlanOrderMutation.mutate({ planOrders });
+  };
+  
+  // Mutation for updating plan order
+  const updatePlanOrderMutation = useMutation({
+    mutationFn: async (data: { planOrders: { id: number, sortOrder: number }[] }) => {
+      const res = await apiRequest("PATCH", "/api/admin/subscription-plans/reorder", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Plan sıralaması güncellendi",
+        description: "Plan sıralaması başarıyla kaydedildi.",
+      });
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Plan sıralaması güncellenemedi",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   });
   
   // Add a feature to the list
@@ -876,26 +971,49 @@ const AdminServices: React.FC = () => {
               </div>
               
               <div className="flex items-center gap-2 max-w-md w-full">
-                <Input
-                  placeholder="Search plans..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-xs"
-                />
+                {!sortMode && (
+                  <>
+                    <Input
+                      placeholder="Search plans..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="max-w-xs"
+                    />
+                    
+                    <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                      <SelectTrigger className="max-w-[180px]">
+                        <SelectValue placeholder="All Platforms" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Platforms</SelectItem>
+                        {platforms.map((platform) => (
+                          <SelectItem key={platform.slug} value={platform.slug}>
+                            {platform.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
                 
-                <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                  <SelectTrigger className="max-w-[180px]">
-                    <SelectValue placeholder="All Platforms" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Platforms</SelectItem>
-                    {platforms.map((platform) => (
-                      <SelectItem key={platform.slug} value={platform.slug}>
-                        {platform.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {sortMode ? (
+                  <Button 
+                    onClick={() => setSortMode(false)}
+                    variant="outline"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Sıralamayı Kaydet
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => setSortMode(true)}
+                    variant="outline"
+                  >
+                    <ArrowUp className="mr-2 h-4 w-4" />
+                    <ArrowDown className="mr-2 h-4 w-4" />
+                    Sıralamayı Düzenle
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
