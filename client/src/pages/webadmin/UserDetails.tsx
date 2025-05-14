@@ -569,7 +569,15 @@ const UserDetails: React.FC = () => {
                             {user.subscriptions.map((subscription: any) => (
                               <TableRow key={subscription.id}>
                                 <TableCell className="font-medium">
-                                  {subscription.planName || "Unknown Plan"}
+                                  {subscription.planExists ? (
+                                    subscription.planName
+                                  ) : (
+                                    <span className="flex items-center text-amber-600">
+                                      <AlertTriangle className="h-4 w-4 mr-1" />
+                                      {subscription.planName} 
+                                      <Badge variant="outline" className="ml-2 text-xs bg-amber-100">Plan Removed</Badge>
+                                    </span>
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   {subscription.isActive ? (
@@ -609,7 +617,11 @@ const UserDetails: React.FC = () => {
                                       size="sm" 
                                       className="h-8 w-8 p-0 text-red-500"
                                       onClick={() => {
-                                        if (window.confirm('Are you sure you want to cancel this subscription?')) {
+                                        const planStatus = subscription.planExists ? 
+                                          '' : 
+                                          '\n\nWarning: This subscription has a removed plan. Cancelling is recommended.';
+                                        
+                                        if (window.confirm(`Are you sure you want to cancel this subscription?${planStatus}`)) {
                                           cancelSubscriptionMutation.mutate(subscription.id);
                                         }
                                       }}

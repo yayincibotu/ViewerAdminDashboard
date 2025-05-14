@@ -1367,10 +1367,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userSubscriptions = await storage.getUserSubscriptions(userId);
       const userPayments = await storage.getUserPayments(userId);
       
+      // Enrich subscriptions with plan information
+      const enrichedSubscriptions = await Promise.all(
+        userSubscriptions.map(async (subscription) => {
+          // Get the plan for this subscription
+          const plan = await storage.getSubscriptionPlan(subscription.planId);
+          
+          return {
+            ...subscription,
+            planName: plan ? plan.name : "Unknown Plan",
+            planPrice: plan ? plan.price : 0,
+            planExists: !!plan,
+            currentPrice: subscription.currentPrice || (plan ? plan.price : 0)
+          };
+        })
+      );
+      
       // Create comprehensive user profile
       const userProfile = {
         ...user,
-        subscriptions: userSubscriptions,
+        subscriptions: enrichedSubscriptions,
         payments: userPayments
       };
       
@@ -1409,6 +1425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         planId,
         status: status || "active",
+        currentPrice: plan.price, // Add the current price from the plan
         startDate,
         endDate,
         twitchChannel,
