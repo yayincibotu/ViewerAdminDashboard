@@ -252,56 +252,43 @@ const EmailVerificationTopbar = () => {
   }
 
   return (
-    <div className="w-full bg-gradient-to-r from-red-500 to-amber-500 shadow-md">
-      <Alert className="max-w-screen-xl mx-auto border-none rounded-none bg-transparent py-3">
+    <div className="w-full bg-red-600 shadow-sm">
+      <div className="max-w-screen-xl mx-auto px-4 py-1">
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center space-x-3">
-            <div className={`p-2 bg-white rounded-full ${isAnimating ? 'animate-pulse' : ''}`}>
-              <AlertTriangle className="h-5 w-5 text-red-500" />
+          <div className="flex items-center gap-2 flex-1">
+            <div className={`${isAnimating ? 'animate-pulse' : ''}`}>
+              <AlertTriangle className="h-4 w-4 text-white" />
             </div>
-            <div>
-              <h3 className="font-bold text-white text-md">ATTENTION: Your email is not verified!</h3>
-              <AlertDescription className="text-white text-sm">
-                Verify your email address to ensure account security and receive important notifications.
-              </AlertDescription>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="default"
-              size="sm"
-              className="h-9 bg-white text-red-600 hover:bg-gray-100 hover:text-red-700 font-bold shadow-sm"
-              onClick={() => resendVerificationMutation.mutate()}
-              disabled={resendVerificationMutation.isPending || timeRemaining !== null}
-            >
-              {resendVerificationMutation.isPending ? (
-                <>
+            <p className="text-white text-sm font-medium md:mr-8">
+              Email not verified. 
+              <Button
+                variant="link"
+                size="sm"
+                className="text-white underline px-1 py-0 h-auto font-normal"
+                onClick={() => resendVerificationMutation.mutate()}
+                disabled={resendVerificationMutation.isPending || timeRemaining !== null}
+              >
+                {resendVerificationMutation.isPending ? (
                   <span className="animate-pulse">Sending...</span>
-                </>
-              ) : timeRemaining !== null ? (
-                <>
-                  <Clock className="h-4 w-4 mr-1" />
-                  Wait {countdown}s
-                </>
-              ) : (
-                <>
-                  <Mail className="h-4 w-4 mr-1" />
-                  Send Verification Link
-                </>
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-white hover:bg-red-600/20 hover:text-white"
-              onClick={handleDismiss}
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Dismiss</span>
-            </Button>
+                ) : timeRemaining !== null ? (
+                  <span>Retry in {countdown}s</span>
+                ) : (
+                  <span>Verify now</span>
+                )}
+              </Button>
+            </p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-white hover:bg-red-700 hover:text-white p-0"
+            onClick={handleDismiss}
+          >
+            <X className="h-3 w-3" />
+            <span className="sr-only">Dismiss</span>
+          </Button>
         </div>
-      </Alert>
+      </div>
     </div>
   );
 };
