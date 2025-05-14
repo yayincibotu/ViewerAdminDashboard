@@ -1527,10 +1527,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Subscription not found or doesn't belong to this user" });
       }
       
-      // Instead of deleting, update status to cancelled and isActive to false
+      // Instead of deleting, update status to cancelled and keep it active until end of billing period
+      // Calculate the end date (if no endDate is set, set one month from now)
+      const subscription_plan = await storage.getSubscriptionPlan(subscription.planId);
+      let endDate = subscription.endDate;
+      
+      if (!endDate) {
+        // If no endDate is set, calculate based on billing cycle
+        const billingPeriodDays = 
+          subscription_plan.billingCycle === 'day' ? 1 :
+          subscription_plan.billingCycle === 'week' ? 7 :
+          subscription_plan.billingCycle === 'month' ? 30 :
+          subscription_plan.billingCycle === 'year' ? 365 : 30;
+          
+        const today = new Date();
+        endDate = new Date(today.setDate(today.getDate() + billingPeriodDays));
+      }
+      
       const updatedSubscription = await storage.updateUserSubscription(subscriptionId, {
         status: "cancelled",
-        isActive: false
+        isActive: true, // Keep active until the end date
+        endDate: endDate
       });
       
       if (!updatedSubscription) {

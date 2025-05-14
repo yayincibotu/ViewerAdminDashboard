@@ -542,23 +542,10 @@ const Billing = () => {
                           {sub.subscription.status.charAt(0).toUpperCase() + sub.subscription.status.slice(1)}
                         </div>
                       </div>
-                      <CardDescription>
-                        {sub.subscription.twitchChannel 
-                          ? `Channel: ${sub.subscription.twitchChannel}` 
-                          : "No Twitch channel set"}
-                      </CardDescription>
+
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        <div>
-                          <div className="text-xl font-bold">
-                            {sub.plan?.viewerCount || 0} Live Viewers
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {sub.plan?.description || "Subscription plan"}
-                          </div>
-                        </div>
-                        
                         <div className="flex justify-between items-baseline">
                           <div className="text-2xl font-bold">
                             ${((sub.plan?.price || 0) / 100).toFixed(2)}
@@ -567,8 +554,10 @@ const Billing = () => {
                             </span>
                           </div>
                           <div className="text-sm text-gray-500">
-                            {sub.subscription.endDate 
-                              ? `Renews on ${new Date(sub.subscription.endDate).toLocaleDateString()}` 
+                            {sub.subscription.status === 'cancelled' 
+                              ? `Expires on ${new Date(sub.subscription.endDate).toLocaleDateString()}` 
+                              : sub.subscription.endDate 
+                              ? `Renews on ${new Date(sub.subscription.endDate).toLocaleDateString()}`
                               : ""}
                           </div>
                         </div>
@@ -608,15 +597,25 @@ const Billing = () => {
                       </div>
                     </CardContent>
                     <CardFooter className="pt-0 flex justify-between">
-                      <Button 
-                        variant="outline"
-                        onClick={() => {
-                          setSubscriptionToCancel(sub);
-                          setShowCancelDialog(true);
-                        }}
-                      >
-                        Cancel Plan
-                      </Button>
+                      {sub.subscription.status === 'cancelled' ? (
+                        <Button 
+                          variant="outline"
+                          disabled
+                          className="opacity-50 cursor-not-allowed"
+                        >
+                          Cancelled
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline"
+                          onClick={() => {
+                            setSubscriptionToCancel(sub);
+                            setShowCancelDialog(true);
+                          }}
+                        >
+                          Cancel Plan
+                        </Button>
+                      )}
                       <Button asChild>
                         <a href={`/app/bot-control?id=${sub.subscription.id}`}>
                           Manage
