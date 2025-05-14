@@ -313,7 +313,7 @@ const AdminServices: React.FC = () => {
       dailyPrice: plan.dailyPrice ? Number(plan.dailyPrice) : undefined,
       weeklyPrice: plan.weeklyPrice ? Number(plan.weeklyPrice) : undefined, 
       annualPrice: plan.annualPrice ? Number(plan.annualPrice) : undefined,
-      billingCycle: plan.billingCycle || "monthly",
+      billingCycle: (plan.billingCycle as "daily" | "weekly" | "monthly" | "annual") || "monthly",
       platform: plan.platform,
       description: plan.description,
       viewerCount: Number(plan.viewerCount),
@@ -375,7 +375,7 @@ const AdminServices: React.FC = () => {
                   Add Plan
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl">
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Subscription Plan</DialogTitle>
                   <DialogDescription>
@@ -912,7 +912,7 @@ const AdminServices: React.FC = () => {
       
       {/* Edit Plan Dialog */}
       <Dialog open={isEditPlanDialogOpen} onOpenChange={setIsEditPlanDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-[550px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Subscription Plan</DialogTitle>
             <DialogDescription>
