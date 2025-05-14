@@ -220,10 +220,21 @@ const UserDetails: React.FC = () => {
       return res.json();
     },
     onSuccess: () => {
-      // Manually refetch the user data to ensure we have the latest state
+      console.log('Subscription cancelled successfully, refreshing data...');
+      
+      // Önce cache'i temizle, kesinlikle yeni veri gelsin
+      queryClient.removeQueries({ queryKey: [`/api/admin/users/${userId}`] });
+      
+      // Sonra veriyi yeniden yükle
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
-      // Force a refetch of the user data
-      refetch();
+      
+      // Manuel olarak refetch yap
+      if (refetch) {
+        setTimeout(() => {
+          refetch();
+        }, 200); // Kısa bir gecikmeyle yeniden sorgulama yap
+      }
+      
       toast({
         title: 'Subscription cancelled',
         description: 'User subscription has been cancelled successfully.',

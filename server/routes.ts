@@ -1364,7 +1364,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Fetch additional user data
-      const userSubscriptions = await storage.getUserSubscriptions(userId);
+      let userSubscriptions = await storage.getUserSubscriptions(userId);
+      
+      // Filtre: Yalnızca aktif ve "cancelled" olmayan abonelikleri göster
+      // Veya status parametresi ile tüm abonelikler istenirse, hepsini göster
+      if (req.query.includeAll !== 'true') {
+        userSubscriptions = userSubscriptions.filter(sub => 
+          sub.status !== 'cancelled' || sub.isActive === true
+        );
+      }
+      
       const userPayments = await storage.getUserPayments(userId);
       
       // Enrich subscriptions with plan information
