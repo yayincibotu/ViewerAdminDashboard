@@ -18,7 +18,6 @@ import UserDetails from "@/pages/webadmin/UserDetails";
 import AdminPayments from "@/pages/webadmin/Payments";
 import AdminInvoices from "@/pages/webadmin/Invoices";
 import AdminServices from "@/pages/webadmin/Services";
-import AdminPlans from "@/pages/webadmin/Plans";
 import AdminPageContents from "@/pages/webadmin/PageContents";
 import Blog from "@/pages/webadmin/Blog";
 import BlogCategories from "@/pages/webadmin/BlogCategories";
@@ -59,7 +58,6 @@ function Router() {
       <ProtectedRoute path="/webadmin/payments" component={AdminPayments} />
       <ProtectedRoute path="/webadmin/invoices" component={AdminInvoices} />
       <ProtectedRoute path="/webadmin/services" component={AdminServices} />
-      <ProtectedRoute path="/webadmin/plans" component={AdminPlans} />
       <ProtectedRoute path="/webadmin/page-contents" component={AdminPageContents} />
       <ProtectedRoute path="/webadmin/blog" component={Blog} />
       <ProtectedRoute path="/webadmin/blog-categories" component={BlogCategories} />

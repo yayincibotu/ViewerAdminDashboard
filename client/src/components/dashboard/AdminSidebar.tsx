@@ -59,13 +59,6 @@ const AdminSidebar: React.FC = () => {
               Services
             </div>
           </Link>
-          
-          <Link href="/webadmin/plans">
-            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/plans')}`}>
-              <i className="fas fa-tags mr-3"></i>
-              Subscription Plans
-            </div>
-          </Link>
         </nav>
         
         <div className="mt-6 mb-2 px-4 text-xs font-semibold text-sidebar-foreground/60 uppercase">
