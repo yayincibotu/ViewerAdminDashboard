@@ -58,7 +58,7 @@ const UserDetails: React.FC = () => {
   });
   
   // Fetch user details
-  const { data: user, isLoading, error } = useQuery<any, Error>({
+  const { data: user, isLoading, error, refetch } = useQuery<any, Error>({
     queryKey: [`/api/admin/users/${userId}`],
     enabled: userId > 0, // Only run query if we have a valid userId
     queryFn: async () => {
@@ -220,13 +220,17 @@ const UserDetails: React.FC = () => {
       return res.json();
     },
     onSuccess: () => {
+      // Manually refetch the user data to ensure we have the latest state
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
+      // Force a refetch of the user data
+      refetch();
       toast({
         title: 'Subscription cancelled',
         description: 'User subscription has been cancelled successfully.',
       });
     },
     onError: (error: any) => {
+      console.error('Subscription cancellation error:', error);
       toast({
         title: 'Error cancelling subscription',
         description: error.message,
