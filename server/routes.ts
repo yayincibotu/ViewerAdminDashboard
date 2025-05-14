@@ -234,7 +234,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/subscription-plans", async (req, res) => {
     try {
       const plans = await storage.getSubscriptionPlans();
-      res.json(plans);
+      // Sort plans by sortOrder field
+      const sortedPlans = plans.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      res.json(sortedPlans);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching subscription plans: " + error.message });
     }
@@ -1738,6 +1740,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedPlan);
     } catch (error: any) {
       res.status(500).json({ message: "Error updating subscription plan: " + error.message });
+    }
+  });
+  
+  // Update plan order
+  app.patch("/api/admin/subscription-plans/reorder", isAdmin, async (req, res) => {
+    try {
+      const { planOrders } = req.body;
+      
+      if (!Array.isArray(planOrders)) {
+        return res.status(400).json({ message: "planOrders must be an array of objects with id and sortOrder" });
+      }
+      
+      const results = [];
+      
+      // Update each plan's sort order
+      for (const item of planOrders) {
+        if (!item.id || typeof item.sortOrder !== 'number') {
+          continue;
+        }
+        
+        const updated = await storage.updateSubscriptionPlan(item.id, { 
+          sortOrder: item.sortOrder 
+        });
+        
+        results.push(updated);
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Plan order updated successfully", 
+        updatedPlans: results 
+      });
+    } catch (error: any) {
+      res.status(500).json({ 
+        success: false, 
+        message: "Error updating plan order: " + error.message 
+      });
     }
   });
   

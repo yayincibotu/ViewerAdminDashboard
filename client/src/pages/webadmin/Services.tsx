@@ -19,8 +19,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Download, Filter, Plus, Edit, Trash2, BookOpen, Tag, CheckCircle2, X, Box, Package, Loader2, AlertTriangle } from 'lucide-react';
+import { Search, Download, Filter, Plus, Edit, Trash2, BookOpen, Tag, CheckCircle2, X, Box, Package, Loader2, AlertTriangle, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Schema for creating/editing subscription plan
 const planFormSchema = z.object({
@@ -69,6 +72,7 @@ interface Plan {
   stripeAnnualPriceId?: string;
   stripeProductId?: string;
   isVisible: boolean;
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,6 +85,93 @@ interface Platform {
   iconClass: string;
   bgColor: string;
 }
+
+// Sortable Table Row component
+interface SortableRowProps {
+  id: number;
+  plan: Plan;
+  onEdit: (plan: Plan) => void;
+  onDelete: (plan: Plan) => void;
+}
+
+const SortableTableRow: React.FC<SortableRowProps> = ({ id, plan, onEdit, onDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1 : 0,
+    position: 'relative' as 'relative',
+  };
+  
+  return (
+    <TableRow ref={setNodeRef} style={style} className={isDragging ? 'bg-accent/30' : ''}>
+      <TableCell className="w-12">
+        <div className="flex items-center justify-center cursor-grab" {...attributes} {...listeners}>
+          <GripVertical className="h-5 w-5 text-muted-foreground" />
+        </div>
+      </TableCell>
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-2">
+          {plan.name}
+          {plan.isPopular && (
+            <Badge variant="secondary">Popular</Badge>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>{plan.platform}</TableCell>
+      <TableCell>{plan.billingCycle === 'monthly' ? 'Aylık' : 
+                  plan.billingCycle === 'annual' ? 'Yıllık' : 
+                  plan.billingCycle === 'weekly' ? 'Haftalık' : 'Günlük'}</TableCell>
+      <TableCell>
+        <div className="flex flex-col">
+          {plan.price > 0 && <span>Aylık: {plan.price} TL</span>}
+          {plan.dailyPrice > 0 && <span>Günlük: {plan.dailyPrice} TL</span>}
+          {plan.weeklyPrice > 0 && <span>Haftalık: {plan.weeklyPrice} TL</span>}
+          {plan.annualPrice > 0 && <span>Yıllık: {plan.annualPrice} TL</span>}
+        </div>
+      </TableCell>
+      <TableCell>{plan.viewerCount}</TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          {plan.features.slice(0, 2).map((feature, i) => (
+            <Badge key={i} variant="outline" className="whitespace-nowrap">
+              {feature}
+            </Badge>
+          ))}
+          {plan.features.length > 2 && (
+            <Badge variant="outline">+{plan.features.length - 2}</Badge>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant={plan.isVisible ? "success" : "destructive"}>
+          {plan.isVisible ? "Aktif" : "Gizli"}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end space-x-2">
+          <Button variant="ghost" size="sm" onClick={() => onEdit(plan)}>
+            <Edit className="h-4 w-4" />
+            <span className="sr-only">Edit</span>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => onDelete(plan)}>
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Delete</span>
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const AdminServices: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
