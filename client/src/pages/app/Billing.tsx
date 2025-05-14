@@ -199,7 +199,9 @@ const Billing = () => {
   const [showAddCardDialog, setShowAddCardDialog] = useState(false);
   const [showEditBillingDialog, setShowEditBillingDialog] = useState(false);
   const [showInvoiceDetailsDialog, setShowInvoiceDetailsDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [subscriptionToCancel, setSubscriptionToCancel] = useState<any>(null);
   
   // Define billing info type for TypeScript
   interface BillingInfoType {
@@ -285,6 +287,29 @@ const Billing = () => {
     onError: (error: Error) => {
       toast({
         title: 'Failed to remove payment method',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Cancel subscription mutation
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async (subscriptionId: number) => {
+      return apiRequest('POST', `/api/user-subscriptions/${subscriptionId}/cancel`);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Subscription canceled',
+        description: 'Your subscription has been canceled.',
+      });
+      setShowCancelDialog(false);
+      setSubscriptionToCancel(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/user-subscriptions'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to cancel subscription',
         description: error.message,
         variant: 'destructive',
       });
@@ -467,53 +492,140 @@ const Billing = () => {
             </Card>
             
             {/* Current Plan Card */}
-            <Card>
-              <CardHeader className="pb-4">
-                <div className="flex justify-between items-center">
+            {subscriptionsLoading ? (
+              <Card>
+                <CardHeader className="pb-4">
                   <CardTitle className="text-lg">Current Plan</CardTitle>
-                  <div className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
-                    Active
+                  <CardDescription>Your subscription details</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
-                </div>
-                <CardDescription>Your subscription details</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-xl font-bold">50 Live Viewers</div>
-                    <div className="text-sm text-gray-500">Premium subscription</div>
+                </CardContent>
+              </Card>
+            ) : subscriptions.length === 0 ? (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">Current Plan</CardTitle>
+                  <CardDescription>Your subscription details</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-gray-500">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No active subscriptions found</p>
+                    <p className="text-sm mt-1">Subscribe to a plan to access our services</p>
                   </div>
-                  
-                  <div className="flex justify-between items-baseline">
-                    <div className="text-2xl font-bold">$99.99<span className="text-gray-500 text-sm font-normal">/month</span></div>
-                    <div className="text-sm text-gray-500">Renews on May 15, 2023</div>
-                  </div>
-                  
-                  <div className="pt-2 flex flex-col gap-1.5">
-                    <div className="flex items-center text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                      <span>50 viewers per stream</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                      <span>Chat Bot (20 custom commands)</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                      <span>Geographic targeting</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                      <span>Priority support</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-0 flex justify-between">
-                <Button variant="outline">Cancel Plan</Button>
-                <Button>Upgrade Plan</Button>
-              </CardFooter>
-            </Card>
+                </CardContent>
+                <CardFooter className="pt-0 flex justify-center">
+                  <Button asChild>
+                    <a href="/#pricing">View Plans</a>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ) : (
+              <>
+                {subscriptions.map((sub: any, index: number) => (
+                  <Card key={sub.subscription.id}>
+                    <CardHeader className="pb-4">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg">
+                          {sub.plan?.name || "Subscription Plan"}
+                        </CardTitle>
+                        <div className={`px-2 py-1 rounded text-xs font-medium ${
+                          sub.subscription.status === 'active' 
+                            ? 'bg-green-100 text-green-600' 
+                            : sub.subscription.status === 'pending' 
+                            ? 'bg-yellow-100 text-yellow-600'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {sub.subscription.status.charAt(0).toUpperCase() + sub.subscription.status.slice(1)}
+                        </div>
+                      </div>
+                      <CardDescription>
+                        {sub.subscription.twitchChannel 
+                          ? `Channel: ${sub.subscription.twitchChannel}` 
+                          : "No Twitch channel set"}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div>
+                          <div className="text-xl font-bold">
+                            {sub.plan?.viewerCount || 0} Live Viewers
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {sub.plan?.description || "Subscription plan"}
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between items-baseline">
+                          <div className="text-2xl font-bold">
+                            ${((sub.plan?.price || 0) / 100).toFixed(2)}
+                            <span className="text-gray-500 text-sm font-normal">
+                              /{sub.plan?.billingCycle || "month"}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {sub.subscription.endDate 
+                              ? `Renews on ${new Date(sub.subscription.endDate).toLocaleDateString()}` 
+                              : ""}
+                          </div>
+                        </div>
+                        
+                        <div className="pt-2 flex flex-col gap-1.5">
+                          {sub.plan?.viewerCount && (
+                            <div className="flex items-center text-sm">
+                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                              <span>{sub.plan.viewerCount} viewers per stream</span>
+                            </div>
+                          )}
+                          {sub.plan?.features?.includes('chatbot') && (
+                            <div className="flex items-center text-sm">
+                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                              <span>Chat Bot included</span>
+                            </div>
+                          )}
+                          {sub.plan?.features?.includes('geographic') && (
+                            <div className="flex items-center text-sm">
+                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                              <span>Geographic targeting</span>
+                            </div>
+                          )}
+                          {sub.plan?.features?.includes('follower') && (
+                            <div className="flex items-center text-sm">
+                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                              <span>Follower Bot included</span>
+                            </div>
+                          )}
+                          {sub.plan?.features?.includes('support') && (
+                            <div className="flex items-center text-sm">
+                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                              <span>Priority support</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="pt-0 flex justify-between">
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          // Show cancel confirmation here
+                        }}
+                      >
+                        Cancel Plan
+                      </Button>
+                      <Button asChild>
+                        <a href={`/app/bot-control?id=${sub.subscription.id}`}>
+                          Manage
+                        </a>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </>
+            )}
 
             {/* Payment Method Card */}
             <Card>
