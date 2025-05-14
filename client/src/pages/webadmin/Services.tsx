@@ -328,6 +328,29 @@ const AdminServices: React.FC = () => {
     }
   });
   
+  // Reorder plans mutation
+  const reorderPlansMutation = useMutation({
+    mutationFn: async (planOrders: { id: number, sortOrder: number }[]) => {
+      const res = await apiRequest("POST", "/api/admin/subscription-plans/reorder", { plans: planOrders });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Sıralama güncellendi",
+        description: "Plan sıralaması başarıyla güncellendi."
+      });
+      setSortMode(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/subscription-plans'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Sıralama hatası",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Delete subscription plan mutation
   const deletePlanMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -437,37 +460,9 @@ const AdminServices: React.FC = () => {
     
     setSortablePlans(withNewSortOrders);
     
-    // Prepare data for API
-    const planOrders = withNewSortOrders.map(plan => ({
-      id: plan.id,
-      sortOrder: plan.sortOrder || 0
-    }));
-    
-    // Update on the server
-    updatePlanOrderMutation.mutate({ planOrders });
+    // Not saving to server immediately (only on button click)
+    // This allows for multiple drag-drop operations before saving
   };
-  
-  // Mutation for updating plan order
-  const updatePlanOrderMutation = useMutation({
-    mutationFn: async (data: { planOrders: { id: number, sortOrder: number }[] }) => {
-      const res = await apiRequest("PATCH", "/api/admin/subscription-plans/reorder", data);
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Plan sıralaması güncellendi",
-        description: "Plan sıralaması başarıyla kaydedildi.",
-      });
-      refetch();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Plan sıralaması güncellenemedi",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
   
   // Add a feature to the list
   const addFeature = () => {
@@ -998,10 +993,22 @@ const AdminServices: React.FC = () => {
                 
                 {sortMode ? (
                   <Button 
-                    onClick={() => setSortMode(false)}
+                    onClick={() => {
+                      // Save the new order
+                      const planOrders = sortablePlans.map((plan, index) => ({
+                        id: plan.id,
+                        sortOrder: index
+                      }));
+                      reorderPlansMutation.mutate(planOrders);
+                    }}
                     variant="outline"
+                    disabled={reorderPlansMutation.isPending}
                   >
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    {reorderPlansMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                    )}
                     Sıralamayı Kaydet
                   </Button>
                 ) : (
