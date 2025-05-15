@@ -117,10 +117,12 @@ const BotControl = () => {
     subscriptionId ? parseInt(subscriptionId) : null
   );
   
-  // Keep subscription ID in sync with URL
+  // Keep subscription ID in sync with URL - this needs to be high priority
   useEffect(() => {
     if (subscriptionId && parseInt(subscriptionId)) {
-      setSelectedSubscription(parseInt(subscriptionId));
+      const id = parseInt(subscriptionId);
+      console.log("Setting subscription from URL:", id);
+      setSelectedSubscription(id);
     }
   }, [subscriptionId]);
   const [viewerSettings, setViewerSettings] = useState(DEFAULT_VIEWER_SETTINGS);
@@ -362,15 +364,21 @@ const BotControl = () => {
     }
   }, [subscriptions, subscriptionId, selectedSubscription]);
   
-  // Select first subscription if none selected and subscriptions are loaded
+  // Only select first subscription if none selected, no URL subscription ID and subscriptions are loaded
   useEffect(() => {
+    // Prioritize URL param subscriptionId first
+    if (subscriptionId && parseInt(subscriptionId)) {
+      return; // Don't do anything else if we have a URL param
+    }
+    
+    // Otherwise, default to first subscription only if no selection yet
     if (
       !selectedSubscription && 
       !subscriptionsLoading && 
       subscriptions && 
-      subscriptions.length > 0 && 
-      !subscriptionId
+      subscriptions.length > 0
     ) {
+      console.log("Defaulting to first subscription:", subscriptions[0]?.subscription?.id);
       setSelectedSubscription(subscriptions[0]?.subscription?.id);
     }
   }, [subscriptions, subscriptionsLoading, selectedSubscription, subscriptionId]);
