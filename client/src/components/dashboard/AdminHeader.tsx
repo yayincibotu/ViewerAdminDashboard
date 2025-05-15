@@ -22,12 +22,14 @@ import { Link } from 'wouter';
 
 interface Notification {
   id: number;
+  userId: number;
   type: 'info' | 'warning' | 'success' | 'error';
   title: string;
   message: string;
-  timestamp: Date;
   read: boolean;
-  link?: string;
+  link?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AdminHeaderProps {
@@ -45,64 +47,15 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch notification data (mock data for now, replace with real API call)
-  const { data: notifications = [] } = useQuery<Notification[]>({
+  // Fetch notification data from the API
+  const { data: notifications = [], refetch: refetchNotifications } = useQuery<Notification[]>({
     queryKey: ['/api/admin/notifications'],
     queryFn: async () => {
-      try {
-        const res = await fetch('/api/admin/notifications');
-        if (!res.ok) {
-          throw new Error('Failed to fetch notifications');
-        }
-        return res.json();
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-        // Return mock data for now
-        return [
-          {
-            id: 1,
-            type: 'info',
-            title: 'New User Registration',
-            message: 'A new user "StreamMaster" has registered.',
-            timestamp: new Date(Date.now() - 1000 * 60 * 15), // 15 mins ago
-            read: false
-          },
-          {
-            id: 2,
-            type: 'success',
-            title: 'Payment Received',
-            message: 'Payment of $99.99 received from user "GamingPro".',
-            timestamp: new Date(Date.now() - 1000 * 60 * 45), // 45 mins ago
-            read: false,
-            link: '/webadmin/payments'
-          },
-          {
-            id: 3,
-            type: 'warning',
-            title: 'Multiple Failed Logins',
-            message: 'User "TwitchStar" has 3 failed login attempts.',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-            read: false,
-            link: '/webadmin/analytics'
-          },
-          {
-            id: 4,
-            type: 'error',
-            title: 'Server Issue',
-            message: 'Twitch API service temporarily unavailable.',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4), // 4 hours ago
-            read: true
-          },
-          {
-            id: 5,
-            type: 'info',
-            title: 'System Update',
-            message: 'System maintenance scheduled for tonight at 2AM UTC.',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
-            read: true
-          }
-        ] as Notification[];
+      const res = await fetch('/api/admin/notifications');
+      if (!res.ok) {
+        throw new Error('Failed to fetch notifications');
       }
+      return res.json();
     },
     refetchInterval: 30000, // Refetch every 30 seconds
   });
@@ -139,8 +92,8 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
     }
   };
 
-  const getTimeAgo = (date: Date) => {
-    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+  const getTimeAgo = (dateString: string) => {
+    const seconds = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 1000);
     
     let interval = seconds / 31536000;
     if (interval > 1) return Math.floor(interval) + ' years ago';
@@ -160,14 +113,79 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
     return Math.floor(seconds) + ' seconds ago';
   };
 
-  const markAllAsRead = () => {
-    // Add logic to mark all notifications as read
-    console.log('Mark all as read');
+  const markAsRead = async (notificationId: number) => {
+    try {
+      const response = await fetch('/api/admin/notifications/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ notificationIds: [notificationId] }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to mark notification as read');
+      }
+      
+      // Refetch notifications after update
+      refetchNotifications();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      // Get all unread notification IDs
+      const unreadIds = notifications
+        .filter(notification => !notification.read)
+        .map(notification => notification.id);
+      
+      if (unreadIds.length === 0) return;
+      
+      const response = await fetch('/api/admin/notifications/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ notificationIds: unreadIds }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to mark notifications as read');
+      }
+      
+      // Refetch notifications after update
+      refetchNotifications();
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
   };
   
-  const clearAllNotifications = () => {
-    // Add logic to clear all notifications
-    console.log('Clear all notifications');
+  const clearAllNotifications = async () => {
+    try {
+      // Get all notification IDs
+      const allIds = notifications.map(notification => notification.id);
+      
+      if (allIds.length === 0) return;
+      
+      const response = await fetch('/api/admin/notifications', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ notificationIds: allIds }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete notifications');
+      }
+      
+      // Refetch notifications after deletion
+      refetchNotifications();
+    } catch (error) {
+      console.error('Error deleting notifications:', error);
+    }
   };
 
   return (
@@ -311,7 +329,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
                             <div className="flex items-start justify-between">
                               <p className="font-medium truncate pr-2">{notification.title}</p>
                               <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                {getTimeAgo(notification.timestamp)}
+                                {getTimeAgo(notification.createdAt)}
                               </span>
                             </div>
                             <p className="text-sm text-muted-foreground truncate">{notification.message}</p>
