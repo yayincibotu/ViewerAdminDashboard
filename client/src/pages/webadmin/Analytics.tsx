@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LoaderCircle, RefreshCw, Calendar, ArrowRight, ArrowUpRight, ArrowDownRight, Users, CreditCard, Activity, Shield, AlertTriangle, Check, X } from 'lucide-react';
+import { LoaderCircle, RefreshCw, Calendar, ArrowRight, ArrowUpRight, ArrowDownRight, Users, CreditCard, Activity, Shield, AlertTriangle, Check, X, Info, AlertCircle, Lock, Unlock } from 'lucide-react';
 import AdminLayout from '@/components/dashboard/AdminLayout';
 import AdminHeader from '@/components/dashboard/AdminHeader';
 import { apiRequest } from '@/lib/queryClient';
@@ -24,6 +24,7 @@ import {
 } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import type { UserAnalytics, SubscriptionAnalytics, FinancialAnalytics, PerformanceMetrics, LoginAttempt, Session, LockedAccount } from '@shared/schema';
 
 // Helper function to format date for display
