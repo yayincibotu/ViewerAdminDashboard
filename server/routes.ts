@@ -1394,9 +1394,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
+      // JSON string alanlarını JavaScript nesnelerine dönüştür
+      const processedUser = {
+        ...user,
+        profileData: user.profileData ? JSON.parse(user.profileData) : null,
+        securitySettings: user.securitySettings ? JSON.parse(user.securitySettings) : null,
+        notificationPreferences: user.notificationPreferences ? JSON.parse(user.notificationPreferences) : null,
+        billingInfo: user.billingInfo ? JSON.parse(user.billingInfo) : null
+      };
+
       // Create comprehensive user profile
       const userProfile = {
-        ...user,
+        ...processedUser,
         subscriptions: enrichedSubscriptions,
         payments: userPayments
       };
@@ -1594,10 +1603,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: z.string().optional(),
         email: z.string().email().optional(),
         role: z.enum(["user", "admin"]).optional(),
-        isEmailVerified: z.boolean().optional()
+        isEmailVerified: z.boolean().optional(),
+        profileData: z.any().optional(),        // Kullanıcı profil bilgileri
+        securitySettings: z.any().optional(),   // Güvenlik ayarları
+        notificationPreferences: z.any().optional()  // Bildirim tercihleri
       });
       
-      const validatedData = updateSchema.parse(req.body);
+      // JSON verilerini doğru biçimde işle
+      let validatedData = updateSchema.parse(req.body);
+      
+      // Obje şeklinde gelen alanları JSON string'e dönüştür
+      if (validatedData.profileData && typeof validatedData.profileData === 'object') {
+        validatedData.profileData = JSON.stringify(validatedData.profileData);
+      }
+      
+      if (validatedData.securitySettings && typeof validatedData.securitySettings === 'object') {
+        validatedData.securitySettings = JSON.stringify(validatedData.securitySettings);
+      }
+      
+      if (validatedData.notificationPreferences && typeof validatedData.notificationPreferences === 'object') {
+        validatedData.notificationPreferences = JSON.stringify(validatedData.notificationPreferences);
+      }
+      
       const updatedUser = await storage.updateUser(userId, validatedData);
       
       res.json(updatedUser);
