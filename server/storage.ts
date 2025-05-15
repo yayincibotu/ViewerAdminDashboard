@@ -21,7 +21,13 @@ import {
   systemConfigs, SystemConfig, InsertSystemConfig,
   emailTemplates, EmailTemplate, InsertEmailTemplate,
   ipRestrictions, IpRestriction, InsertIpRestriction,
-  auditLogs, AuditLog, InsertAuditLog
+  auditLogs, AuditLog, InsertAuditLog,
+  // Security tables
+  loginAttempts, LoginAttempt, InsertLoginAttempt,
+  twoFactorAuth, TwoFactorAuth, InsertTwoFactorAuth,
+  securityQuestions, SecurityQuestion, InsertSecurityQuestion,
+  userSecurityQuestions, UserSecurityQuestion, InsertUserSecurityQuestion,
+  securitySessions, SecuritySession, InsertSecuritySession
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
