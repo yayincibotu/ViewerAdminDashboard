@@ -278,8 +278,14 @@ const UserDetails: React.FC = () => {
       discountPercentage?: number;
       paymentStatus?: string;
     }) => {
-      const res = await apiRequest('POST', `/api/admin/users/${userId}/subscriptions`, data);
-      return res.json();
+      try {
+        const res = await apiRequest('POST', `/api/admin/users/${userId}/subscriptions`, data);
+        const responseData = await res.json();
+        return responseData;
+      } catch (error) {
+        console.error('Error adding subscription:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
