@@ -24,7 +24,7 @@ import {
 } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import type { UserAnalytics, SubscriptionAnalytics, FinancialAnalytics, PerformanceMetrics, LoginAttempt } from '@shared/schema';
+import type { UserAnalytics, SubscriptionAnalytics, FinancialAnalytics, PerformanceMetrics, LoginAttempt, Session, LockedAccount } from '@shared/schema';
 
 // Helper function to format date for display
 const formatDate = (date: string | Date) => {
@@ -475,12 +475,15 @@ const SubscriptionAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}>
 
 // Security Analytics Dashboard
 const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = ({ startDate, endDate }) => {
+  const [activeTab, setActiveTab] = useState<string>("login-attempts");
   const [usernameFilter, setUsernameFilter] = useState<string>("");
+  const { toast } = useToast();
   
+  // Login Attempts
   const {
     data: loginAttempts = [],
-    isLoading,
-    refetch
+    isLoading: isLoadingLoginAttempts,
+    refetch: refetchLoginAttempts
   } = useQuery<LoginAttempt[]>({
     queryKey: ['/api/admin/security/login-attempts', { limit: 100, username: usernameFilter }],
     queryFn: async () => {
@@ -495,7 +498,77 @@ const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = (
     }
   });
   
-  // Calculate statistics
+  // Active Sessions
+  const {
+    data: activeSessions = [],
+    isLoading: isLoadingSessions,
+    refetch: refetchSessions
+  } = useQuery<Session[]>({
+    queryKey: ['/api/admin/security/active-sessions'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/admin/security/active-sessions');
+      return res.json();
+    },
+    enabled: activeTab === "sessions"
+  });
+  
+  // Locked Accounts
+  const {
+    data: lockedAccounts = [],
+    isLoading: isLoadingLockedAccounts,
+    refetch: refetchLockedAccounts
+  } = useQuery<LockedAccount[]>({
+    queryKey: ['/api/admin/security/locked-accounts'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/admin/security/locked-accounts');
+      return res.json();
+    },
+    enabled: activeTab === "locked-accounts"
+  });
+  
+  // Terminate session mutation
+  const terminateSessionMutation = useMutation({
+    mutationFn: async (sessionId: number) => {
+      await apiRequest('POST', `/api/admin/security/terminate-session/${sessionId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Session terminated",
+        description: "The session has been successfully terminated",
+      });
+      refetchSessions();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to terminate session: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Unlock account mutation
+  const unlockAccountMutation = useMutation({
+    mutationFn: async (username: string) => {
+      await apiRequest('POST', `/api/admin/security/unlock-account`, { username });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Account unlocked",
+        description: "The account has been successfully unlocked",
+      });
+      refetchLockedAccounts();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to unlock account: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Calculate login statistics
   const totalAttempts = loginAttempts.length;
   const successfulAttempts = loginAttempts.filter(attempt => attempt.success).length;
   const failedAttempts = totalAttempts - successfulAttempts;
@@ -519,31 +592,78 @@ const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = (
     return date.toLocaleString();
   };
   
+  // Format date for session expiry display
+  const formatExpiry = (expiryDate: string | Date) => {
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    
+    if (expiry < now) {
+      return "Expired";
+    }
+    
+    const diffMs = expiry.getTime() - now.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    
+    if (diffMins < 60) {
+      return `${diffMins} minute${diffMins !== 1 ? 's' : ''} left`;
+    }
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} left`;
+    }
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} left`;
+  };
+
+  // Handle session termination confirmation
+  const handleTerminateSession = (sessionId: number) => {
+    if (confirm("Are you sure you want to terminate this session?")) {
+      terminateSessionMutation.mutate(sessionId);
+    }
+  };
+  
+  // Handle account unlock confirmation
+  const handleUnlockAccount = (username: string) => {
+    if (confirm(`Are you sure you want to unlock the account for ${username}?`)) {
+      unlockAccountMutation.mutate(username);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Security Analytics</h2>
+        
         <div className="flex space-x-2">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Filter by username"
-              className="h-10 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              value={usernameFilter}
-              onChange={(e) => setUsernameFilter(e.target.value)}
-            />
-            {usernameFilter && (
-              <button
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                onClick={() => setUsernameFilter("")}
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
+          {activeTab === "login-attempts" && (
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Filter by username"
+                className="h-10 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                value={usernameFilter}
+                onChange={(e) => setUsernameFilter(e.target.value)}
+              />
+              {usernameFilter && (
+                <button
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  onClick={() => setUsernameFilter("")}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          )}
+          
           <Button 
             variant="outline" 
-            onClick={() => refetch()}
+            onClick={() => {
+              if (activeTab === "login-attempts") refetchLoginAttempts();
+              if (activeTab === "sessions") refetchSessions();
+              if (activeTab === "locked-accounts") refetchLockedAccounts();
+            }}
             className="flex items-center gap-2"
           >
             <RefreshCw size={16} />
@@ -552,184 +672,441 @@ const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = (
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Login Attempts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{totalAttempts}</div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="login-attempts" onValueChange={setActiveTab} value={activeTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="login-attempts" className="flex items-center gap-2">
+            <KeyRound size={16} />
+            Login Attempts
+          </TabsTrigger>
+          <TabsTrigger value="sessions" className="flex items-center gap-2">
+            <Users size={16} />
+            Active Sessions
+          </TabsTrigger>
+          <TabsTrigger value="locked-accounts" className="flex items-center gap-2">
+            <Lock size={16} />
+            Locked Accounts
+          </TabsTrigger>
+        </TabsList>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Successful Logins
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <div className="text-3xl font-bold text-green-600">{successfulAttempts}</div>
-              <div className="ml-2 text-sm text-muted-foreground">
-                ({totalAttempts > 0 ? ((successfulAttempts / totalAttempts) * 100).toFixed(1) : 0}%)
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Failed Logins
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <div className="text-3xl font-bold text-red-600">{failedAttempts}</div>
-              <div className="ml-2 text-sm text-muted-foreground">
-                ({totalAttempts > 0 ? ((failedAttempts / totalAttempts) * 100).toFixed(1) : 0}%)
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Top IP Addresses</CardTitle>
-            <CardDescription>
-              IP addresses with the most login attempts
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : topIpAddresses.length > 0 ? (
-              <div className="space-y-2">
-                {topIpAddresses.map(([ip, count]) => (
-                  <div key={ip} className="flex justify-between items-center p-2 rounded bg-muted">
-                    <span className="font-mono">{ip}</span>
-                    <span className="px-2 py-1 rounded-full bg-primary/10 text-xs font-semibold">
-                      {count} attempts
-                    </span>
+        {/* Login Attempts Tab */}
+        <TabsContent value="login-attempts" className="space-y-6 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Login Attempts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{totalAttempts}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Successful Logins
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center">
+                  <div className="text-3xl font-bold text-green-600">{successfulAttempts}</div>
+                  <div className="ml-2 text-sm text-muted-foreground">
+                    ({totalAttempts > 0 ? ((successfulAttempts / totalAttempts) * 100).toFixed(1) : 0}%)
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex justify-center items-center h-64 text-muted-foreground">
-                No IP address data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Failed Logins
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center">
+                  <div className="text-3xl font-bold text-red-600">{failedAttempts}</div>
+                  <div className="ml-2 text-sm text-muted-foreground">
+                    ({totalAttempts > 0 ? ((failedAttempts / totalAttempts) * 100).toFixed(1) : 0}%)
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Top IP Addresses</CardTitle>
+                <CardDescription>
+                  IP addresses with the most login attempts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingLoginAttempts ? (
+                  <div className="flex justify-center items-center h-64">
+                    <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : topIpAddresses.length > 0 ? (
+                  <div className="space-y-2">
+                    {topIpAddresses.map(([ip, count]) => (
+                      <div key={ip} className="flex justify-between items-center p-2 rounded bg-muted">
+                        <span className="font-mono">{ip}</span>
+                        <span className="px-2 py-1 rounded-full bg-primary/10 text-xs font-semibold">
+                          {count} attempts
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex justify-center items-center h-64 text-muted-foreground">
+                    No IP address data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Success/Failure Rate</CardTitle>
+                <CardDescription>
+                  Ratio of successful to failed login attempts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingLoginAttempts ? (
+                  <div className="flex justify-center items-center h-64">
+                    <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : totalAttempts > 0 ? (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Successful', value: successfulAttempts },
+                          { name: 'Failed', value: failedAttempts }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        <Cell fill="#10b981" />
+                        <Cell fill="#ef4444" />
+                      </Pie>
+                      <Tooltip formatter={(value: number) => [value, 'Attempts']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex justify-center items-center h-64 text-muted-foreground">
+                    No login attempts data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Login Attempts</CardTitle>
+              <CardDescription>
+                Recent login activity with status and details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLoginAttempts ? (
+                <div className="flex justify-center items-center h-64">
+                  <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : loginAttempts.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4">Timestamp</th>
+                        <th className="text-left py-3 px-4">Username</th>
+                        <th className="text-left py-3 px-4">IP Address</th>
+                        <th className="text-left py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4">Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loginAttempts.map((attempt, index) => (
+                        <tr key={index} className={index % 2 === 0 ? 'bg-muted/50' : ''}>
+                          <td className="py-2 px-4">{formatTimestamp(attempt.timestamp)}</td>
+                          <td className="py-2 px-4 font-medium">{attempt.username}</td>
+                          <td className="py-2 px-4 font-mono text-xs">{attempt.ipAddress || 'N/A'}</td>
+                          <td className="py-2 px-4">
+                            {attempt.success ? (
+                              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                <Check size={12} className="mr-1" />
+                                Success
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                                <X size={12} className="mr-1" />
+                                Failed
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 px-4 text-muted-foreground">
+                            {attempt.failureReason || (attempt.success ? 'Authentication successful' : 'N/A')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex justify-center items-center h-64 text-muted-foreground">
+                  No login attempts data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Success/Failure Rate</CardTitle>
-            <CardDescription>
-              Ratio of successful to failed login attempts
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+        {/* Active Sessions Tab */}
+        <TabsContent value="sessions" className="space-y-6 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Active Sessions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{activeSessions.length}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Unique Users with Sessions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {new Set(activeSessions.map(session => session.userId)).size}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Average Sessions Per User
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {activeSessions.length > 0 
+                    ? (activeSessions.length / new Set(activeSessions.map(session => session.userId)).size).toFixed(1) 
+                    : '0'}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Active User Sessions</CardTitle>
+              <CardDescription>
+                Manage active sessions across the platform
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingSessions ? (
+                <div className="flex justify-center items-center h-64">
+                  <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : activeSessions.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4">User</th>
+                        <th className="text-left py-3 px-4">Device / Browser</th>
+                        <th className="text-left py-3 px-4">IP Address</th>
+                        <th className="text-left py-3 px-4">Last Activity</th>
+                        <th className="text-left py-3 px-4">Expires</th>
+                        <th className="text-left py-3 px-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeSessions.map((session) => (
+                        <tr key={session.id} className="border-b border-muted">
+                          <td className="py-3 px-4">
+                            <div className="font-medium">{session.username || `User ID: ${session.userId}`}</div>
+                          </td>
+                          <td className="py-3 px-4 max-w-[200px] truncate" title={session.userAgent || ''}>
+                            {session.userAgent || 'Unknown'}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-xs">
+                            {session.ipAddress || 'Unknown'}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {session.lastActive 
+                              ? formatTimestamp(session.lastActive)
+                              : 'No activity recorded'}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center">
+                              <Badge 
+                                variant={
+                                  new Date(session.expiresAt) < new Date() ? "destructive" : 
+                                  new Date(session.expiresAt) < new Date(Date.now() + 60 * 60 * 1000) ? "outline" : "default"
+                                }
+                                className="text-xs"
+                              >
+                                {formatExpiry(session.expiresAt)}
+                              </Badge>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleTerminateSession(session.id)}
+                              disabled={terminateSessionMutation.isPending}
+                            >
+                              {terminateSessionMutation.isPending ? (
+                                <LoaderCircle className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <LogOut className="h-3 w-3 mr-1" />
+                              )}
+                              Terminate
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex justify-center items-center h-64 text-muted-foreground">
+                  No active sessions found
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Locked Accounts Tab */}
+        <TabsContent value="locked-accounts" className="space-y-6 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Locked Accounts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{lockedAccounts.length}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Average Failed Attempts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {lockedAccounts.length > 0 
+                    ? (lockedAccounts.reduce((sum, account) => sum + account.failedAttempts, 0) / lockedAccounts.length).toFixed(1) 
+                    : '0'}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Account Lockouts</CardTitle>
+                  <CardDescription>
+                    Accounts that have been locked due to suspicious activity
+                  </CardDescription>
+                </div>
               </div>
-            ) : totalAttempts > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'Successful', value: successfulAttempts },
-                      { name: 'Failed', value: failedAttempts }
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    <Cell fill="#10b981" />
-                    <Cell fill="#ef4444" />
-                  </Pie>
-                  <Tooltip formatter={(value: number) => [value, 'Attempts']} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex justify-center items-center h-64 text-muted-foreground">
-                No login attempts data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Login Attempts</CardTitle>
-          <CardDescription>
-            Recent login activity with status and details
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : loginAttempts.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4">Timestamp</th>
-                    <th className="text-left py-3 px-4">Username</th>
-                    <th className="text-left py-3 px-4">IP Address</th>
-                    <th className="text-left py-3 px-4">Status</th>
-                    <th className="text-left py-3 px-4">Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loginAttempts.map((attempt, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-muted/50' : ''}>
-                      <td className="py-2 px-4">{formatTimestamp(attempt.timestamp)}</td>
-                      <td className="py-2 px-4 font-medium">{attempt.username}</td>
-                      <td className="py-2 px-4 font-mono text-xs">{attempt.ipAddress || 'N/A'}</td>
-                      <td className="py-2 px-4">
-                        {attempt.success ? (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                            <Check size={12} className="mr-1" />
-                            Success
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-                            <X size={12} className="mr-1" />
-                            Failed
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2 px-4 text-muted-foreground">
-                        {attempt.failureReason || (attempt.success ? 'Authentication successful' : 'N/A')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="flex justify-center items-center h-64 text-muted-foreground">
-              No login attempts data available
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLockedAccounts ? (
+                <div className="flex justify-center items-center h-64">
+                  <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : lockedAccounts.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4">Username</th>
+                        <th className="text-left py-3 px-4">Email</th>
+                        <th className="text-left py-3 px-4">Last Failed IP</th>
+                        <th className="text-left py-3 px-4">Failed Attempts</th>
+                        <th className="text-left py-3 px-4">Locked At</th>
+                        <th className="text-left py-3 px-4">Auto Unlock At</th>
+                        <th className="text-left py-3 px-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lockedAccounts.map((account) => (
+                        <tr key={account.id} className="border-b border-muted">
+                          <td className="py-3 px-4 font-medium">{account.username}</td>
+                          <td className="py-3 px-4">{account.email || 'N/A'}</td>
+                          <td className="py-3 px-4 font-mono text-xs">{account.lastFailedIp || 'Unknown'}</td>
+                          <td className="py-3 px-4">
+                            <Badge variant="destructive">
+                              {account.failedAttempts} failed
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {formatTimestamp(account.lockedAt)}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {account.unlockAt ? formatTimestamp(account.unlockAt) : 'Manual unlock only'}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => handleUnlockAccount(account.username)}
+                              disabled={unlockAccountMutation.isPending}
+                            >
+                              {unlockAccountMutation.isPending ? (
+                                <LoaderCircle className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <Unlock className="h-3 w-3 mr-1" />
+                              )}
+                              Unlock
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex flex-col justify-center items-center h-64 text-muted-foreground">
+                  <Lock className="h-12 w-12 mb-4 text-muted" />
+                  <p>No locked accounts found</p>
+                  <p className="text-xs mt-2">All user accounts are currently accessible</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

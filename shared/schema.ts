@@ -702,6 +702,37 @@ export const insertLoginAttemptSchema = createInsertSchema(loginAttempts, {
   timestamp: true
 });
 
+// Locked Accounts - For tracking and managing account lockouts
+export const lockedAccounts = pgTable("locked_accounts", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull(),
+  email: text("email"),
+  userId: integer("user_id"),
+  failedAttempts: integer("failed_attempts").notNull().default(0),
+  lastFailedIp: text("last_failed_ip"),
+  lastFailedUserAgent: text("last_failed_user_agent"),
+  lockedAt: timestamp("locked_at").notNull().defaultNow(),
+  unlockAt: timestamp("unlock_at"), // If null, requires manual unlock
+  reason: text("reason").notNull().default("Too many failed login attempts"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertLockedAccountSchema = createInsertSchema(lockedAccounts, {
+  username: z.string().min(1),
+  email: z.string().email().optional(),
+  userId: z.number().optional(),
+  failedAttempts: z.number().default(0),
+  lastFailedIp: z.string().optional(),
+  lastFailedUserAgent: z.string().optional(),
+  reason: z.string().default("Too many failed login attempts"),
+}).omit({
+  id: true,
+  lockedAt: true,
+  createdAt: true,
+  updatedAt: true
+});
+
 // Two Factor Authentication
 export const twoFactorAuth = pgTable("two_factor_auth", {
   id: serial("id").primaryKey(),
