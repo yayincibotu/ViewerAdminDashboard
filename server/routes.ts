@@ -5176,6 +5176,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get all active sessions across the platform for admin dashboard
+  app.get("/api/admin/security/active-sessions", requireAdmin, async (req, res) => {
+    try {
+      // Get all active sessions from the database
+      const sessions = await storage.getAllActiveSessions();
+      
+      // Add the current admin session if it's not already included
+      const currentSessionExists = sessions.some(s => 
+        s.sessionToken === req.sessionID || 
+        (s.userId === req.user.id && s.ipAddress === req.ip)
+      );
+      
+      if (!currentSessionExists) {
+        // Include current admin session in the response
+        const currentAdminSession = {
+          id: 0, // Will be overridden if there's an ID collision
+          sessionToken: req.sessionID,
+          userId: req.user.id,
+          username: req.user.username,
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          isActive: true,
+          createdAt: new Date(),
+          lastActive: new Date(),
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day from now
+        };
+        
+        sessions.unshift(currentAdminSession);
+      }
+      
+      res.json(sessions);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching active sessions: " + error.message });
+    }
+  });
+  
   // User's view of their own sessions
   app.get("/api/user/sessions", async (req, res) => {
     if (!req.isAuthenticated()) {

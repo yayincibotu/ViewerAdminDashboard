@@ -771,9 +771,39 @@ export class DatabaseStorage implements IStorage {
           eq(securitySessions.isActive, true)
         )
       )
-      .orderBy(desc(securitySessions.lastActivityAt));
+      .orderBy(desc(securitySessions.lastActive));
     
     return sessions;
+  }
+  
+  async getAllActiveSessions(): Promise<any[]> {
+    console.log(`[DB] Fetching all active sessions from PostgreSQL database`);
+    
+    try {
+      // Join with users table to include username
+      const sessions = await db
+        .select({
+          id: securitySessions.id,
+          userId: securitySessions.userId,
+          username: users.username,
+          sessionToken: securitySessions.sessionToken,
+          ipAddress: securitySessions.ipAddress,
+          userAgent: securitySessions.userAgent,
+          isActive: securitySessions.isActive,
+          createdAt: securitySessions.createdAt,
+          lastActive: securitySessions.lastActive,
+          expiresAt: securitySessions.expiresAt
+        })
+        .from(securitySessions)
+        .leftJoin(users, eq(securitySessions.userId, users.id))
+        .where(eq(securitySessions.isActive, true))
+        .orderBy(desc(securitySessions.lastActive));
+      
+      return sessions;
+    } catch (error) {
+      console.error("[DB] Error fetching all active sessions:", error);
+      return [];
+    }
   }
   
   async updateSecuritySession(id: number, updates: Partial<SecuritySession>): Promise<SecuritySession | undefined> {
