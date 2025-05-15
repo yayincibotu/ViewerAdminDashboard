@@ -1430,97 +1430,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin API: Assign subscription plan to user
   app.post("/api/admin/users/:id/subscriptions", isAdmin, async (req, res) => {
     try {
+      // 1. Validate user existence
       const userId = parseInt(req.params.id);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
+      // 2. Validate request data
       const { 
         planId, 
-        twitchChannel, 
-        geographicTargeting, 
-        status, 
-        paymentStatus, 
+        twitchChannel = null, 
+        geographicTargeting = null, 
+        status = "active", 
+        paymentStatus,
         startDate: startDateString, 
         endDate: endDateString,
-        discountPercentage
+        discountPercentage = 0
       } = req.body;
       
       if (!planId) {
         return res.status(400).json({ message: "Plan ID is required" });
       }
       
-      const plan = await storage.getSubscriptionPlan(planId);
+      // 3. Validate plan existence
+      const plan = await storage.getSubscriptionPlan(Number(planId));
       if (!plan) {
-        return res.status(404).json({ message: "Subscription plan not found" });
+        return res.status(400).json({ message: "Subscription plan not found" });
       }
       
+      // 4. Prepare dates and data
       // Parse dates from client or use defaults
       const startDate = startDateString ? new Date(startDateString) : new Date();
-      const endDate = endDateString ? new Date(endDateString) : new Date(startDate);
+      let endDate;
       
-      // Default to 30 days if no end date was provided
-      if (!endDateString) {
+      if (endDateString) {
+        endDate = new Date(endDateString);
+      } else {
+        // Default to 30 days if no end date was provided
+        endDate = new Date(startDate);
         endDate.setDate(endDate.getDate() + 30);
       }
       
-      // Debug logs to diagnose the issue
-      console.log('Creating subscription with data:', {
-        userId,
-        planId,
-        status: paymentStatus || status || "active",
-        startDate,
-        endDate,
-        twitchChannel: twitchChannel || null,
-        isActive: true,
-        geographicTargeting: geographicTargeting || null
-      });
-      
+      // 5. Create subscription data with all fields explicitly set, no undefined values
       const subscriptionData = {
         userId,
-        planId,
-        status: paymentStatus || status || "active",
+        planId: Number(planId),  // Ensure this is a number
+        status: paymentStatus || status,
         startDate,
         endDate,
-        twitchChannel: twitchChannel || null,
+        twitchChannel,
         isActive: true,
-        geographicTargeting: geographicTargeting || null
+        geographicTargeting,
+        // Initialize all JSON settings properly
+        viewerSettings: '{}',
+        chatSettings: '{}',
+        followerSettings: '{}'
       };
       
-      const subscription = await storage.createUserSubscription(subscriptionData);
+      // Log what we're about to insert
+      console.log('Creating subscription with data:', subscriptionData);
       
-      // Log action in audit log
-      await storage.createAuditLog({
-        userId: req.user?.id || 0,
-        action: "assign_subscription",
-        details: JSON.stringify({
-          targetUserId: userId,
-          planId,
-          subscriptionId: subscription?.id
-        }),
-        ipAddress: req.ip || ""
-      });
-      
-      res.status(201).json(subscription);
+      // 6. Create the subscription
+      try {
+        const subscription = await storage.createUserSubscription(subscriptionData);
+        
+        // 7. Log the success action
+        await storage.createAuditLog({
+          userId: req.user?.id || 0,
+          action: "assign_subscription",
+          details: JSON.stringify({
+            targetUserId: userId,
+            planId,
+            subscriptionId: subscription?.id
+          }),
+          ipAddress: req.ip || ""
+        });
+        
+        // 8. Return success response
+        return res.status(201).json(subscription);
+      } catch (dbError: any) {
+        console.error('Database error creating subscription:', dbError);
+        return res.status(500).json({ 
+          message: "Database error: " + dbError.message,
+          details: "Failed to create subscription in database"
+        });
+      }
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      // 9. Handle any uncaught errors
+      console.error('Uncaught error in subscription creation:', error);
+      return res.status(500).json({ 
+        message: error.message || "Unknown server error",
+        details: "An unexpected error occurred while processing your request"
+      });
     }
   });
 
   // Admin API: Update user subscription
   app.put("/api/admin/users/:userId/subscriptions/:id", isAdmin, async (req, res) => {
     try {
+      // 1. Validate parameters
       const userId = parseInt(req.params.userId);
       const subscriptionId = parseInt(req.params.id);
       
-      // Check if user exists
+      // 2. Check if user exists
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Check if subscription exists and belongs to user
+      // 3. Check if subscription exists and belongs to user
       const subscriptions = await storage.getUserSubscriptions(userId);
       const subscription = subscriptions.find(sub => sub.id === subscriptionId);
       
@@ -1528,44 +1547,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Subscription not found or doesn't belong to this user" });
       }
       
-      // Update subscription
-      const updatedSubscription = await storage.updateUserSubscription(subscriptionId, req.body);
+      // 4. Prepare update data
+      const updateData = { ...req.body };
       
-      if (!updatedSubscription) {
-        return res.status(500).json({ message: "Failed to update subscription" });
+      // 5. Convert date strings to Date objects if they exist
+      if (updateData.startDate && typeof updateData.startDate === 'string') {
+        updateData.startDate = new Date(updateData.startDate);
       }
       
-      // Log action in audit log
-      await storage.createAuditLog({
-        userId: req.user.id || 0,
-        action: "update_subscription",
-        details: JSON.stringify({
-          targetUserId: userId,
-          subscriptionId,
-          changes: req.body
-        }),
-        ipAddress: req.ip || ""
+      if (updateData.endDate && typeof updateData.endDate === 'string') {
+        updateData.endDate = new Date(updateData.endDate);
+      }
+      
+      // 6. Log the update operation
+      console.log('Updating subscription with data:', {
+        subscriptionId,
+        userId,
+        ...updateData
       });
       
-      res.json(updatedSubscription);
+      // 7. Update subscription with full error handling
+      try {
+        const updatedSubscription = await storage.updateUserSubscription(subscriptionId, updateData);
+        
+        if (!updatedSubscription) {
+          return res.status(500).json({ 
+            message: "Failed to update subscription",
+            details: "The operation was processed but no updated record was returned"
+          });
+        }
+        
+        // 8. Log action in audit log
+        await storage.createAuditLog({
+          userId: req.user?.id || 0,
+          action: "update_subscription",
+          details: JSON.stringify({
+            targetUserId: userId,
+            subscriptionId,
+            changes: updateData
+          }),
+          ipAddress: req.ip || ""
+        });
+        
+        // 9. Return successful response
+        return res.json(updatedSubscription);
+      } catch (dbError: any) {
+        console.error('Database error updating subscription:', dbError);
+        return res.status(500).json({ 
+          message: "Database error: " + dbError.message,
+          details: "Failed to update subscription in database" 
+        });
+      }
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      // 10. Handle any uncaught errors
+      console.error('Uncaught error in subscription update:', error);
+      return res.status(500).json({ 
+        message: error.message || "Unknown server error",
+        details: "An unexpected error occurred while processing your request" 
+      });
     }
   });
 
   // Admin API: Cancel user subscription
   app.delete("/api/admin/users/:userId/subscriptions/:id", isAdmin, async (req, res) => {
     try {
+      // 1. Validate parameters
       const userId = parseInt(req.params.userId);
       const subscriptionId = parseInt(req.params.id);
       
-      // Check if user exists
+      console.log(`Processing subscription cancellation request: userId=${userId}, subscriptionId=${subscriptionId}`);
+      
+      // 2. Check if user exists
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Check if subscription exists and belongs to user
+      // 3. Check if subscription exists and belongs to user
       const subscriptions = await storage.getUserSubscriptions(userId);
       const subscription = subscriptions.find(sub => sub.id === subscriptionId);
       
@@ -1573,56 +1631,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Subscription not found or doesn't belong to this user" });
       }
       
-      // Instead of deleting, update status to cancelled and keep it active until end of billing period
-      // Calculate the end date (if no endDate is set, set one month from now)
-      const subscription_plan = await storage.getSubscriptionPlan(subscription.planId);
-      
-      // Default to one month from now if plan or billing cycle info is missing
+      // 4. Calculate the proper end date based on billing cycle
+      // Default to one month from now if no existing end date
       const defaultEndDate = new Date();
       defaultEndDate.setDate(defaultEndDate.getDate() + 30);
       
       let endDate = subscription.endDate || defaultEndDate;
+      let billingPeriodDays = 30; // Default to monthly
       
-      // If we have plan info, calculate more precisely based on billing cycle
-      if (subscription_plan && subscription_plan.billingCycle) {
-        // If no endDate is set, calculate based on billing cycle
-        const billingPeriodDays = 
-          subscription_plan.billingCycle === 'day' ? 1 :
-          subscription_plan.billingCycle === 'week' ? 7 :
-          subscription_plan.billingCycle === 'month' ? 30 :
-          subscription_plan.billingCycle === 'year' ? 365 : 30;
+      try {
+        // 5. Fetch subscription plan for billing cycle info
+        const subscription_plan = await storage.getSubscriptionPlan(subscription.planId);
+        
+        // If we have plan info, calculate more precisely based on billing cycle
+        if (subscription_plan && subscription_plan.billingCycle) {
+          // Calculate billing period days
+          billingPeriodDays = 
+            subscription_plan.billingCycle === 'day' ? 1 :
+            subscription_plan.billingCycle === 'week' ? 7 :
+            subscription_plan.billingCycle === 'month' ? 30 :
+            subscription_plan.billingCycle === 'year' ? 365 : 30;
+            
+          console.log(`Billing cycle: ${subscription_plan.billingCycle}, calculated days: ${billingPeriodDays}`);
           
-        // Only set a new end date if one doesn't exist
-        if (!subscription.endDate) {
-          const today = new Date();
-          endDate = new Date(today.setDate(today.getDate() + billingPeriodDays));
+          // Only set a new end date if one doesn't exist
+          if (!subscription.endDate) {
+            const today = new Date();
+            endDate = new Date(today);
+            endDate.setDate(today.getDate() + billingPeriodDays);
+            console.log(`Setting new end date: ${endDate.toISOString()}`);
+          } else {
+            console.log(`Using existing end date: ${subscription.endDate}`);
+          }
         }
+      } catch (planError) {
+        console.error('Error fetching subscription plan:', planError);
+        // Continue with the default end date if plan lookup fails
       }
       
-      const updatedSubscription = await storage.updateUserSubscription(subscriptionId, {
-        status: "cancelled",
-        isActive: true, // Keep active until the end date
-        endDate: endDate
+      // 6. Log the cancellation operation
+      console.log('Cancelling subscription with data:', {
+        subscriptionId,
+        userId,
+        currentStatus: subscription.status,
+        newStatus: "cancelled",
+        currentEndDate: subscription.endDate,
+        newEndDate: endDate
       });
       
-      if (!updatedSubscription) {
-        return res.status(500).json({ message: "Failed to cancel subscription" });
+      // 7. Update subscription with proper error handling
+      try {
+        const updateData = {
+          status: "cancelled",
+          isActive: true, // Keep active until the end date
+          endDate: endDate
+        };
+        
+        const updatedSubscription = await storage.updateUserSubscription(subscriptionId, updateData);
+        
+        if (!updatedSubscription) {
+          return res.status(500).json({ 
+            message: "Failed to cancel subscription",
+            details: "The database operation did not return an updated subscription"
+          });
+        }
+        
+        // 8. Log action in audit log
+        await storage.createAuditLog({
+          userId: req.user?.id || 0,
+          action: "cancel_subscription",
+          details: JSON.stringify({
+            targetUserId: userId,
+            subscriptionId,
+            endDate: endDate.toISOString()
+          }),
+          ipAddress: req.ip || ""
+        });
+        
+        // 9. Return successful response with clear data
+        // Send back both the message and the updated subscription for client-side update
+        return res.json({
+          success: true, 
+          message: "Subscription cancelled successfully",
+          subscription: updatedSubscription
+        });
+      } catch (dbError: any) {
+        console.error('Database error cancelling subscription:', dbError);
+        return res.status(500).json({ 
+          message: "Database error: " + dbError.message,
+          details: "Failed to cancel subscription in database"
+        });
       }
-      
-      // Log action in audit log
-      await storage.createAuditLog({
-        userId: req.user.id || 0,
-        action: "cancel_subscription",
-        details: JSON.stringify({
-          targetUserId: userId,
-          subscriptionId
-        }),
-        ipAddress: req.ip || ""
-      });
-      
-      res.json({ success: true, message: "Subscription cancelled successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      // 10. Handle any uncaught errors
+      console.error('Uncaught error in subscription cancellation:', error);
+      return res.status(500).json({
+        message: error.message || "Unknown server error",
+        details: "An unexpected error occurred while processing your request"
+      });
     }
   });
 
