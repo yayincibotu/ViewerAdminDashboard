@@ -404,22 +404,6 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   
-  // Security questions
-  async getSecurityQuestions(activeOnly: boolean = true): Promise<SecurityQuestion[]> {
-    console.log(`[DB] Fetching all security questions from PostgreSQL database${activeOnly ? ' (active only)' : ''}`);
-    
-    let query = db
-      .select()
-      .from(securityQuestions)
-      .orderBy(asc(securityQuestions.question));
-      
-    if (activeOnly) {
-      query = query.where(eq(securityQuestions.isActive, true));
-    }
-    
-    return await query;
-  }
-  
   async deleteTwoFactorAuth(userId: number): Promise<boolean> {
     console.log(`[DB] Deleting two-factor auth for user ID: ${userId} from PostgreSQL database`);
     
@@ -439,16 +423,18 @@ export class DatabaseStorage implements IStorage {
   async getSecurityQuestions(activeOnly: boolean = true): Promise<SecurityQuestion[]> {
     console.log(`[DB] Fetching all security questions from PostgreSQL database${activeOnly ? ' (active only)' : ''}`);
     
-    let query = db
-      .select()
-      .from(securityQuestions)
-      .orderBy(asc(securityQuestions.question));
-      
     if (activeOnly) {
-      query = query.where(eq(securityQuestions.isActive, true));
+      return await db
+        .select()
+        .from(securityQuestions)
+        .where(eq(securityQuestions.isActive, true))
+        .orderBy(asc(securityQuestions.question));
+    } else {
+      return await db
+        .select()
+        .from(securityQuestions)
+        .orderBy(asc(securityQuestions.question));
     }
-    
-    return await query;
   }
   
   async getSecurityQuestion(id: number): Promise<SecurityQuestion | undefined> {
@@ -482,8 +468,7 @@ export class DatabaseStorage implements IStorage {
     const [updatedQuestion] = await db
       .update(securityQuestions)
       .set({
-        ...updates,
-        updatedAt: new Date()
+        ...updates
       })
       .where(eq(securityQuestions.id, id))
       .returning();
