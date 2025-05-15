@@ -226,8 +226,28 @@ export function setupAuth(app: Express) {
     
     console.log("User authenticated:", req.user.username);
     
-    // Remove password from response
-    const userResponse = { ...req.user };
+    // Remove password from response and process JSON fields
+    const user = req.user;
+    
+    // Function to safely parse JSON
+    const safeParseJSON = (jsonString: string | null) => {
+      if (!jsonString) return null;
+      try {
+        return JSON.parse(jsonString);
+      } catch (error) {
+        console.error('Error parsing JSON:', error);
+        return null;
+      }
+    };
+    
+    const userResponse = { 
+      ...user,
+      // Convert JSON string fields to objects if they exist
+      profileData: safeParseJSON(user.profileData),
+      securitySettings: safeParseJSON(user.securitySettings),
+      notificationPreferences: safeParseJSON(user.notificationPreferences),
+      billingInfo: safeParseJSON(user.billingInfo)
+    };
     delete userResponse.password;
     
     res.json(userResponse);

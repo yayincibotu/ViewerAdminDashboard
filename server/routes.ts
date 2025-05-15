@@ -1395,12 +1395,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // JSON string alanlarını JavaScript nesnelerine dönüştür
+      // Function to safely parse JSON
+      const safeParseJSON = (jsonString: string | null) => {
+        if (!jsonString) return null;
+        try {
+          return JSON.parse(jsonString);
+        } catch (error) {
+          console.error('Error parsing JSON:', error);
+          return null;
+        }
+      };
+      
       const processedUser = {
         ...user,
-        profileData: user.profileData ? JSON.parse(user.profileData) : null,
-        securitySettings: user.securitySettings ? JSON.parse(user.securitySettings) : null,
-        notificationPreferences: user.notificationPreferences ? JSON.parse(user.notificationPreferences) : null,
-        billingInfo: user.billingInfo ? JSON.parse(user.billingInfo) : null
+        profileData: safeParseJSON(user.profileData),
+        securitySettings: safeParseJSON(user.securitySettings),
+        notificationPreferences: safeParseJSON(user.notificationPreferences),
+        billingInfo: safeParseJSON(user.billingInfo)
       };
 
       // Create comprehensive user profile
@@ -1612,17 +1623,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // JSON verilerini doğru biçimde işle
       let validatedData = updateSchema.parse(req.body);
       
+      // Function to safely stringify objects to JSON
+      const safeStringifyJSON = (obj: any) => {
+        if (!obj) return null;
+        if (typeof obj === 'string') return obj; // Already a string, no need to stringify
+        
+        try {
+          return JSON.stringify(obj);
+        } catch (error) {
+          console.error('Error stringifying object to JSON:', error);
+          return null;
+        }
+      };
+      
       // Obje şeklinde gelen alanları JSON string'e dönüştür
-      if (validatedData.profileData && typeof validatedData.profileData === 'object') {
-        validatedData.profileData = JSON.stringify(validatedData.profileData);
+      if (validatedData.profileData) {
+        validatedData.profileData = safeStringifyJSON(validatedData.profileData);
       }
       
-      if (validatedData.securitySettings && typeof validatedData.securitySettings === 'object') {
-        validatedData.securitySettings = JSON.stringify(validatedData.securitySettings);
+      if (validatedData.securitySettings) {
+        validatedData.securitySettings = safeStringifyJSON(validatedData.securitySettings);
       }
       
-      if (validatedData.notificationPreferences && typeof validatedData.notificationPreferences === 'object') {
-        validatedData.notificationPreferences = JSON.stringify(validatedData.notificationPreferences);
+      if (validatedData.notificationPreferences) {
+        validatedData.notificationPreferences = safeStringifyJSON(validatedData.notificationPreferences);
+      }
+      
+      if (validatedData.billingInfo) {
+        validatedData.billingInfo = safeStringifyJSON(validatedData.billingInfo);
       }
       
       const updatedUser = await storage.updateUser(userId, validatedData);
