@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LoaderCircle, RefreshCw, Calendar, ArrowRight, ArrowUpRight, ArrowDownRight, Users, CreditCard, Activity } from 'lucide-react';
+import { LoaderCircle, RefreshCw, Calendar, ArrowRight, ArrowUpRight, ArrowDownRight, Users, CreditCard, Activity, Shield, AlertTriangle, Check, X } from 'lucide-react';
 import AdminLayout from '@/components/dashboard/AdminLayout';
 import AdminHeader from '@/components/dashboard/AdminHeader';
 import { apiRequest } from '@/lib/queryClient';
@@ -24,7 +24,7 @@ import {
 } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import type { UserAnalytics, SubscriptionAnalytics, FinancialAnalytics, PerformanceMetrics } from '@shared/schema';
+import type { UserAnalytics, SubscriptionAnalytics, FinancialAnalytics, PerformanceMetrics, LoginAttempt } from '@shared/schema';
 
 // Helper function to format date for display
 const formatDate = (date: string | Date) => {
@@ -473,7 +473,267 @@ const SubscriptionAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}>
   );
 };
 
-// Financial Analytics Dashboard
+// Security Analytics Dashboard
+const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = ({ startDate, endDate }) => {
+  const [usernameFilter, setUsernameFilter] = useState<string>("");
+  
+  const {
+    data: loginAttempts = [],
+    isLoading,
+    refetch
+  } = useQuery<LoginAttempt[]>({
+    queryKey: ['/api/admin/security/login-attempts', { limit: 100, username: usernameFilter }],
+    queryFn: async () => {
+      let url = `/api/admin/security/login-attempts?limit=100`;
+      
+      if (usernameFilter) {
+        url += `&username=${encodeURIComponent(usernameFilter)}`;
+      }
+      
+      const res = await apiRequest('GET', url);
+      return res.json();
+    }
+  });
+  
+  // Calculate statistics
+  const totalAttempts = loginAttempts.length;
+  const successfulAttempts = loginAttempts.filter(attempt => attempt.success).length;
+  const failedAttempts = totalAttempts - successfulAttempts;
+  
+  // Group by IP address
+  const ipAddresses = loginAttempts.reduce((acc, attempt) => {
+    if (attempt.ipAddress) {
+      acc[attempt.ipAddress] = (acc[attempt.ipAddress] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  
+  // Sort IP addresses by number of attempts (descending)
+  const topIpAddresses = Object.entries(ipAddresses)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  
+  // Format timestamp for display
+  const formatTimestamp = (timestamp: string | Date) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+  };
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Security Analytics</h2>
+        <div className="flex space-x-2">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Filter by username"
+              className="h-10 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              value={usernameFilter}
+              onChange={(e) => setUsernameFilter(e.target.value)}
+            />
+            {usernameFilter && (
+              <button
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                onClick={() => setUsernameFilter("")}
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => refetch()}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw size={16} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Login Attempts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalAttempts}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Successful Logins
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <div className="text-3xl font-bold text-green-600">{successfulAttempts}</div>
+              <div className="ml-2 text-sm text-muted-foreground">
+                ({totalAttempts > 0 ? ((successfulAttempts / totalAttempts) * 100).toFixed(1) : 0}%)
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Failed Logins
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <div className="text-3xl font-bold text-red-600">{failedAttempts}</div>
+              <div className="ml-2 text-sm text-muted-foreground">
+                ({totalAttempts > 0 ? ((failedAttempts / totalAttempts) * 100).toFixed(1) : 0}%)
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Top IP Addresses</CardTitle>
+            <CardDescription>
+              IP addresses with the most login attempts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : topIpAddresses.length > 0 ? (
+              <div className="space-y-2">
+                {topIpAddresses.map(([ip, count]) => (
+                  <div key={ip} className="flex justify-between items-center p-2 rounded bg-muted">
+                    <span className="font-mono">{ip}</span>
+                    <span className="px-2 py-1 rounded-full bg-primary/10 text-xs font-semibold">
+                      {count} attempts
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex justify-center items-center h-64 text-muted-foreground">
+                No IP address data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Success/Failure Rate</CardTitle>
+            <CardDescription>
+              Ratio of successful to failed login attempts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : totalAttempts > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Successful', value: successfulAttempts },
+                      { name: 'Failed', value: failedAttempts }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    <Cell fill="#10b981" />
+                    <Cell fill="#ef4444" />
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [value, 'Attempts']} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex justify-center items-center h-64 text-muted-foreground">
+                No login attempts data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Login Attempts</CardTitle>
+          <CardDescription>
+            Recent login activity with status and details
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : loginAttempts.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4">Timestamp</th>
+                    <th className="text-left py-3 px-4">Username</th>
+                    <th className="text-left py-3 px-4">IP Address</th>
+                    <th className="text-left py-3 px-4">Status</th>
+                    <th className="text-left py-3 px-4">Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loginAttempts.map((attempt, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-muted/50' : ''}>
+                      <td className="py-2 px-4">{formatTimestamp(attempt.timestamp)}</td>
+                      <td className="py-2 px-4 font-medium">{attempt.username}</td>
+                      <td className="py-2 px-4 font-mono text-xs">{attempt.ipAddress || 'N/A'}</td>
+                      <td className="py-2 px-4">
+                        {attempt.success ? (
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                            <Check size={12} className="mr-1" />
+                            Success
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                            <X size={12} className="mr-1" />
+                            Failed
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-4 text-muted-foreground">
+                        {attempt.failureReason || (attempt.success ? 'Authentication successful' : 'N/A')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex justify-center items-center h-64 text-muted-foreground">
+              No login attempts data available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 const FinancialAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = ({ startDate, endDate }) => {
   const {
     data: analytics = [],
@@ -1042,7 +1302,7 @@ const AnalyticsPage: React.FC = () => {
       <div className="container mx-auto p-6">
         
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="mb-6 grid w-full grid-cols-4">
+          <TabsList className="mb-6 grid w-full grid-cols-5">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users size={16} />
               User Analytics
@@ -1058,6 +1318,10 @@ const AnalyticsPage: React.FC = () => {
             <TabsTrigger value="performance" className="flex items-center gap-2">
               <Activity size={16} />
               Performance
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <Shield size={16} />
+              Security
             </TabsTrigger>
           </TabsList>
           
@@ -1075,6 +1339,10 @@ const AnalyticsPage: React.FC = () => {
           
           <TabsContent value="performance">
             <PerformanceMetricsDashboard startDate={dateRange.from} endDate={dateRange.to} />
+          </TabsContent>
+          
+          <TabsContent value="security">
+            <SecurityAnalyticsDashboard startDate={dateRange.from} endDate={dateRange.to} />
           </TabsContent>
         </Tabs>
       </div>
