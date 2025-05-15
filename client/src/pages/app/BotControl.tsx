@@ -347,6 +347,21 @@ const BotControl = () => {
     }
   }, [subscriptionDetail]);
   
+  // Log useful information to understand subscription data
+  useEffect(() => {
+    if (subscriptions && subscriptions.length > 0) {
+      console.log("Available subscriptions:", subscriptions.map(sub => {
+        return {
+          id: sub.subscription.id,
+          planId: sub.subscription.planId,
+          planName: sub.plan.name
+        };
+      }));
+      console.log("URL subscription ID:", subscriptionId);
+      console.log("Selected subscription ID:", selectedSubscription);
+    }
+  }, [subscriptions, subscriptionId, selectedSubscription]);
+  
   // Select first subscription if none selected and subscriptions are loaded
   useEffect(() => {
     if (
