@@ -12,10 +12,10 @@ export const users = pgTable("users", {
   role: text("role").default("user").notNull(),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
-  profileData: text("profile_data"),
-  securitySettings: text("security_settings"),
-  notificationPreferences: text("notification_preferences"),
-  billingInfo: text("billing_info"),
+  profileData: text("profile_data"), // JSON string: fullName, phoneNumber, country, city, address, birthDate, languagePreference, avatarUrl
+  securitySettings: text("security_settings"), // JSON string: twoFactorEnabled, accountLocked, ipRestricted, allowedIps
+  notificationPreferences: text("notification_preferences"), // JSON string: emailEnabled, subscriptionAlerts, promotions
+  billingInfo: text("billing_info"), // JSON string: billingAddress, taxInfo, etc.
   // Email verification fields
   isEmailVerified: boolean("is_email_verified").default(false).notNull(),
   verificationToken: text("verification_token"),
@@ -234,12 +234,55 @@ export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type PaymentMethod = typeof paymentMethods.$inferSelect;
 export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
 
+// User Activity Logs
+export const userActivityLogs = pgTable("user_activity_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(), // login, subscription, payment, profile, security
+  description: text("description").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  metadata: text("metadata"), // Additional data as JSON
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export const insertActivityLogSchema = createInsertSchema(userActivityLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+// User Session History
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  sessionId: text("session_id").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  successful: boolean("successful").default(true).notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+  logoutTime: timestamp("logout_time"),
+});
+
+export const insertSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type UserActivityLog = typeof userActivityLogs.$inferSelect;
+export type InsertUserActivityLog = z.infer<typeof insertActivityLogSchema>;
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertSessionSchema>;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   subscriptions: many(userSubscriptions),
   payments: many(payments),
   invoices: many(invoices),
   paymentMethods: many(paymentMethods),
+  activityLogs: many(userActivityLogs),
+  sessions: many(userSessions),
 }));
 
 export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
@@ -297,6 +340,21 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
 export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({
   user: one(users, {
     fields: [paymentMethods.userId],
+    references: [users.id],
+  }),
+}));
+
+// User Activity and Session Relations
+export const userActivityLogsRelations = relations(userActivityLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [userActivityLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userSessionsRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
     references: [users.id],
   }),
 }));
