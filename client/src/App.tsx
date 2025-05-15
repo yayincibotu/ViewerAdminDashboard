@@ -30,6 +30,13 @@ import Checkout from "@/pages/payment/Checkout";
 import Subscribe from "@/pages/payment/Subscribe";
 import { useAuth } from "@/hooks/use-auth";
 
+// Service Pages
+import TwitchViewers from "@/pages/services/TwitchViewers";
+import KickViewers from "@/pages/services/KickViewers";
+
+// Platform Pages
+import TwitchPlatform from "@/pages/platforms/Twitch";
+
 function Router() {
   const { user } = useAuth();
   
@@ -39,6 +46,13 @@ function Router() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
+      
+      {/* Platform Pages */}
+      <Route path="/twitch" component={TwitchPlatform} />
+      
+      {/* Service Pages */}
+      <Route path="/twitch-viewers" component={TwitchViewers} />
+      <Route path="/kick-viewers" component={KickViewers} />
       
       {/* User Dashboard Routes */}
       <ProtectedRoute path="/app" component={Dashboard} />
