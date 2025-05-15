@@ -1012,7 +1012,7 @@ const Billing = () => {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => window.open(`/app/plan/${subscription.plan?.id}`, '_blank')}
+                              onClick={() => window.location.href = `/app/bot-control?id=${subscription.subscription.id}`}
                             >
                               <Eye className="h-4 w-4 mr-1.5" /> View Plan
                             </Button>
