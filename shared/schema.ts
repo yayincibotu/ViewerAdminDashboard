@@ -276,8 +276,8 @@ export const insertSessionSchema = createInsertSchema(userSessions).omit({
 export type UserActivityLog = typeof userActivityLogs.$inferSelect;
 export type InsertUserActivityLog = z.infer<typeof insertActivityLogSchema>;
 
-export type UserSession = typeof userSessions.$inferSelect;
-export type InsertUserSession = z.infer<typeof insertSessionSchema>;
+export type UserSessionHistory = typeof userSessions.$inferSelect;
+export type InsertUserSessionHistory = z.infer<typeof insertSessionSchema>;
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -867,8 +867,8 @@ export type InsertSecurityQuestion = z.infer<typeof insertSecurityQuestionSchema
 export type UserSecurityQuestion = typeof userSecurityQuestions.$inferSelect;
 export type InsertUserSecurityQuestion = z.infer<typeof insertUserSecurityQuestionSchema>;
 
-export type UserSession = typeof userSessions.$inferSelect;
-export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+export type SecuritySession = typeof securitySessions.$inferSelect;
+export type InsertSecuritySession = z.infer<typeof insertSecuritySessionSchema>;
 
 // Analytics types
 export type UserAnalytics = typeof userAnalytics.$inferSelect;
