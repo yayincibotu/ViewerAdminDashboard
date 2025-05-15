@@ -202,8 +202,14 @@ const UserDetails: React.FC = () => {
       securitySettings?: any;
       notificationPreferences?: any;
     }) => {
-      const res = await apiRequest('PUT', `/api/admin/users/${userId}`, userData);
-      return res.json();
+      try {
+        const res = await apiRequest('PUT', `/api/admin/users/${userId}`, userData);
+        const responseData = await res.json();
+        return responseData;
+      } catch (error) {
+        console.error('Error updating user:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
@@ -310,8 +316,14 @@ const UserDetails: React.FC = () => {
   // Update subscription mutation
   const updateSubscriptionMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: any }) => {
-      const res = await apiRequest('PUT', `/api/admin/users/${userId}/subscriptions/${id}`, data);
-      return res.json();
+      try {
+        const res = await apiRequest('PUT', `/api/admin/users/${userId}/subscriptions/${id}`, data);
+        const responseData = await res.json();
+        return responseData;
+      } catch (error) {
+        console.error('Error updating subscription:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
@@ -334,8 +346,14 @@ const UserDetails: React.FC = () => {
   // Cancel subscription mutation
   const cancelSubscriptionMutation = useMutation({
     mutationFn: async (subscriptionId: number) => {
-      const res = await apiRequest('DELETE', `/api/admin/users/${userId}/subscriptions/${subscriptionId}`);
-      return res.json();
+      try {
+        const res = await apiRequest('DELETE', `/api/admin/users/${userId}/subscriptions/${subscriptionId}`);
+        const responseData = await res.json();
+        return responseData;
+      } catch (error) {
+        console.error('Error cancelling subscription:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       console.log('Subscription cancelled successfully, refreshing data...');
