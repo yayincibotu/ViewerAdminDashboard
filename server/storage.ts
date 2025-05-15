@@ -263,7 +263,7 @@ export class DatabaseStorage implements IStorage {
       .insert(loginAttempts)
       .values({
         ...attempt,
-        createdAt: new Date()
+        timestamp: new Date()
       })
       .returning();
     
@@ -282,27 +282,27 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(loginAttempts.username, username),
-          gte(loginAttempts.createdAt, windowDate)
+          gte(loginAttempts.timestamp, windowDate)
         )
       )
-      .orderBy(desc(loginAttempts.createdAt));
+      .orderBy(desc(loginAttempts.timestamp));
     
     return attempts;
   }
   
-  async getSuccessfulLoginAttempts(userId: number, limit?: number): Promise<LoginAttempt[]> {
-    console.log(`[DB] Fetching successful login attempts for user ID: ${userId} from PostgreSQL database`);
+  async getSuccessfulLoginAttempts(username: string, limit?: number): Promise<LoginAttempt[]> {
+    console.log(`[DB] Fetching successful login attempts for username: ${username} from PostgreSQL database`);
     
     const query = db
       .select()
       .from(loginAttempts)
       .where(
         and(
-          eq(loginAttempts.userId, userId),
+          eq(loginAttempts.username, username),
           eq(loginAttempts.success, true)
         )
       )
-      .orderBy(desc(loginAttempts.createdAt));
+      .orderBy(desc(loginAttempts.timestamp));
       
     if (limit) {
       query.limit(limit);
