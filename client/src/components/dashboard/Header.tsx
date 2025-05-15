@@ -165,21 +165,27 @@ const Header = () => {
                 </NavigationMenuItem>
                 
                 <NavigationMenuItem>
-                  <Link href="/app/billing">
-                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  <NavigationMenuLink asChild>
+                    <Link 
+                      href="/app/billing" 
+                      className={navigationMenuTriggerStyle()}
+                    >
                       <CreditCard className="mr-2 h-4 w-4" />
                       Billing
-                    </NavigationMenuLink>
-                  </Link>
+                    </Link>
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
                 
                 <NavigationMenuItem>
-                  <Link href="/app/profile">
-                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  <NavigationMenuLink asChild>
+                    <Link 
+                      href="/app/profile" 
+                      className={navigationMenuTriggerStyle()}
+                    >
                       <UserCircle className="mr-2 h-4 w-4" />
                       Profile
-                    </NavigationMenuLink>
-                  </Link>
+                    </Link>
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
@@ -208,13 +214,17 @@ const Header = () => {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <UserCircle className="mr-2 h-4 w-4" />
-                  <Link href="/app/profile">Profile</Link>
+                <DropdownMenuItem asChild>
+                  <Link href="/app/profile" className="flex items-center w-full">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  <Link href="/app/billing">Billing</Link>
+                <DropdownMenuItem asChild>
+                  <Link href="/app/billing" className="flex items-center w-full">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span>Billing</span>
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
@@ -224,26 +234,34 @@ const Header = () => {
                 <>
                   <DropdownMenuLabel>Bot Controls</DropdownMenuLabel>
                   {hasTwitchViewersBot && (
-                    <DropdownMenuItem>
-                      <Eye className="mr-2 h-4 w-4" />
-                      <Link href="/app/bot-control?tab=viewers">Viewers Bot</Link>
+                    <DropdownMenuItem asChild>
+                      <Link href="/app/bot-control?tab=viewers" className="flex items-center w-full">
+                        <Eye className="mr-2 h-4 w-4" />
+                        <span>Viewers Bot</span>
+                      </Link>
                     </DropdownMenuItem>
                   )}
                   {hasChatBot && (
-                    <DropdownMenuItem>
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      <Link href="/app/bot-control?tab=chat">Chat Bot</Link>
+                    <DropdownMenuItem asChild>
+                      <Link href="/app/bot-control?tab=chat" className="flex items-center w-full">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        <span>Chat Bot</span>
+                      </Link>
                     </DropdownMenuItem>
                   )}
                   {hasFollowerBot && (
-                    <DropdownMenuItem>
-                      <Users className="mr-2 h-4 w-4" />
-                      <Link href="/app/bot-control?tab=followers">Follower Bot</Link>
+                    <DropdownMenuItem asChild>
+                      <Link href="/app/bot-control?tab=followers" className="flex items-center w-full">
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Follower Bot</span>
+                      </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem>
-                    <Bot className="mr-2 h-4 w-4" />
-                    <Link href="/app/bot-control">All Bot Controls</Link>
+                  <DropdownMenuItem asChild>
+                    <Link href="/app/bot-control" className="flex items-center w-full">
+                      <Bot className="mr-2 h-4 w-4" />
+                      <span>All Bot Controls</span>
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>

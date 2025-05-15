@@ -22,15 +22,13 @@ interface NavItemProps {
 
 const NavItem: React.FC<NavItemProps> = ({ icon, label, href, isActive, collapsed }) => {
   return (
-    <Link href={href}>
-      <div 
-        className={cn(
-          "flex items-center px-4 py-3 text-sm font-medium rounded-md transition-all duration-200 group",
+    <div className="w-full">
+      <Link href={href} className={cn(
+          "flex items-center px-4 py-3 text-sm font-medium rounded-md transition-all duration-200 group w-full block",
           isActive 
             ? "bg-sidebar-accent text-white" 
             : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-white"
-        )}
-      >
+        )}>
         <div className={cn(
           "flex items-center w-full", 
           collapsed ? "justify-center" : ""
@@ -48,8 +46,8 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, href, isActive, collapse
             </div>
           )}
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 };
 
