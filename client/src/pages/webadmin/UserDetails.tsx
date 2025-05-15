@@ -416,33 +416,75 @@ const UserDetails: React.FC = () => {
   const handleAssignSubscription = () => {
     if (!selectedPlanId) {
       toast({
-        title: 'No plan selected',
-        description: 'Please select a subscription plan',
+        title: 'Plan seçilmedi',
+        description: 'Lütfen bir abonelik planı seçin',
         variant: 'destructive',
       });
       return;
     }
     
-    // Calculate end date based on duration
-    const startDate = new Date();
-    let endDate = new Date();
+    let subscriptionStartDate: Date;
+    let subscriptionEndDate: Date;
     
-    if (subscriptionDuration === 'monthly') {
-      endDate.setMonth(endDate.getMonth() + 1);
-    } else if (subscriptionDuration === 'quarterly') {
-      endDate.setMonth(endDate.getMonth() + 3);
-    } else if (subscriptionDuration === 'yearly') {
-      endDate.setFullYear(endDate.getFullYear() + 1);
-    } else if (subscriptionDuration === 'custom' && customDurationDays > 0) {
-      endDate.setDate(endDate.getDate() + customDurationDays);
+    // Parse start date from input
+    if (startDate) {
+      subscriptionStartDate = new Date(startDate);
+    } else {
+      subscriptionStartDate = new Date();
+    }
+    
+    // Handle end date based on selection
+    if (isCustomEndDate && endDate) {
+      subscriptionEndDate = new Date(endDate);
+    } else {
+      // Calculate end date based on duration from start date
+      subscriptionEndDate = new Date(subscriptionStartDate);
+      
+      switch (subscriptionDuration) {
+        case 'daily':
+          subscriptionEndDate.setDate(subscriptionStartDate.getDate() + 1);
+          break;
+        case 'weekly':
+          subscriptionEndDate.setDate(subscriptionStartDate.getDate() + 7);
+          break;
+        case 'monthly':
+          subscriptionEndDate.setMonth(subscriptionStartDate.getMonth() + 1);
+          break;
+        case 'quarterly':
+          subscriptionEndDate.setMonth(subscriptionStartDate.getMonth() + 3);
+          break;
+        case 'biannual':
+          subscriptionEndDate.setMonth(subscriptionStartDate.getMonth() + 6);
+          break;
+        case 'annual':
+          subscriptionEndDate.setFullYear(subscriptionStartDate.getFullYear() + 1);
+          break;
+        case 'custom':
+          if (customDurationDays > 0) {
+            subscriptionEndDate.setDate(subscriptionStartDate.getDate() + customDurationDays);
+          }
+          break;
+        default:
+          subscriptionEndDate.setMonth(subscriptionStartDate.getMonth() + 1);
+      }
+    }
+    
+    // Validate that end date is after start date
+    if (subscriptionEndDate <= subscriptionStartDate) {
+      toast({
+        title: 'Geçersiz tarih aralığı',
+        description: 'Bitiş tarihi başlangıç tarihinden sonra olmalıdır',
+        variant: 'destructive',
+      });
+      return;
     }
     
     addSubscriptionMutation.mutate({
       planId: selectedPlanId,
       twitchChannel: twitchChannel || undefined,
       geographicTargeting: geoTargeting || undefined,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate: subscriptionStartDate.toISOString(),
+      endDate: subscriptionEndDate.toISOString(),
       discountPercentage: discountPercentage > 0 ? discountPercentage : undefined,
       paymentStatus: paymentStatus
     });
@@ -1300,33 +1342,18 @@ const UserDetails: React.FC = () => {
                             variant="outline" 
                             onClick={() => setIsSubscriptionDialogOpen(false)}
                           >
-                            Cancel
+                            İptal
                           </Button>
                           <Button 
-                            onClick={() => {
-                              if (!selectedPlanId) {
-                                toast({
-                                  title: 'Error',
-                                  description: 'Please select a subscription plan',
-                                  variant: 'destructive',
-                                });
-                                return;
-                              }
-                              
-                              addSubscriptionMutation.mutate({
-                                planId: selectedPlanId,
-                                twitchChannel,
-                                geographicTargeting: geoTargeting
-                              });
-                            }}
+                            onClick={handleAssignSubscription}
                             disabled={addSubscriptionMutation.isPending}
                           >
                             {addSubscriptionMutation.isPending ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Assigning...
+                                Atanıyor...
                               </>
-                            ) : 'Assign Plan'}
+                            ) : 'Planı Ata'}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
