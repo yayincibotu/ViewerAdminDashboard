@@ -412,6 +412,16 @@ const UserDetails: React.FC = () => {
     setNotificationPrefs(prev => ({ ...prev, [field]: value }));
   };
   
+  // Profil verilerini kaydet
+  const handleSaveProfileData = () => {
+    // Profil, bildirim ve güvenlik bilgilerini birleştir
+    updateUserMutation.mutate({
+      profileData: profileData,
+      securitySettings: securitySettings,
+      notificationPreferences: notificationPrefs
+    });
+  };
+  
   // Handle assign subscription with extended options
   const handleAssignSubscription = () => {
     if (!selectedPlanId) {
@@ -906,8 +916,8 @@ const UserDetails: React.FC = () => {
                                 </div>
                               </div>
                               <div className="flex justify-end mt-4">
-                                <Button type="button" onClick={handleSaveProfileData} disabled={!isEditMode || updateProfileMutation.isPending}>
-                                  {updateProfileMutation.isPending ? (
+                                <Button type="button" onClick={handleSaveProfileData} disabled={!isEditMode || updateUserMutation.isPending}>
+                                  {updateUserMutation.isPending ? (
                                     <>
                                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                       Kaydediliyor...
@@ -969,6 +979,17 @@ const UserDetails: React.FC = () => {
                                   onCheckedChange={(checked) => handleNotificationChange('promotions', checked)}
                                   disabled={!isEditMode}
                                 />
+                              </div>
+                              
+                              <div className="flex justify-end mt-6">
+                                <Button type="button" onClick={handleSaveProfileData} disabled={!isEditMode || updateUserMutation.isPending}>
+                                  {updateUserMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Ayarlar Kaydediliyor...
+                                    </>
+                                  ) : 'Bildirimleri Kaydet'}
+                                </Button>
                               </div>
                             </div>
                           </CardContent>
@@ -1044,6 +1065,17 @@ const UserDetails: React.FC = () => {
                                   <p className="text-xs text-gray-500">Örnek: 192.168.1.1, 10.0.0.1</p>
                                 </div>
                               )}
+                              
+                              <div className="flex justify-end mt-6">
+                                <Button type="button" onClick={handleSaveProfileData} disabled={!isEditMode || updateUserMutation.isPending}>
+                                  {updateUserMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Güvenlik Ayarları Kaydediliyor...
+                                    </>
+                                  ) : 'Güvenlik Ayarlarını Kaydet'}
+                                </Button>
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
