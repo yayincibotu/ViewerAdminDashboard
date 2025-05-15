@@ -434,7 +434,21 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-
+  // Security questions
+  async getSecurityQuestions(activeOnly: boolean = true): Promise<SecurityQuestion[]> {
+    console.log(`[DB] Fetching all security questions from PostgreSQL database${activeOnly ? ' (active only)' : ''}`);
+    
+    let query = db
+      .select()
+      .from(securityQuestions)
+      .orderBy(asc(securityQuestions.question));
+      
+    if (activeOnly) {
+      query = query.where(eq(securityQuestions.isActive, true));
+    }
+    
+    return await query;
+  }
   
   async getSecurityQuestion(id: number): Promise<SecurityQuestion | undefined> {
     console.log(`[DB] Fetching security question with ID: ${id} from PostgreSQL database`);
