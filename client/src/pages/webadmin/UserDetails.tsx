@@ -1851,18 +1851,22 @@ const UserDetails: React.FC = () => {
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>Tarih</TableHead>
+                                    <TableHead>Başlangıç Tarihi</TableHead>
                                     <TableHead>Abonelik</TableHead>
-                                    <TableHead>İşlem</TableHead>
+                                    <TableHead>Bitiş Tarihi</TableHead>
                                     <TableHead>Durum</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                   {user.subscriptions.map((sub: any) => (
                                     <TableRow key={sub.id}>
-                                      <TableCell>{format(new Date(sub.createdAt), 'dd MMM yyyy')}</TableCell>
+                                      <TableCell>
+                                        {sub.startDate ? format(new Date(sub.startDate), 'dd MMM yyyy') : 'Tarih yok'}
+                                      </TableCell>
                                       <TableCell className="font-medium">{sub.plan?.name || 'Silinmiş Plan'}</TableCell>
-                                      <TableCell>Abonelik Başlangıcı</TableCell>
+                                      <TableCell>
+                                        {sub.endDate ? format(new Date(sub.endDate), 'dd MMM yyyy') : 'Tarih yok'}
+                                      </TableCell>
                                       <TableCell>
                                         <Badge className={
                                           sub.status === 'active' ? 'bg-green-500' : 
