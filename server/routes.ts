@@ -278,98 +278,269 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.get("/api/user-subscriptions/:id", async (req, res) => {
+    // 1. Authentication check
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     try {
+      // 2. Get and validate parameters
       const id = parseInt(req.params.id);
-      const subscriptionWithPlan = await storage.getUserSubscriptionWithPlan(id);
-      
-      if (!subscriptionWithPlan) {
-        return res.status(404).json({ message: "Subscription not found" });
+      if (isNaN(id)) {
+        return res.status(400).json({ 
+          message: "Invalid subscription ID", 
+          details: "The subscription ID must be a valid number" 
+        });
       }
       
-      // Check if the subscription belongs to the logged-in user
-      if (subscriptionWithPlan.subscription.userId !== req.user.id) {
-        return res.status(403).json({ message: "Forbidden" });
+      const userId = req.user?.id;
+      if (!userId) {
+        console.error('User ID not found in authenticated session');
+        return res.status(401).json({ 
+          message: "User information missing", 
+          details: "Authentication validated but user ID is missing" 
+        });
       }
       
-      res.json(subscriptionWithPlan);
+      console.log(`Fetching subscription details for ID: ${id}, requested by user: ${userId}`);
+      
+      // 3. Get subscription with error handling
+      try {
+        const subscriptionWithPlan = await storage.getUserSubscriptionWithPlan(id);
+        
+        // 4. Check if subscription exists
+        if (!subscriptionWithPlan) {
+          return res.status(404).json({ 
+            message: "Subscription not found",
+            details: "The requested subscription does not exist"
+          });
+        }
+        
+        // 5. Security: Check if the subscription belongs to the logged-in user
+        if (subscriptionWithPlan.subscription.userId !== userId) {
+          console.warn(`Unauthorized attempt to access subscription: User ${userId} tried to access subscription ${id} belonging to user ${subscriptionWithPlan.subscription.userId}`);
+          return res.status(403).json({ 
+            message: "Forbidden",
+            details: "You do not have permission to access this subscription"
+          });
+        }
+        
+        // 6. Return successful response
+        return res.json(subscriptionWithPlan);
+      } catch (dbError: any) {
+        console.error(`Database error fetching subscription ${id}:`, dbError);
+        return res.status(500).json({ 
+          message: "Database error: " + dbError.message,
+          details: "Failed to fetch subscription details from database"
+        });
+      }
     } catch (error: any) {
-      res.status(500).json({ message: "Error fetching subscription: " + error.message });
+      // 7. Handle any uncaught errors
+      console.error('Uncaught error in subscription fetch:', error);
+      return res.status(500).json({ 
+        message: "Error fetching subscription: " + error.message,
+        details: "An unexpected error occurred while processing your request"
+      });
     }
   });
   
   // Update Twitch channel for subscription
   app.put("/api/user-subscriptions/:id/twitch-channel", async (req, res) => {
+    // 1. Authentication check
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
     try {
+      // 2. Get and validate parameters
       const subscriptionId = parseInt(req.params.id);
+      if (isNaN(subscriptionId)) {
+        return res.status(400).json({ 
+          message: "Invalid subscription ID", 
+          details: "The subscription ID must be a valid number" 
+        });
+      }
+      
+      const userId = req.user?.id;
+      if (!userId) {
+        console.error('User ID not found in authenticated session');
+        return res.status(401).json({ 
+          message: "User information missing", 
+          details: "Authentication validated but user ID is missing" 
+        });
+      }
+      
+      // 3. Validate request data
       const { twitchChannel } = req.body;
-      
-      // Validate data
       if (!twitchChannel) {
-        return res.status(400).json({ message: "Twitch channel is required" });
+        return res.status(400).json({ 
+          message: "Twitch channel is required",
+          details: "You must provide a valid Twitch channel name"
+        });
       }
       
-      // Get the subscription to verify ownership
-      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+      console.log(`Updating Twitch channel for subscription ID: ${subscriptionId}, user: ${userId}, new channel: ${twitchChannel}`);
       
-      if (!subscription) {
-        return res.status(404).json({ message: "Subscription not found" });
+      // 4. Get subscription with error handling
+      try {
+        // Get the subscription to verify ownership
+        const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+        
+        // 5. Check if subscription exists
+        if (!subscription) {
+          return res.status(404).json({ 
+            message: "Subscription not found",
+            details: "The requested subscription does not exist"
+          });
+        }
+        
+        // 6. Security: Check if the subscription belongs to the logged-in user
+        if (subscription.subscription.userId !== userId) {
+          console.warn(`Unauthorized attempt to update subscription: User ${userId} tried to update subscription ${subscriptionId} belonging to user ${subscription.subscription.userId}`);
+          return res.status(403).json({ 
+            message: "Forbidden",
+            details: "You do not have permission to update this subscription"
+          });
+        }
+        
+        // 7. Update the subscription with proper error handling
+        try {
+          const updated = await storage.updateSubscriptionTwitchChannel(subscriptionId, twitchChannel);
+          
+          if (!updated) {
+            return res.status(500).json({ 
+              message: "Failed to update Twitch channel",
+              details: "The database operation did not return an updated subscription"
+            });
+          }
+          
+          // 8. Return successful response
+          return res.json(updated);
+        } catch (updateError: any) {
+          console.error(`Database error updating Twitch channel for subscription ${subscriptionId}:`, updateError);
+          return res.status(500).json({ 
+            message: "Database error: " + updateError.message,
+            details: "Failed to update Twitch channel in database"
+          });
+        }
+      } catch (fetchError: any) {
+        console.error(`Database error fetching subscription ${subscriptionId}:`, fetchError);
+        return res.status(500).json({ 
+          message: "Database error: " + fetchError.message,
+          details: "Failed to fetch subscription details from database"
+        });
       }
-      
-      // Check if subscription belongs to the user
-      if (subscription.subscription.userId !== req.user.id) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-      
-      // Update the twitch channel
-      const updated = await storage.updateSubscriptionTwitchChannel(subscriptionId, twitchChannel);
-      
-      res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: "Error updating Twitch channel: " + error.message });
+      // 9. Handle any uncaught errors
+      console.error('Uncaught error in Twitch channel update:', error);
+      return res.status(500).json({ 
+        message: "Error updating Twitch channel: " + error.message,
+        details: "An unexpected error occurred while processing your request"
+      });
     }
   });
   
   // Toggle subscription activation
   app.put("/api/user-subscriptions/:id/toggle", async (req, res) => {
+    // 1. Authentication check
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
     try {
+      // 2. Get and validate parameters
       const subscriptionId = parseInt(req.params.id);
+      if (isNaN(subscriptionId)) {
+        return res.status(400).json({ 
+          message: "Invalid subscription ID", 
+          details: "The subscription ID must be a valid number" 
+        });
+      }
+      
+      const userId = req.user?.id;
+      if (!userId) {
+        console.error('User ID not found in authenticated session');
+        return res.status(401).json({ 
+          message: "User information missing", 
+          details: "Authentication validated but user ID is missing" 
+        });
+      }
+      
+      // 3. Validate request data
       const { isActive } = req.body;
-      
-      // Get the subscription to verify ownership
-      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
-      
-      if (!subscription) {
-        return res.status(404).json({ message: "Subscription not found" });
+      if (isActive === undefined) {
+        return res.status(400).json({ 
+          message: "Active status is required",
+          details: "You must specify whether the subscription should be active or not"
+        });
       }
       
-      // Check if subscription belongs to the user
-      if (subscription.subscription.userId !== req.user.id) {
-        return res.status(403).json({ message: "Forbidden" });
+      console.log(`Toggling subscription status for ID: ${subscriptionId}, user: ${userId}, new status: ${isActive ? 'active' : 'inactive'}`);
+      
+      // 4. Get subscription with error handling
+      try {
+        // Get the subscription to verify ownership
+        const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+        
+        // 5. Check if subscription exists
+        if (!subscription) {
+          return res.status(404).json({ 
+            message: "Subscription not found",
+            details: "The requested subscription does not exist"
+          });
+        }
+        
+        // 6. Security: Check if the subscription belongs to the logged-in user
+        if (subscription.subscription.userId !== userId) {
+          console.warn(`Unauthorized attempt to toggle subscription: User ${userId} tried to toggle subscription ${subscriptionId} belonging to user ${subscription.subscription.userId}`);
+          return res.status(403).json({ 
+            message: "Forbidden",
+            details: "You do not have permission to update this subscription"
+          });
+        }
+        
+        // 7. Business rules: Check if the channel is set
+        if (isActive && !subscription.subscription.twitchChannel) {
+          return res.status(400).json({ 
+            message: "Twitch channel required",
+            details: "You must set a Twitch channel before activating this subscription"
+          });
+        }
+        
+        // 8. Toggle subscription with proper error handling
+        try {
+          const updated = await storage.toggleSubscriptionStatus(subscriptionId, isActive);
+          
+          if (!updated) {
+            return res.status(500).json({ 
+              message: "Failed to toggle subscription status",
+              details: "The database operation did not return an updated subscription"
+            });
+          }
+          
+          // 9. Return successful response
+          return res.json(updated);
+        } catch (updateError: any) {
+          console.error(`Database error toggling subscription ${subscriptionId}:`, updateError);
+          return res.status(500).json({ 
+            message: "Database error: " + updateError.message,
+            details: "Failed to update subscription status in database"
+          });
+        }
+      } catch (fetchError: any) {
+        console.error(`Database error fetching subscription ${subscriptionId}:`, fetchError);
+        return res.status(500).json({ 
+          message: "Database error: " + fetchError.message,
+          details: "Failed to fetch subscription details from database"
+        });
       }
-      
-      // Check if the channel is set
-      if (isActive && !subscription.subscription.twitchChannel) {
-        return res.status(400).json({ message: "You must set a Twitch channel before activating this subscription" });
-      }
-      
-      // Toggle subscription
-      const updated = await storage.toggleSubscriptionStatus(subscriptionId, isActive);
-      
-      res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: "Error toggling subscription: " + error.message });
+      // 10. Handle any uncaught errors
+      console.error('Uncaught error in subscription toggle:', error);
+      return res.status(500).json({ 
+        message: "Error toggling subscription: " + error.message,
+        details: "An unexpected error occurred while processing your request"
+      });
     }
   });
   
