@@ -468,8 +468,8 @@ const BotControl = () => {
               </div>
               <h2 className="text-xl font-semibold mb-2">No Active Subscriptions</h2>
               <p className="text-gray-500 mb-6">You need an active subscription to access the bot control panel.</p>
-              <Button asChild>
-                <a href="/#pricing">View Plans</a>
+              <Button onClick={() => window.location.href="/#pricing"}>
+                View Plans
               </Button>
             </div>
           </div>
