@@ -712,435 +712,420 @@ const Billing = () => {
   if (!user) return null;
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <UserSidebar />
-      <div className="flex-1 overflow-auto flex flex-col">
+      <div className="flex-1 overflow-auto">
         <Header />
-        <div className="container mx-auto py-6 px-4">
-          <h1 className="text-2xl font-bold mb-6">Billing & Payments</h1>
-          {/* Debug info - Hidden in production */}
-          {false && (
-            <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
-              <p>Debug - Raw billing info:</p>
-              <pre className="overflow-auto max-h-20">{JSON.stringify(billingInfo, null, 2)}</pre>
+        <main className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col gap-8">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold tracking-tight">Billing & Payments</h1>
             </div>
-          )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Billing Info Card */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Billing Information</CardTitle>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => setShowEditBillingDialog(true)}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </div>
-                <CardDescription>Your billing address and details</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm">
-                  {billingInfo?.companyName ? (
-                    <>
-                      <div className="flex items-center gap-1.5 text-primary font-medium pb-1 mb-1 border-b">
-                        <Building2 className="h-4 w-4" />
-                        <span>Company Billing</span>
-                      </div>
-                      <div>
-                        <div className="font-semibold">Company:</div>
-                        <div>{billingInfo.companyName}</div>
-                      </div>
-                      {billingInfo.companyRegistrationNumber && (
-                        <div>
-                          <div className="font-semibold">Registration Number:</div>
-                          <div>{billingInfo.companyRegistrationNumber}</div>
-                        </div>
-                      )}
-                      {billingInfo.companyVatNumber && (
-                        <div>
-                          <div className="font-semibold">VAT Number:</div>
-                          <div>{billingInfo.companyVatNumber}</div>
-                        </div>
-                      )}
-                    </>
-                  ) : null}
-                  
-                  <div>
-                    <div className="font-semibold">Contact Name:</div>
-                    <div>{billingInfo?.fullName || user.username}</div>
+            {/* Main Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Left Column - Billing Info */}
+              <div className="lg:col-span-4 space-y-6">
+                {/* Billing Info Section */}
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Billing Information</h2>
                   </div>
-                  <div>
-                    <div className="font-semibold">Email:</div>
-                    <div>{billingInfo?.email || user.email}</div>
-                  </div>
-                  {billingInfo?.address1 && (
-                    <div>
-                      <div className="font-semibold">Address:</div>
-                      <div>{billingInfo.address1}</div>
-                      {billingInfo.address2 && <div>{billingInfo.address2}</div>}
-                      <div>
-                        {billingInfo.city && `${billingInfo.city}, `}
-                        {billingInfo.state && (
-                          typeof billingInfo.state === 'string' && billingInfo.state.length === 2 && 
-                          typeof billingInfo.country === 'string' && billingInfo.country.length === 2 
-                            ? `${State.getStateByCodeAndCountry(billingInfo.state, billingInfo.country)?.name || billingInfo.state} `
-                            : `${billingInfo.state} `
-                        )}
-                        {billingInfo.zip}
-                      </div>
-                      <div className="flex items-center">
-                        {billingInfo.country && (
-                          <>
-                            {typeof billingInfo.country === 'string' && billingInfo.country.length === 2 ? (
-                              <>
-                                <ReactCountryFlag 
-                                  countryCode={billingInfo.country}
-                                  svg
-                                  style={{
-                                    width: '1.2em',
-                                    height: '1.2em',
-                                    marginRight: '0.5em'
-                                  }}
-                                />
-                                {Country.getCountryByCode(billingInfo.country)?.name}
-                              </>
-                            ) : (
-                              billingInfo.country
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="space-y-6">
-            {/* Subscription Section Header */}
-            <div className="mt-8 mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCardIcon className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Your Subscription Plans</h2>
-              </div>
-              <div className="h-1 w-32 bg-gradient-to-r from-primary to-primary/30 rounded mb-1"></div>
-              <p className="text-sm text-gray-500">Manage your active subscriptions and services</p>
-            </div>
-            
-            {/* Current Plan Card */}
-            {subscriptionsLoading ? (
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">Current Plan</CardTitle>
-                  <CardDescription>Your subscription details</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
-            ) : subscriptions.length === 0 ? (
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">Current Plan</CardTitle>
-                  <CardDescription>Your subscription details</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className="bg-gray-100 p-3 rounded-full mb-4">
-                      <CreditCard className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">No active subscriptions</h3>
-                    <p className="text-sm text-gray-500 max-w-md mb-6">
-                      You don't have any active subscription plans. Subscribe to our services to get started.
-                    </p>
-                    <Button>
-                      Browse Plans
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {subscriptions.map((subscription) => (
-                  <Card key={subscription.id} className="overflow-hidden">
-                    <CardHeader className="pb-4 relative">
-                      <div className="absolute top-0 right-0 p-4">
-                        {subscription.status === 'active' ? (
-                          <div className="flex items-center gap-1.5 text-green-600">
-                            <div className="h-2.5 w-2.5 rounded-full bg-green-600 animate-pulse"></div>
-                            <span className="text-xs font-medium">Active</span>
-                          </div>
-                        ) : subscription.status === 'canceled' ? (
-                          <div className="flex items-center gap-1.5 text-red-500">
-                            <div className="h-2.5 w-2.5 rounded-full bg-red-500"></div>
-                            <span className="text-xs font-medium">Canceled</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-yellow-500">
-                            <div className="h-2.5 w-2.5 rounded-full bg-yellow-500"></div>
-                            <span className="text-xs font-medium">{subscription.status}</span>
-                          </div>
-                        )}
-                      </div>
-                      <CardTitle className="text-lg">
-                        {subscription.plan?.name || 'Unknown Plan'}
-                      </CardTitle>
-                      <CardDescription>
-                        {subscription.plan?.description || 'Plan details'}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
-                          <span className="font-medium text-gray-500">Price:</span>
-                          <span className="font-semibold">
-                            ${Number(subscription.amount / 100).toFixed(2)} / 
-                            {subscription.cycle === 'monthly' ? 'month' : 
-                             subscription.cycle === 'yearly' ? 'year' : 
-                             subscription.cycle === 'weekly' ? 'week' : 'day'}
-                          </span>
-                        </div>
-                        
-                        <div className="flex justify-between">
-                          <span className="font-medium text-gray-500">Start Date:</span>
-                          <span>
-                            {new Date(subscription.startDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                        
-                        {subscription.status === 'canceled' && subscription.endDate && (
-                          <div className="flex justify-between">
-                            <span className="font-medium text-gray-500">End Date:</span>
-                            <span>
-                              {new Date(subscription.endDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                        )}
-                        
-                        <div className="flex justify-between">
-                          <span className="font-medium text-gray-500">Next Billing:</span>
-                          <span>
-                            {subscription.status === 'canceled' ? 'No further billing' : 
-                              new Date(subscription.nextBillingDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between pt-3 border-t">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => window.open(`/app/plan/${subscription.plan?.id}`, '_blank')}
-                      >
-                        <Eye className="h-4 w-4 mr-1.5" /> View Plan
-                      </Button>
-                      
-                      {subscription.status === 'active' && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-base">Contact Details</CardTitle>
                         <Button 
                           size="sm" 
-                          variant="destructive"
-                          onClick={() => {
-                            setSubscriptionToCancel(subscription);
-                            setShowCancelDialog(true);
-                          }}
+                          variant="outline" 
+                          onClick={() => setShowEditBillingDialog(true)}
                         >
-                          Cancel Plan
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
                         </Button>
-                      )}
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            )}
-            
-            {/* Payment Methods Section Header */}
-            <div className="mt-12 mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Payment Methods</h2>
-              </div>
-              <div className="h-1 w-32 bg-gradient-to-r from-primary to-primary/30 rounded mb-1"></div>
-              <p className="text-sm text-gray-500">Manage your saved payment methods</p>
-            </div>
-            
-            {/* Payment Methods Card */}
-            <Card>
-              <CardHeader className="pb-4">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Your Payment Methods</CardTitle>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowAddCardDialog(true)}
-                  >
-                    Add Payment Method
-                  </Button>
-                </div>
-                <CardDescription>Manage your credit cards and payment options</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {paymentMethodsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : paymentMethods.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className="bg-gray-100 p-3 rounded-full mb-4">
-                      <CreditCard className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">No payment methods found</h3>
-                    <p className="text-sm text-gray-500 max-w-md mb-6">
-                      You haven't added any payment methods yet. Add a payment method to subscribe to plans.
-                    </p>
-                    <Button size="sm" onClick={() => setShowAddCardDialog(true)}>
-                      Add Payment Method
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {paymentMethods.map((method) => (
-                      <div key={method.id} className="flex justify-between items-center p-4 border rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex-shrink-0 font-medium">
-                            {getCardLogo(method.card.brand)}
-                          </div>
-                          <div>
-                            <div className="font-medium">
-                              {method.card.brand.charAt(0).toUpperCase() + method.card.brand.slice(1)} ••••{method.card.last4}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3 text-sm">
+                        {billingInfo?.companyName ? (
+                          <>
+                            <div className="flex items-center gap-1.5 text-primary font-medium pb-1 mb-1 border-b">
+                              <Building2 className="h-4 w-4" />
+                              <span>Company Billing</span>
                             </div>
-                            <div className="text-sm text-gray-500">
-                              Expires {method.card.exp_month}/{method.card.exp_year}
+                            <div>
+                              <div className="font-semibold">Company:</div>
+                              <div>{billingInfo.companyName}</div>
                             </div>
-                          </div>
+                            {billingInfo.companyRegistrationNumber && (
+                              <div>
+                                <div className="font-semibold">Registration Number:</div>
+                                <div>{billingInfo.companyRegistrationNumber}</div>
+                              </div>
+                            )}
+                            {billingInfo.companyVatNumber && (
+                              <div>
+                                <div className="font-semibold">VAT Number:</div>
+                                <div>{billingInfo.companyVatNumber}</div>
+                              </div>
+                            )}
+                          </>
+                        ) : null}
+                        
+                        <div>
+                          <div className="font-semibold">Contact Name:</div>
+                          <div>{billingInfo?.fullName || user.username}</div>
                         </div>
-                        <div className="flex items-center space-x-3">
-                          {method.isDefault ? (
-                            <div className="text-xs bg-green-100 text-green-800 py-0.5 px-2 rounded-full">
-                              Default
+                        <div>
+                          <div className="font-semibold">Email:</div>
+                          <div>{billingInfo?.email || user.email}</div>
+                        </div>
+                        {billingInfo?.address1 && (
+                          <div>
+                            <div className="font-semibold">Address:</div>
+                            <div>{billingInfo.address1}</div>
+                            {billingInfo.address2 && <div>{billingInfo.address2}</div>}
+                            <div>
+                              {billingInfo.city && `${billingInfo.city}, `}
+                              {billingInfo.state && (
+                                typeof billingInfo.state === 'string' && billingInfo.state.length === 2 && 
+                                typeof billingInfo.country === 'string' && billingInfo.country.length === 2 
+                                  ? `${State.getStateByCodeAndCountry(billingInfo.state, billingInfo.country)?.name || billingInfo.state} `
+                                  : `${billingInfo.state} `
+                              )}
+                              {billingInfo.zip}
                             </div>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleSetDefaultCard(method.id)}
-                            >
-                              Set as Default
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRemoveCard(method.id)}
-                            disabled={method.isDefault}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <div className="flex items-center">
+                              {billingInfo.country && (
+                                <>
+                                  {typeof billingInfo.country === 'string' && billingInfo.country.length === 2 ? (
+                                    <>
+                                      <ReactCountryFlag 
+                                        countryCode={billingInfo.country}
+                                        svg
+                                        style={{
+                                          width: '1.2em',
+                                          height: '1.2em',
+                                          marginRight: '0.5em'
+                                        }}
+                                      />
+                                      {Country.getCountryByCode(billingInfo.country)?.name}
+                                    </>
+                                  ) : (
+                                    billingInfo.country
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </section>
+
+                {/* Payment Methods Section */}
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Payment Methods</h2>
+                  </div>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-base">Your Cards</CardTitle>
+                        <Button
+                          size="sm"
+                          onClick={() => setShowAddCardDialog(true)}
+                        >
+                          Add Card
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {paymentMethodsLoading ? (
+                        <div className="flex justify-center py-6">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      ) : paymentMethods.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-full mb-4">
+                            <CreditCard className="h-6 w-6 text-gray-400" />
+                          </div>
+                          <h3 className="text-sm font-medium mb-2">No payment methods</h3>
+                          <p className="text-xs text-gray-500 max-w-md mb-4">
+                            Add a payment method to subscribe to our services.
+                          </p>
+                          <Button size="sm" onClick={() => setShowAddCardDialog(true)}>
+                            Add Payment Method
                           </Button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            {/* Billing History Section Header */}
-            <div className="mt-12 mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Receipt className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Billing History</h2>
-              </div>
-              <div className="h-1 w-32 bg-gradient-to-r from-primary to-primary/30 rounded mb-1"></div>
-              <p className="text-sm text-gray-500">View your past invoices and payment history</p>
-            </div>
-            
-            {/* Billing History Card */}
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg">Your Billing History</CardTitle>
-                <CardDescription>View and download your invoices</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {billingHistoryLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : billingHistory.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className="bg-gray-100 p-3 rounded-full mb-4">
-                      <Receipt className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">No billing history</h3>
-                    <p className="text-sm text-gray-500 max-w-md">
-                      You don't have any billing history yet. Your invoices will appear here after your first payment.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="text-left border-b">
-                          <th className="pb-2 font-medium text-sm text-gray-500">Date</th>
-                          <th className="pb-2 font-medium text-sm text-gray-500">Description</th>
-                          <th className="pb-2 font-medium text-sm text-gray-500">Amount</th>
-                          <th className="pb-2 font-medium text-sm text-gray-500">Status</th>
-                          <th className="pb-2 font-medium text-sm text-gray-500"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {billingHistory.map((invoice) => (
-                          <tr key={invoice.id} className="border-b">
-                            <td className="py-3 text-sm">
-                              {new Date(invoice.date).toLocaleDateString()}
-                            </td>
-                            <td className="py-3 text-sm">
-                              {invoice.description || `Invoice #${invoice.number}`}
-                            </td>
-                            <td className="py-3 text-sm font-medium">
-                              ${Number(invoice.amount / 100).toFixed(2)} {invoice.currency.toUpperCase()}
-                            </td>
-                            <td className="py-3 text-sm">
-                              {getInvoiceStatusBadge(invoice.status)}
-                            </td>
-                            <td className="py-3 text-sm">
-                              <div className="flex space-x-2 justify-end">
+                      ) : (
+                        <div className="space-y-3">
+                          {paymentMethods.map((method) => (
+                            <div key={method.id} className="flex justify-between items-center p-3 border rounded-lg bg-gray-50 dark:bg-gray-800">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-shrink-0 font-medium">
+                                  {getCardLogo(method.card.brand)}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-sm">
+                                    ••••{method.card.last4}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    Exp: {method.card.exp_month}/{method.card.exp_year}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {method.isDefault ? (
+                                  <div className="text-xs bg-green-100 text-green-800 py-0.5 px-2 rounded-full">
+                                    Default
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleSetDefaultCard(method.id)}
+                                  >
+                                    Set Default
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => {
-                                    setSelectedInvoice(invoice);
-                                    setShowInvoiceDetailsDialog(true);
-                                  }}
+                                  onClick={() => handleRemoveCard(method.id)}
+                                  disabled={method.isDefault}
                                 >
-                                  <Eye className="h-4 w-4" />
+                                  <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
-                                {invoice.invoiceUrl && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => window.open(invoice.invoiceUrl, '_blank')}
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                )}
                               </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </section>
+              </div>
+
+              {/* Right Column - Subscriptions and History */}
+              <div className="lg:col-span-8 space-y-6">
+                {/* Subscription Plans Section */}
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <CreditCardIcon className="h-5 w-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Your Subscription Plans</h2>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  
+                  {subscriptionsLoading ? (
+                    <Card>
+                      <CardContent className="flex justify-center items-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </CardContent>
+                    </Card>
+                  ) : subscriptions.length === 0 ? (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
+                          <CreditCard className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-medium mb-2">No active subscriptions</h3>
+                        <p className="text-sm text-gray-500 max-w-md mb-6">
+                          You don't have any active subscription plans. Subscribe to our services to get started.
+                        </p>
+                        <Button>
+                          Browse Plans
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {subscriptions.map((subscription) => (
+                        <Card key={subscription.id} className="overflow-hidden border-l-4 border-l-primary">
+                          <CardHeader className="pb-3 relative">
+                            <div className="absolute top-0 right-0 p-3">
+                              {subscription.status === 'active' ? (
+                                <div className="flex items-center gap-1.5 text-green-600">
+                                  <div className="h-2.5 w-2.5 rounded-full bg-green-600 animate-pulse"></div>
+                                  <span className="text-xs font-medium">Active</span>
+                                </div>
+                              ) : subscription.status === 'canceled' ? (
+                                <div className="flex items-center gap-1.5 text-red-500">
+                                  <div className="h-2.5 w-2.5 rounded-full bg-red-500"></div>
+                                  <span className="text-xs font-medium">Canceled</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-yellow-500">
+                                  <div className="h-2.5 w-2.5 rounded-full bg-yellow-500"></div>
+                                  <span className="text-xs font-medium">{subscription.status}</span>
+                                </div>
+                              )}
+                            </div>
+                            <CardTitle className="text-lg">
+                              {subscription.plan?.name || 'Unknown Plan'}
+                            </CardTitle>
+                            <CardDescription className="line-clamp-1">
+                              {subscription.plan?.description || 'Plan details'}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="pb-3">
+                            <div className="space-y-3 text-sm">
+                              <div className="flex justify-between border-b pb-2">
+                                <span className="font-medium text-gray-500">Price:</span>
+                                <span className="font-semibold">
+                                  ${Number(subscription.amount / 100).toFixed(2)} / 
+                                  {subscription.cycle === 'monthly' ? 'month' : 
+                                  subscription.cycle === 'yearly' ? 'year' : 
+                                  subscription.cycle === 'weekly' ? 'week' : 'day'}
+                                </span>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-500">Start Date:</span>
+                                <span>
+                                  {new Date(subscription.startDate).toLocaleDateString()}
+                                </span>
+                              </div>
+                              
+                              {subscription.status === 'canceled' && subscription.endDate && (
+                                <div className="flex justify-between">
+                                  <span className="font-medium text-gray-500">End Date:</span>
+                                  <span>
+                                    {new Date(subscription.endDate).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-500">Next Billing:</span>
+                                <span>
+                                  {subscription.status === 'canceled' ? 'No further billing' : 
+                                    new Date(subscription.nextBillingDate).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                          </CardContent>
+                          <CardFooter className="flex justify-between pt-3 border-t bg-gray-50 dark:bg-gray-800">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => window.open(`/app/plan/${subscription.plan?.id}`, '_blank')}
+                            >
+                              <Eye className="h-4 w-4 mr-1.5" /> View Plan
+                            </Button>
+                            
+                            {subscription.status === 'active' && (
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => {
+                                  setSubscriptionToCancel(subscription);
+                                  setShowCancelDialog(true);
+                                }}
+                              >
+                                Cancel Plan
+                              </Button>
+                            )}
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </section>
+                
+                {/* Billing History Section */}
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Receipt className="h-5 w-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Billing History</h2>
+                  </div>
+                  
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Recent Invoices</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {billingHistoryLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      ) : billingHistory.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-full mb-4">
+                            <Receipt className="h-8 w-8 text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-medium mb-2">No billing history</h3>
+                          <p className="text-sm text-gray-500 max-w-md">
+                            You don't have any billing history yet. Your invoices will appear here after your first payment.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto -mx-4 sm:-mx-6">
+                          <div className="inline-block min-w-full align-middle px-4 sm:px-6">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                              <thead>
+                                <tr className="text-left">
+                                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                  <th scope="col" className="py-3.5 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                  <th scope="col" className="py-3.5 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                  <th scope="col" className="py-3.5 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                  <th scope="col" className="py-3.5 px-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                {billingHistory.map((invoice) => (
+                                  <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                    <td className="py-4 pl-4 pr-3 text-sm whitespace-nowrap">
+                                      {new Date(invoice.date).toLocaleDateString()}
+                                    </td>
+                                    <td className="py-4 px-3 text-sm">
+                                      {invoice.description || `Invoice #${invoice.number}`}
+                                    </td>
+                                    <td className="py-4 px-3 text-sm font-medium">
+                                      ${Number(invoice.amount / 100).toFixed(2)} {invoice.currency.toUpperCase()}
+                                    </td>
+                                    <td className="py-4 px-3 text-sm">
+                                      {getInvoiceStatusBadge(invoice.status)}
+                                    </td>
+                                    <td className="py-4 px-3 text-sm text-right whitespace-nowrap">
+                                      <div className="flex space-x-2 justify-end">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            setSelectedInvoice(invoice);
+                                            setShowInvoiceDetailsDialog(true);
+                                          }}
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                        {invoice.invoiceUrl && (
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => window.open(invoice.invoiceUrl, '_blank')}
+                                          >
+                                            <Download className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </section>
+              </div>
+            </div>
           </div>
-        </div>
+        </main>
       </div>
 
       {/* Add Card Dialog */}
