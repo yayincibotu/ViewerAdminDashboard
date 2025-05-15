@@ -271,6 +271,60 @@ export class DatabaseStorage implements IStorage {
     return newAttempt;
   }
   
+  async getAllLoginAttempts(limit: number = 100): Promise<LoginAttempt[]> {
+    console.log(`[DB] Fetching latest ${limit} login attempts from PostgreSQL database`);
+    
+    return await db
+      .select()
+      .from(loginAttempts)
+      .orderBy(desc(loginAttempts.timestamp))
+      .limit(limit);
+  }
+  
+  async unlockUserAccount(username: string): Promise<boolean> {
+    console.log(`[DB] Unlocking account for username: ${username} in PostgreSQL database`);
+    
+    try {
+      // Check if the user exists
+      const user = await this.getUserByUsername(username);
+      if (!user) {
+        return false;
+      }
+      
+      // For an account to be unlocked, we need to:
+      // 1. Check if the account is actually locked
+      const isLocked = await this.isAccountLocked(username);
+      if (!isLocked) {
+        // Account is not locked, nothing to do
+        return true;
+      }
+      
+      // 2. Delete failed login attempts for this user to remove the lock
+      await db
+        .delete(loginAttempts)
+        .where(
+          and(
+            eq(loginAttempts.username, username),
+            eq(loginAttempts.success, false)
+          )
+        );
+      
+      // 3. Create a new login attempt record marking the unlock action
+      await this.createLoginAttempt({
+        username,
+        success: true,
+        ipAddress: null,
+        userAgent: null,
+        failureReason: "Account manually unlocked by admin"
+      });
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error unlocking account: ${error}`);
+      return false;
+    }
+  }
+  
   async getLoginAttempts(username: string, timeWindow: number): Promise<LoginAttempt[]> {
     console.log(`[DB] Fetching login attempts for username: ${username} in the last ${timeWindow} minutes from PostgreSQL database`);
     

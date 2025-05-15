@@ -5097,6 +5097,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SECURITY MANAGEMENT ROUTES
+  
+  // Login Attempts Management
+  app.get("/api/admin/security/login-attempts", requireAdmin, async (req, res) => {
+    try {
+      const { limit, username } = req.query;
+      
+      let loginAttempts;
+      if (username) {
+        loginAttempts = await storage.getLoginAttempts(username as string, 24 * 60 * 60 * 1000);
+      } else {
+        // Get most recent login attempts
+        loginAttempts = await storage.getAllLoginAttempts(parseInt(limit as string) || 100);
+      }
+      
+      res.json(loginAttempts);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching login attempts: " + error.message });
+    }
+  });
+  
+  // Account Lock/Unlock Management
+  app.post("/api/admin/security/unlock-account", requireAdmin, async (req, res) => {
+    try {
+      const { username } = req.body;
+      
+      if (!username) {
+        return res.status(400).json({ message: "Username is required" });
+      }
+      
+      // Method to unlock an account
+      const result = await storage.unlockUserAccount(username);
+      
+      if (result) {
+        res.json({ message: "Account unlocked successfully" });
+      } else {
+        res.status(404).json({ message: "User not found or account is not locked" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: "Error unlocking account: " + error.message });
+    }
+  });
+  
+  // Active Sessions Management for admins
+  app.get("/api/admin/security/user-sessions/:userId", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid User ID is required" });
+      }
+      
+      const sessions = await storage.getUserActiveSessions(userId);
+      res.json(sessions);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching user sessions: " + error.message });
+    }
+  });
+  
+  // User's view of their own sessions
+  app.get("/api/user/sessions", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const sessions = await storage.getUserActiveSessions(req.user.id);
+      res.json(sessions);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching sessions: " + error.message });
+    }
+  });
+  
+  // Terminate a specific session
+  app.delete("/api/user/sessions/:sessionToken", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const { sessionToken } = req.params;
+      
+      if (!sessionToken) {
+        return res.status(400).json({ message: "Session token is required" });
+      }
+      
+      // Only allow users to terminate their own sessions
+      const session = await storage.getSecuritySession(sessionToken);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      // Admins can terminate any session, regular users only their own
+      if (session.userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: "You can only terminate your own sessions" });
+      }
+      
+      const result = await storage.terminateSession(sessionToken);
+      
+      if (result) {
+        res.json({ message: "Session terminated successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to terminate session" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: "Error terminating session: " + error.message });
+    }
+  });
+  
+  // Terminate all sessions for a user except the current one
+  app.delete("/api/user/sessions", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      // Get the current session token
+      const currentSessionToken = req.sessionID;
+      
+      // Terminate all other sessions
+      const result = await storage.terminateAllUserSessionsExcept(req.user.id, currentSessionToken);
+      
+      res.json({ message: `${result} session(s) terminated successfully` });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error terminating sessions: " + error.message });
+    }
+  });
+  
+  // Admin can terminate all sessions for a user
+  app.delete("/api/admin/security/user-sessions/:userId", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid User ID is required" });
+      }
+      
+      const result = await storage.terminateAllUserSessions(userId);
+      
+      res.json({ message: `${result} session(s) terminated successfully` });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error terminating sessions: " + error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
