@@ -116,6 +116,13 @@ const BotControl = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<number | null>(
     subscriptionId ? parseInt(subscriptionId) : null
   );
+  
+  // Keep subscription ID in sync with URL
+  useEffect(() => {
+    if (subscriptionId && parseInt(subscriptionId)) {
+      setSelectedSubscription(parseInt(subscriptionId));
+    }
+  }, [subscriptionId]);
   const [viewerSettings, setViewerSettings] = useState(DEFAULT_VIEWER_SETTINGS);
   const [customMessage, setCustomMessage] = useState('');
   const [chatSettings, setChatSettings] = useState(DEFAULT_CHAT_SETTINGS);
