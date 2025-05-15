@@ -871,6 +871,78 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+  
+  // Session termination methods for admin dashboard
+  async terminateSession(sessionId: number): Promise<boolean> {
+    console.log(`[DB] Terminating session with ID: ${sessionId} in PostgreSQL database`);
+    
+    try {
+      const [updatedSession] = await db
+        .update(securitySessions)
+        .set({
+          isActive: false,
+          invalidatedAt: new Date()
+        })
+        .where(eq(securitySessions.id, sessionId))
+        .returning();
+      
+      return !!updatedSession;
+    } catch (error) {
+      console.error(`[DB] Error terminating session: ${error}`);
+      return false;
+    }
+  }
+  
+  async terminateAllUserSessionsExcept(userId: number, currentSessionToken: string): Promise<number> {
+    console.log(`[DB] Terminating all sessions for user ID: ${userId} except current session in PostgreSQL database`);
+    
+    try {
+      const result = await db
+        .update(securitySessions)
+        .set({
+          isActive: false,
+          invalidatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(securitySessions.userId, userId),
+            ne(securitySessions.sessionToken, currentSessionToken),
+            eq(securitySessions.isActive, true)
+          )
+        );
+      
+      // This should return the number of affected rows
+      return result.rowCount || 0;
+    } catch (error) {
+      console.error(`[DB] Error terminating user sessions: ${error}`);
+      return 0;
+    }
+  }
+  
+  async terminateAllUserSessions(userId: number): Promise<number> {
+    console.log(`[DB] Terminating all sessions for user ID: ${userId} in PostgreSQL database`);
+    
+    try {
+      const result = await db
+        .update(securitySessions)
+        .set({
+          isActive: false,
+          invalidatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(securitySessions.userId, userId),
+            eq(securitySessions.isActive, true)
+          )
+        );
+      
+      // This should return the number of affected rows
+      return result.rowCount || 0;
+    } catch (error) {
+      console.error(`[DB] Error terminating all user sessions: ${error}`);
+      return 0;
+    }
+  }
 
   private async initializeSampleData() {
     try {
