@@ -1000,7 +1000,7 @@ const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = (
         
         {/* Locked Accounts Tab */}
         <TabsContent value="locked-accounts" className="space-y-6 mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -1009,6 +1009,9 @@ const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = (
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{lockedAccounts.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Total accounts currently locked
+                </p>
               </CardContent>
             </Card>
             
@@ -1024,9 +1027,70 @@ const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = (
                     ? (lockedAccounts.reduce((sum, account) => sum + account.failedAttempts, 0) / lockedAccounts.length).toFixed(1) 
                     : '0'}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Before account lockout
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Lockout Distribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {lockedAccounts.filter(a => a.unlockAt === null).length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Manual unlock required
+                </p>
               </CardContent>
             </Card>
           </div>
+          
+          {/* Visualization for Locked Account Status */}
+          {lockedAccounts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Lockout Severity</CardTitle>
+                <CardDescription>
+                  Distribution of account lockouts by failed attempt count
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: '3-5 attempts', value: lockedAccounts.filter(a => a.failedAttempts >= 3 && a.failedAttempts <= 5).length },
+                          { name: '6-10 attempts', value: lockedAccounts.filter(a => a.failedAttempts > 5 && a.failedAttempts <= 10).length },
+                          { name: '10+ attempts', value: lockedAccounts.filter(a => a.failedAttempts > 10).length }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        nameKey="name"
+                      >
+                        {lockedAccounts.length > 0 && [
+                          <Cell key="cell-0" fill="#FFC107" />,
+                          <Cell key="cell-1" fill="#FF5722" />,
+                          <Cell key="cell-2" fill="#F44336" />
+                        ]}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value} account(s)`, '']} />
+                      <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           
           <Card>
             <CardHeader>
@@ -1037,6 +1101,23 @@ const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = (
                     Accounts that have been locked due to suspicious activity
                   </CardDescription>
                 </div>
+                {lockedAccounts.length > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <Select 
+                      value={usernameFilter} 
+                      onValueChange={setUsernameFilter}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Accounts</SelectItem>
+                        <SelectItem value="auto">Auto Unlock</SelectItem>
+                        <SelectItem value="manual">Manual Unlock Required</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -1059,13 +1140,23 @@ const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = (
                       </tr>
                     </thead>
                     <tbody>
-                      {lockedAccounts.map((account) => (
+                      {lockedAccounts
+                        .filter(account => {
+                          if (!usernameFilter) return true;
+                          if (usernameFilter === 'auto') return account.unlockAt !== null;
+                          if (usernameFilter === 'manual') return account.unlockAt === null;
+                          return true;
+                        })
+                        .map((account) => (
                         <tr key={account.id} className="border-b border-muted">
                           <td className="py-3 px-4 font-medium">{account.username}</td>
                           <td className="py-3 px-4">{account.email || 'N/A'}</td>
                           <td className="py-3 px-4 font-mono text-xs">{account.lastFailedIp || 'Unknown'}</td>
                           <td className="py-3 px-4">
-                            <Badge variant="destructive">
+                            <Badge variant={
+                              account.failedAttempts > 10 ? "destructive" : 
+                              account.failedAttempts > 5 ? "outline" : "secondary"
+                            }>
                               {account.failedAttempts} failed
                             </Badge>
                           </td>
@@ -1073,7 +1164,41 @@ const SecurityAnalyticsDashboard: React.FC<{startDate: Date, endDate: Date}> = (
                             {formatTimestamp(account.lockedAt)}
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
-                            {account.unlockAt ? formatTimestamp(account.unlockAt) : 'Manual unlock only'}
+                            {account.unlockAt ? (
+                              <div className="flex items-center">
+                                <span>{formatTimestamp(account.unlockAt)}</span>
+                                <HoverCard>
+                                  <HoverCardTrigger>
+                                    <Info size={14} className="ml-1 text-muted-foreground" />
+                                  </HoverCardTrigger>
+                                  <HoverCardContent className="w-80">
+                                    <div className="space-y-1">
+                                      <h4 className="text-sm font-semibold">Auto Unlock Information</h4>
+                                      <p className="text-sm">
+                                        This account will be automatically unlocked at the specified time based on your security settings.
+                                      </p>
+                                    </div>
+                                  </HoverCardContent>
+                                </HoverCard>
+                              </div>
+                            ) : (
+                              <div className="flex items-center">
+                                <span className="text-red-500">Manual unlock only</span>
+                                <HoverCard>
+                                  <HoverCardTrigger>
+                                    <AlertCircle size={14} className="ml-1 text-red-500" />
+                                  </HoverCardTrigger>
+                                  <HoverCardContent className="w-80">
+                                    <div className="space-y-1">
+                                      <h4 className="text-sm font-semibold">Manual Intervention Required</h4>
+                                      <p className="text-sm">
+                                        This account has been permanently locked due to suspicious activity and requires administrator approval to unlock.
+                                      </p>
+                                    </div>
+                                  </HoverCardContent>
+                                </HoverCard>
+                              </div>
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             <Button
