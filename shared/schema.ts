@@ -913,7 +913,6 @@ export const adminNotifications = pgTable("admin_notifications", {
   message: text("message").notNull(),
   read: boolean("read").default(false).notNull(),
   link: text("link"), // Optional link to navigate to
-  data: text("data"), // Additional JSON data
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

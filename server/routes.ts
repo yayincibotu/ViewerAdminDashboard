@@ -6,7 +6,7 @@ import Stripe from "stripe";
 import { z } from "zod";
 import { mailService } from "./mail";
 import crypto from "crypto";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, desc } from "drizzle-orm";
 import { getStripe, syncSubscriptionPlansWithStripe, isStripeConfigured, createPaymentIntentForPlan } from "./stripe-helper";
 import { 
@@ -5102,9 +5102,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Notifications API endpoints
   app.get("/api/admin/notifications", requireAdmin, async (req, res) => {
     try {
+      console.log("[API] Fetching admin notifications for user:", req.user?.id);
+      
+      // Use Drizzle ORM
       const notifications = await storage.getAdminNotifications(req.user?.id);
+      console.log("[API] Notifications results:", notifications);
+      
       res.json(notifications);
     } catch (error: any) {
+      console.error("[API] Error fetching notifications:", error);
       res.status(500).json({ message: "Error fetching notifications: " + error.message });
     }
   });
