@@ -24,6 +24,7 @@ import {
   auditLogs, AuditLog, InsertAuditLog,
   // Security tables
   loginAttempts, LoginAttempt, InsertLoginAttempt,
+  lockedAccounts, LockedAccount, InsertLockedAccount,
   twoFactorAuth, TwoFactorAuth, InsertTwoFactorAuth,
   securityQuestions, SecurityQuestion, InsertSecurityQuestion,
   userSecurityQuestions, UserSecurityQuestion, InsertUserSecurityQuestion,

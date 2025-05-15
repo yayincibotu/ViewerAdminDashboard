@@ -889,6 +889,9 @@ export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type LoginAttempt = typeof loginAttempts.$inferSelect;
 export type InsertLoginAttempt = z.infer<typeof insertLoginAttemptSchema>;
 
+export type LockedAccount = typeof lockedAccounts.$inferSelect;
+export type InsertLockedAccount = z.infer<typeof insertLockedAccountSchema>;
+
 export type TwoFactorAuth = typeof twoFactorAuth.$inferSelect;
 export type InsertTwoFactorAuth = z.infer<typeof insertTwoFactorAuthSchema>;
 
