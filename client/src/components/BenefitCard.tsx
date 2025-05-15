@@ -18,8 +18,8 @@ const BenefitCard: React.FC<BenefitCardProps> = ({ icon, title, description, lin
         <h3 className="text-lg font-semibold">{title}</h3>
       </div>
       <p className="text-gray-600 text-sm flex-grow">{description}</p>
-      <Link href={link}>
-        <a className="text-primary-600 font-medium mt-4 inline-block text-sm hover:text-primary-700">Learn more →</a>
+      <Link href={link} className="text-primary-600 font-medium mt-4 inline-block text-sm hover:text-primary-700">
+        Learn more →
       </Link>
     </div>
   );
