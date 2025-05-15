@@ -1896,6 +1896,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // 5. Create subscription data with all fields explicitly set, no undefined values
+      // Make sure we have the plan price for current_price field
+      const planPrice = plan.price || 0; // Default to 0 if price is missing
+      
       const subscriptionData = {
         userId,
         planId: Number(planId),  // Ensure this is a number
@@ -1908,7 +1911,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Initialize all JSON settings properly
         viewerSettings: '{}',
         chatSettings: '{}',
-        followerSettings: '{}'
+        followerSettings: '{}',
+        // Required field that was missing
+        current_price: planPrice,
+        // Set billing cycle from the plan
+        billingCycle: plan.billingCycle || 'monthly' // Default to monthly
       };
       
       // Log what we're about to insert
