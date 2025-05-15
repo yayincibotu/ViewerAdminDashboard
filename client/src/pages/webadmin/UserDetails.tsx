@@ -1399,6 +1399,112 @@ const UserDetails: React.FC = () => {
                       </div>
                     </div>
                   </TabsContent>
+                  
+                  {/* Statistics Tab */}
+                  <TabsContent value="statistics">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Kullanıcı İstatistikleri</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900">
+                            <CardContent className="pt-6">
+                              <div className="flex flex-col items-center">
+                                <h4 className="text-lg font-semibold text-slate-500 dark:text-slate-400">Toplam İzleyici</h4>
+                                <p className="text-3xl font-bold mt-2">{userStats.totalViewers.toLocaleString()}</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                          
+                          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900">
+                            <CardContent className="pt-6">
+                              <div className="flex flex-col items-center">
+                                <h4 className="text-lg font-semibold text-slate-500 dark:text-slate-400">Toplam Harcama</h4>
+                                <p className="text-3xl font-bold mt-2">{userStats.totalSpent.toLocaleString()} ₺</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                          
+                          <Card className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950 dark:to-violet-900">
+                            <CardContent className="pt-6">
+                              <div className="flex flex-col items-center">
+                                <h4 className="text-lg font-semibold text-slate-500 dark:text-slate-400">Aktif Servisler</h4>
+                                <p className="text-3xl font-bold mt-2">{userStats.activeServices}</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Aylık Harcama</h3>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="h-72">
+                              {/* This is where we'd add a recharts BarChart, but for now keeping as placeholder */}
+                              <div className="flex flex-col items-center justify-center h-full">
+                                <p className="text-slate-500 dark:text-slate-400">
+                                  Aylık harcama verileri grafiği burada gösterilecek
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Abonelik Kullanım Özeti</h3>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Servis</TableHead>
+                                  <TableHead>Kullanılan</TableHead>
+                                  <TableHead>Limit</TableHead>
+                                  <TableHead>Durum</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                <TableRow>
+                                  <TableCell className="font-medium">Twitch İzleyici</TableCell>
+                                  <TableCell>105</TableCell>
+                                  <TableCell>250</TableCell>
+                                  <TableCell>
+                                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                                      <div className="bg-green-500 h-2.5 rounded-full" style={{ width: '42%' }}></div>
+                                    </div>
+                                    <span className="text-xs text-slate-500 mt-1">42%</span>
+                                  </TableCell>
+                                </TableRow>
+                                <TableRow>
+                                  <TableCell className="font-medium">Twitch Chat</TableCell>
+                                  <TableCell>68</TableCell>
+                                  <TableCell>100</TableCell>
+                                  <TableCell>
+                                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                                      <div className="bg-amber-500 h-2.5 rounded-full" style={{ width: '68%' }}></div>
+                                    </div>
+                                    <span className="text-xs text-slate-500 mt-1">68%</span>
+                                  </TableCell>
+                                </TableRow>
+                                <TableRow>
+                                  <TableCell className="font-medium">Kick İzleyici</TableCell>
+                                  <TableCell>0</TableCell>
+                                  <TableCell>50</TableCell>
+                                  <TableCell>
+                                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                                      <div className="bg-indigo-500 h-2.5 rounded-full" style={{ width: '0%' }}></div>
+                                    </div>
+                                    <span className="text-xs text-slate-500 mt-1">0%</span>
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  </TabsContent>
                 </CardContent>
               </Tabs>
             </Card>
