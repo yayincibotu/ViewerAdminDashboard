@@ -207,7 +207,8 @@ export interface IStorage {
   // Login attempts and account lockout
   createLoginAttempt(attempt: InsertLoginAttempt): Promise<LoginAttempt>;
   getLoginAttempts(username: string, timeWindow: number): Promise<LoginAttempt[]>;
-  getSuccessfulLoginAttempts(userId: number, limit?: number): Promise<LoginAttempt[]>;
+  getLoginAttemptsByUsername(username: string, limit?: number): Promise<LoginAttempt[]>;
+  getSuccessfulLoginAttempts(username: string, limit?: number): Promise<LoginAttempt[]>;
   
   // Two-factor authentication
   createTwoFactorAuth(twoFactor: InsertTwoFactorAuth): Promise<TwoFactorAuth>;
@@ -333,13 +334,13 @@ export class DatabaseStorage implements IStorage {
     return failedAttempts.length >= maxAttempts;
   }
   
-  async getLoginAttemptsByUserId(userId: number, limit?: number): Promise<LoginAttempt[]> {
-    console.log(`[DB] Fetching login attempts for user ID: ${userId} from PostgreSQL database`);
+  async getLoginAttemptsByUsername(username: string, limit?: number): Promise<LoginAttempt[]> {
+    console.log(`[DB] Fetching login attempts for username: ${username} from PostgreSQL database`);
     
     const query = db
       .select()
       .from(loginAttempts)
-      .where(eq(loginAttempts.userId, userId))
+      .where(eq(loginAttempts.username, username))
       .orderBy(desc(loginAttempts.timestamp));
       
     if (limit) {
