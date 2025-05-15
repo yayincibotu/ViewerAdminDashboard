@@ -88,6 +88,11 @@ const UserDetails: React.FC = () => {
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [paymentStatus, setPaymentStatus] = useState('pending');
   
+  // Başlangıç ve bitiş tarihleri için state değişkenleri
+  const [startDate, setStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState<string>('');
+  const [isCustomEndDate, setIsCustomEndDate] = useState(false);
+  
   // Subscription edit dialog state
   const [isEditSubDialogOpen, setIsEditSubDialogOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<any>(null);
@@ -1155,13 +1160,13 @@ const UserDetails: React.FC = () => {
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <div className="space-y-2">
-                            <Label htmlFor="plan">Subscription Plan</Label>
+                            <Label htmlFor="plan">Abonelik Planı</Label>
                             <Select 
                               value={selectedPlanId.toString()} 
                               onValueChange={(value) => setSelectedPlanId(parseInt(value))}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a plan" />
+                                <SelectValue placeholder="Plan seçin" />
                               </SelectTrigger>
                               <SelectContent>
                                 {plans.map((plan: any) => (
@@ -1173,25 +1178,121 @@ const UserDetails: React.FC = () => {
                             </Select>
                           </div>
                           
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="startDate">Başlangıç Tarihi</Label>
+                              <Input 
+                                id="startDate" 
+                                type="date"
+                                value={startDate} 
+                                onChange={(e) => setStartDate(e.target.value)}
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="endDate">Bitiş Tarihi</Label>
+                                <div className="flex items-center space-x-2">
+                                  <Switch 
+                                    id="customEndDate"
+                                    checked={isCustomEndDate}
+                                    onCheckedChange={setIsCustomEndDate}
+                                  />
+                                  <Label htmlFor="customEndDate" className="text-xs">
+                                    Özel Tarih
+                                  </Label>
+                                </div>
+                              </div>
+                              {isCustomEndDate ? (
+                                <Input 
+                                  id="endDate" 
+                                  type="date"
+                                  value={endDate} 
+                                  onChange={(e) => setEndDate(e.target.value)}
+                                />
+                              ) : (
+                                <Select 
+                                  value={subscriptionDuration} 
+                                  onValueChange={setSubscriptionDuration}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Süre seçin" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="daily">Günlük</SelectItem>
+                                    <SelectItem value="weekly">Haftalık</SelectItem>
+                                    <SelectItem value="monthly">Aylık</SelectItem>
+                                    <SelectItem value="quarterly">3 Aylık</SelectItem>
+                                    <SelectItem value="biannual">6 Aylık</SelectItem>
+                                    <SelectItem value="annual">Yıllık</SelectItem>
+                                    <SelectItem value="custom">Özel</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {subscriptionDuration === 'custom' && !isCustomEndDate && (
+                            <div className="space-y-2">
+                              <Label htmlFor="customDurationDays">Özel Süre (Gün)</Label>
+                              <Input 
+                                id="customDurationDays" 
+                                type="number"
+                                min="1"
+                                value={customDurationDays.toString()} 
+                                onChange={(e) => setCustomDurationDays(parseInt(e.target.value))}
+                              />
+                            </div>
+                          )}
+                          
                           <div className="space-y-2">
-                            <Label htmlFor="twitchChannel">Twitch Channel</Label>
+                            <Label htmlFor="discountPercentage">İndirim Oranı (%)</Label>
                             <Input 
-                              id="twitchChannel" 
-                              value={twitchChannel} 
-                              onChange={(e) => setTwitchChannel(e.target.value)}
-                              placeholder="Enter Twitch channel name"
+                              id="discountPercentage" 
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={discountPercentage.toString()} 
+                              onChange={(e) => setDiscountPercentage(parseInt(e.target.value))}
                             />
                           </div>
                           
                           <div className="space-y-2">
-                            <Label htmlFor="geoTargeting">Geographic Targeting</Label>
+                            <Label htmlFor="twitchChannel">Twitch Kanalı</Label>
+                            <Input 
+                              id="twitchChannel" 
+                              value={twitchChannel} 
+                              onChange={(e) => setTwitchChannel(e.target.value)}
+                              placeholder="Twitch kanal adını girin"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="geoTargeting">Coğrafi Hedefleme</Label>
                             <Input 
                               id="geoTargeting" 
                               value={geoTargeting} 
                               onChange={(e) => setGeoTargeting(e.target.value)}
-                              placeholder="e.g. US,CA,UK"
+                              placeholder="örn. US,CA,UK"
                             />
-                            <p className="text-sm text-gray-500">Comma-separated country codes</p>
+                            <p className="text-sm text-gray-500">Virgülle ayrılmış ülke kodları</p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="paymentStatus">Ödeme Durumu</Label>
+                            <Select 
+                              value={paymentStatus} 
+                              onValueChange={setPaymentStatus}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Durum seçin" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Beklemede</SelectItem>
+                                <SelectItem value="paid">Ödenmiş</SelectItem>
+                                <SelectItem value="free">Ücretsiz</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                         <DialogFooter>
@@ -1350,53 +1451,247 @@ const UserDetails: React.FC = () => {
                   
                   {/* Activity Tab */}
                   <TabsContent value="activity">
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium">Activity Log</h3>
-                      
-                      {/* Show payment history if available */}
-                      <h4 className="font-medium text-gray-700">Payment History</h4>
-                      {user.payments && user.payments.length > 0 ? (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Amount</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Method</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {user.payments.map((payment: any) => (
-                              <TableRow key={payment.id}>
-                                <TableCell>
-                                  {format(new Date(payment.createdAt), 'PPP')}
-                                </TableCell>
-                                <TableCell>
-                                  ${(payment.amount / 100).toFixed(2)}
-                                </TableCell>
-                                <TableCell>
-                                  {payment.status === 'succeeded' ? (
-                                    <Badge className="bg-green-500">Successful</Badge>
-                                  ) : (
-                                    <Badge className="bg-yellow-500">{payment.status}</Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>{payment.paymentMethod || "Unknown"}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      ) : (
-                        <div className="text-center py-4 bg-gray-50 rounded-md">
-                          <p className="text-gray-500">No payment history found.</p>
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-medium">Kullanıcı Aktiviteleri</h3>
+                        <div className="flex space-x-2">
+                          <Select value={activityFilter} onValueChange={setActivityFilter}>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="Filtrele" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Tüm Aktiviteler</SelectItem>
+                              <SelectItem value="payments">Ödemeler</SelectItem>
+                              <SelectItem value="logins">Oturumlar</SelectItem>
+                              <SelectItem value="subscriptions">Abonelikler</SelectItem>
+                              <SelectItem value="services">Servis Kullanımı</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input 
+                            placeholder="Ara..." 
+                            value={activitySearch} 
+                            onChange={(e) => setActivitySearch(e.target.value)}
+                            className="max-w-[200px]"
+                          />
                         </div>
+                      </div>
+                      
+                      {/* Payment History Section */}
+                      {(activityFilter === 'all' || activityFilter === 'payments') && (
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-medium">Ödeme Geçmişi</CardTitle>
+                            <CardDescription>Kullanıcının tüm ödeme işlemleri</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            {user.payments && user.payments.length > 0 ? (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Tarih</TableHead>
+                                    <TableHead>Tutar</TableHead>
+                                    <TableHead>Durum</TableHead>
+                                    <TableHead>Ödeme Yöntemi</TableHead>
+                                    <TableHead>Fatura</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {user.payments.map((payment: any) => (
+                                    <TableRow key={payment.id}>
+                                      <TableCell>
+                                        {format(new Date(payment.createdAt), 'dd MMM yyyy HH:mm')}
+                                      </TableCell>
+                                      <TableCell className="font-medium">
+                                        ${(payment.amount / 100).toFixed(2)}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge className={
+                                          payment.status === 'succeeded' ? 'bg-green-500' : 
+                                          payment.status === 'pending' ? 'bg-amber-500' : 
+                                          'bg-red-500'
+                                        }>
+                                          {payment.status === 'succeeded' ? 'Başarılı' : 
+                                           payment.status === 'pending' ? 'Beklemede' : 
+                                           payment.status}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell>
+                                        {payment.paymentMethod === 'card' ? 'Kredi Kartı' :
+                                         payment.paymentMethod === 'crypto' ? 'Kripto Para' :
+                                         payment.paymentMethod || "Bilinmiyor"}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Button variant="outline" size="sm">
+                                          <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                          </svg>
+                                          Görüntüle
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <div className="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                <p className="text-gray-500">Ödeme geçmişi bulunamadı.</p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
                       )}
                       
-                      {/* Login activity - placeholder for now */}
-                      <h4 className="font-medium text-gray-700 mt-6">Login Activity</h4>
-                      <div className="text-center py-4 bg-gray-50 rounded-md">
-                        <p className="text-gray-500">Login activity data not available.</p>
-                      </div>
+                      {/* Login History Section */}
+                      {(activityFilter === 'all' || activityFilter === 'logins') && (
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-medium">Oturum Geçmişi</CardTitle>
+                            <CardDescription>Kullanıcının giriş aktiviteleri</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            {user.sessionHistory && user.sessionHistory.length > 0 ? (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Tarih & Saat</TableHead>
+                                    <TableHead>IP Adresi</TableHead>
+                                    <TableHead>Tarayıcı / Cihaz</TableHead>
+                                    <TableHead>Durum</TableHead>
+                                    <TableHead>Lokasyon</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {user.sessionHistory.map((session: any, index: number) => (
+                                    <TableRow key={index}>
+                                      <TableCell>{format(new Date(session.timestamp), 'dd MMM yyyy HH:mm')}</TableCell>
+                                      <TableCell>{session.ipAddress}</TableCell>
+                                      <TableCell>{session.userAgent}</TableCell>
+                                      <TableCell>
+                                        <Badge className={session.successful ? 'bg-green-500' : 'bg-red-500'}>
+                                          {session.successful ? 'Başarılı' : 'Başarısız'}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell>{session.location || 'Bilinmiyor'}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <div className="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                <p className="text-gray-500">Oturum geçmişi bulunamadı.</p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {/* Subscription History Section */}
+                      {(activityFilter === 'all' || activityFilter === 'subscriptions') && (
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-medium">Abonelik Geçmişi</CardTitle>
+                            <CardDescription>Kullanıcının abonelik değişiklikleri</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            {user.subscriptions && user.subscriptions.length > 0 ? (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Tarih</TableHead>
+                                    <TableHead>Abonelik</TableHead>
+                                    <TableHead>İşlem</TableHead>
+                                    <TableHead>Durum</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {user.subscriptions.map((sub: any) => (
+                                    <TableRow key={sub.id}>
+                                      <TableCell>{format(new Date(sub.createdAt), 'dd MMM yyyy')}</TableCell>
+                                      <TableCell className="font-medium">{sub.plan?.name || 'Silinmiş Plan'}</TableCell>
+                                      <TableCell>Abonelik Başlangıcı</TableCell>
+                                      <TableCell>
+                                        <Badge className={
+                                          sub.status === 'active' ? 'bg-green-500' : 
+                                          sub.status === 'cancelled' ? 'bg-amber-500' : 
+                                          'bg-slate-500'
+                                        }>
+                                          {sub.status === 'active' ? 'Aktif' : 
+                                           sub.status === 'cancelled' ? 'İptal Edildi' : 
+                                           sub.status}
+                                        </Badge>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <div className="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                <p className="text-gray-500">Abonelik geçmişi bulunamadı.</p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {/* Service Usage Section */}
+                      {(activityFilter === 'all' || activityFilter === 'services') && (
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-medium">Servis Kullanım Geçmişi</CardTitle>
+                            <CardDescription>Kullanıcının servis kullanım aktiviteleri</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            {activityLogs && activityLogs.length > 0 ? (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Tarih & Saat</TableHead>
+                                    <TableHead>Servis</TableHead>
+                                    <TableHead>Aktivite</TableHead>
+                                    <TableHead>Değişiklik</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {activityLogs.map((log: any, index: number) => (
+                                    <TableRow key={index}>
+                                      <TableCell>{format(new Date(log.timestamp), 'dd MMM yyyy HH:mm')}</TableCell>
+                                      <TableCell>{log.service}</TableCell>
+                                      <TableCell>{log.activity}</TableCell>
+                                      <TableCell>{log.details}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <div className="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                <p className="text-gray-500">Servis kullanım geçmişi bulunamadı.</p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {/* Pagination Controls */}
+                      {activityLogs && activityLogs.length > 0 && (
+                        <div className="flex items-center justify-end space-x-2 py-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {/* Previous page logic */}}
+                            disabled={true}
+                          >
+                            Önceki
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {/* Next page logic */}}
+                            disabled={true}
+                          >
+                            Sonraki
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
                   
