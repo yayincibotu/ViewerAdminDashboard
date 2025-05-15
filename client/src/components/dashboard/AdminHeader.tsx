@@ -113,6 +113,19 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
     return Math.floor(seconds) + ' seconds ago';
   };
 
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+    
+    if (notification.link) {
+      // Wait a bit before navigating to ensure the mark-as-read API call is sent
+      setTimeout(() => {
+        window.location.href = notification.link as string;
+      }, 100);
+    }
+  };
+
   const markAsRead = async (notificationId: number) => {
     try {
       const response = await fetch('/api/admin/notifications/mark-read', {
@@ -320,6 +333,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
                       <div 
                         key={notification.id} 
                         className={`px-4 py-3 border-b last:border-0 hover:bg-muted/50 transition-colors cursor-pointer ${!notification.read ? 'bg-blue-50/50 dark:bg-blue-950/10' : ''}`}
+                        onClick={() => handleNotificationClick(notification)}
                       >
                         <div className="flex items-start">
                           <div className="p-1.5 bg-background rounded-full border mr-3">
