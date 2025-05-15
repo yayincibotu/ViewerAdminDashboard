@@ -1436,7 +1436,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      const { planId, twitchChannel, geographicTargeting, status } = req.body;
+      const { 
+        planId, 
+        twitchChannel, 
+        geographicTargeting, 
+        status, 
+        paymentStatus, 
+        startDate: startDateString, 
+        endDate: endDateString,
+        discountPercentage
+      } = req.body;
       
       if (!planId) {
         return res.status(400).json({ message: "Plan ID is required" });
@@ -1447,16 +1456,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Subscription plan not found" });
       }
       
-      // Create start and end date (default: 30 days from now)
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 30);
+      // Parse dates from client or use defaults
+      const startDate = startDateString ? new Date(startDateString) : new Date();
+      const endDate = endDateString ? new Date(endDateString) : new Date(startDate);
+      
+      // Default to 30 days if no end date was provided
+      if (!endDateString) {
+        endDate.setDate(endDate.getDate() + 30);
+      }
       
       const subscription = await storage.createUserSubscription({
         userId,
         planId,
-        status: status || "active",
-        // currentPrice alanı şema tanımında yok, bu yüzden kaldırıldı
+        status: paymentStatus || status || "active",
         startDate,
         endDate,
         twitchChannel,
