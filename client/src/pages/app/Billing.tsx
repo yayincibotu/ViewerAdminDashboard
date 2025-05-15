@@ -1012,7 +1012,12 @@ const Billing = () => {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => window.location.href = `/app/bot-control?id=${subscription.subscription.id}`}
+                              onClick={() => {
+                                // Use Link component's navigation to avoid a full page reload
+                                window.history.pushState({}, '', `/app/bot-control?id=${subscription.subscription.id}`);
+                                // Manually trigger navigation event
+                                window.dispatchEvent(new PopStateEvent('popstate'));
+                              }}
                             >
                               <Eye className="h-4 w-4 mr-1.5" /> View Plan
                             </Button>

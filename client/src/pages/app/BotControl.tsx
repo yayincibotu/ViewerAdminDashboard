@@ -109,6 +109,27 @@ const BotControl = () => {
   const [location] = useLocation();
   
   // Extract the ID from the query string manually
+  // Listen for URL changes via the popstate event
+  useEffect(() => {
+    const handlePopState = () => {
+      // Re-parse URL parameters when navigation occurs
+      const newUrlParams = new URLSearchParams(window.location.search);
+      const newId = newUrlParams.get('id');
+      if (newId && parseInt(newId)) {
+        console.log("URL changed - new subscription ID:", newId);
+        setSelectedSubscription(parseInt(newId));
+      }
+    };
+
+    // Add event listener for URL changes
+    window.addEventListener('popstate', handlePopState);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+  
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const subscriptionId = urlParams.get('id');
   
@@ -117,14 +138,15 @@ const BotControl = () => {
     subscriptionId ? parseInt(subscriptionId) : null
   );
   
-  // Keep subscription ID in sync with URL - this needs to be high priority
+  // When component loads, immediately set subscription ID from URL if available
+  // This needs to be a separate effect to ensure it runs on component mount
   useEffect(() => {
     if (subscriptionId && parseInt(subscriptionId)) {
       const id = parseInt(subscriptionId);
-      console.log("Setting subscription from URL:", id);
+      console.log("Initial setting subscription from URL:", id);
       setSelectedSubscription(id);
     }
-  }, [subscriptionId]);
+  }, []); // Empty dependency array means this runs once on mount
   const [viewerSettings, setViewerSettings] = useState(DEFAULT_VIEWER_SETTINGS);
   const [customMessage, setCustomMessage] = useState('');
   const [chatSettings, setChatSettings] = useState(DEFAULT_CHAT_SETTINGS);
