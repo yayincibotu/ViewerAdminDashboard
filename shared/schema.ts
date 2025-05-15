@@ -112,6 +112,18 @@ export const services = pgTable("services", {
   platformId: integer("platform_id").notNull(),
   price: integer("price").notNull(),
   stripePriceId: text("stripe_price_id"),
+  viewerBotEnabled: boolean("viewer_bot_enabled").default(false),
+  chatBotEnabled: boolean("chat_bot_enabled").default(false),
+  followerBotEnabled: boolean("follower_bot_enabled").default(false),
+  maxViewers: integer("max_viewers").default(0),
+  maxChatMessages: integer("max_chat_messages").default(0),
+  maxFollowers: integer("max_followers").default(0),
+  serviceType: text("service_type").default("basic"), // basic, premium, enterprise
+  isPopular: boolean("is_popular").default(false),
+  sortOrder: integer("sort_order").default(0),
+  isVisible: boolean("is_visible").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertServiceSchema = createInsertSchema(services).omit({
