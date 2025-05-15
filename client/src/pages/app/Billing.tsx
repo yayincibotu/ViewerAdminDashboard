@@ -1013,10 +1013,8 @@ const Billing = () => {
                               size="sm" 
                               variant="outline"
                               onClick={() => {
-                                // Use Link component's navigation to avoid a full page reload
-                                window.history.pushState({}, '', `/app/bot-control?id=${subscription.subscription.id}`);
-                                // Manually trigger navigation event
-                                window.dispatchEvent(new PopStateEvent('popstate'));
+                                // Doğrudan window.location ile tam sayfa yenileme yaparak kesin çözüm
+                                window.location.href = `/app/bot-control?id=${subscription.subscription.id}`;
                               }}
                             >
                               <Eye className="h-4 w-4 mr-1.5" /> View Plan

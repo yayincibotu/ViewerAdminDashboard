@@ -139,12 +139,29 @@ const BotControl = () => {
   );
   
   // When component loads, immediately set subscription ID from URL if available
-  // This needs to be a separate effect to ensure it runs on component mount
+  // This needs to be a separate effect to ensure it runs on component mount with highest priority
   useEffect(() => {
     if (subscriptionId && parseInt(subscriptionId)) {
       const id = parseInt(subscriptionId);
       console.log("Initial setting subscription from URL:", id);
+      
+      // Önce state'i güncelleyelim
       setSelectedSubscription(id);
+      
+      // Ekstra önlem olarak doğrudan detay verilerini de yükleyelim
+      const fetchSubscriptionDetail = async () => {
+        try {
+          const res = await fetch(`/api/user-subscriptions/${id}`);
+          if (res.ok) {
+            const data = await res.json();
+            console.log(`Directly loaded subscription ${id} detail:`, data);
+          }
+        } catch (error) {
+          console.error("Error loading subscription detail:", error);
+        }
+      };
+      
+      fetchSubscriptionDetail();
     }
   }, []); // Empty dependency array means this runs once on mount
   const [viewerSettings, setViewerSettings] = useState(DEFAULT_VIEWER_SETTINGS);
@@ -388,7 +405,19 @@ const BotControl = () => {
   
   // Only select first subscription if none selected, no URL subscription ID and subscriptions are loaded
   useEffect(() => {
-    // Prioritize URL param subscriptionId first
+    // Doğrudan URL'den gelen bir değer varsa, onu kontrol edelim
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlId = urlParams.get('id');
+    
+    // Eğer URL'de id parametresi varsa ona öncelik ver
+    if (urlId && parseInt(urlId)) {
+      const id = parseInt(urlId);
+      console.log("URL parameter subscription ID (from search):", id);
+      setSelectedSubscription(id);
+      return;
+    }
+    
+    // Prioritize URL param subscriptionId first (legacy approach)
     if (subscriptionId && parseInt(subscriptionId)) {
       return; // Don't do anything else if we have a URL param
     }
