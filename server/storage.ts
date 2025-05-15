@@ -34,7 +34,7 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, and, or, gt, gte, lt, lte, desc, asc, isNull, isNotNull, sql, not, ne } from "drizzle-orm";
+import { eq, and, or, gt, gte, lt, lte, desc, asc, isNull, isNotNull, sql, not, ne, inArray } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import crypto from "crypto";
@@ -90,6 +90,12 @@ export interface IStorage {
   getUserAuditLogs(userId: number): Promise<AuditLog[]>;
   getAuditLog(id: number): Promise<AuditLog | undefined>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  
+  // Admin Notification operations
+  getAdminNotifications(userId?: number): Promise<AdminNotification[]>;
+  createAdminNotification(notification: InsertAdminNotification): Promise<AdminNotification>;
+  markNotificationsAsRead(notificationIds: number[]): Promise<boolean>;
+  deleteNotifications(notificationIds: number[]): Promise<boolean>;
   
   // Analytics operations
   getUserAnalytics(startDate: Date, endDate: Date): Promise<UserAnalytics[]>;
