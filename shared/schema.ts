@@ -680,6 +680,114 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs, {
   createdAt: true
 });
 
+// Login Attempts - For tracking failed login attempts and account lockouts
+export const loginAttempts = pgTable("login_attempts", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull(), // Username or email used in attempt
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  success: boolean("success").default(false),
+  failureReason: text("failure_reason"), // Invalid password, account locked, etc.
+  timestamp: timestamp("timestamp").defaultNow().notNull()
+});
+
+export const insertLoginAttemptSchema = createInsertSchema(loginAttempts, {
+  username: z.string().min(1),
+  ipAddress: z.string().optional(),
+  userAgent: z.string().optional(),
+  success: z.boolean().default(false),
+  failureReason: z.string().optional()
+}).omit({
+  id: true,
+  timestamp: true
+});
+
+// Two Factor Authentication
+export const twoFactorAuth = pgTable("two_factor_auth", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id).unique(),
+  secret: text("secret").notNull(), // TOTP secret
+  backupCodes: text("backup_codes"), // JSON array of hashed backup codes
+  enabled: boolean("enabled").default(false),
+  lastVerified: timestamp("last_verified"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+export const insertTwoFactorAuthSchema = createInsertSchema(twoFactorAuth, {
+  userId: z.number(),
+  secret: z.string().min(16),
+  backupCodes: z.string().optional(),
+  enabled: z.boolean().default(false)
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastVerified: true
+});
+
+// Security Questions
+export const securityQuestions = pgTable("security_questions", {
+  id: serial("id").primaryKey(),
+  question: text("question").notNull().unique(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const insertSecurityQuestionSchema = createInsertSchema(securityQuestions, {
+  question: z.string().min(5),
+  isActive: z.boolean().default(true)
+}).omit({
+  id: true,
+  createdAt: true
+});
+
+// User Security Questions
+export const userSecurityQuestions = pgTable("user_security_questions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  questionId: integer("question_id").notNull().references(() => securityQuestions.id),
+  answerHash: text("answer_hash").notNull(), // Hashed answer
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+export const insertUserSecurityQuestionSchema = createInsertSchema(userSecurityQuestions, {
+  userId: z.number(),
+  questionId: z.number(),
+  answerHash: z.string().min(1)
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// Enhanced Session Management
+export const securitySessions = pgTable("security_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  sessionToken: text("session_token").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastActive: timestamp("last_active").defaultNow().notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const insertSecuritySessionSchema = createInsertSchema(securitySessions, {
+  userId: z.number(),
+  sessionToken: z.string().min(1),
+  ipAddress: z.string().optional(),
+  userAgent: z.string().optional(),
+  expiresAt: z.date(),
+  isActive: z.boolean().default(true)
+}).omit({
+  id: true,
+  lastActive: true,
+  createdAt: true
+});
+
 // Analytics & Reporting Tables
 
 // User Analytics
@@ -746,6 +854,21 @@ export type InsertIpRestriction = z.infer<typeof insertIpRestrictionSchema>;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+export type LoginAttempt = typeof loginAttempts.$inferSelect;
+export type InsertLoginAttempt = z.infer<typeof insertLoginAttemptSchema>;
+
+export type TwoFactorAuth = typeof twoFactorAuth.$inferSelect;
+export type InsertTwoFactorAuth = z.infer<typeof insertTwoFactorAuthSchema>;
+
+export type SecurityQuestion = typeof securityQuestions.$inferSelect;
+export type InsertSecurityQuestion = z.infer<typeof insertSecurityQuestionSchema>;
+
+export type UserSecurityQuestion = typeof userSecurityQuestions.$inferSelect;
+export type InsertUserSecurityQuestion = z.infer<typeof insertUserSecurityQuestionSchema>;
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
 
 // Analytics types
 export type UserAnalytics = typeof userAnalytics.$inferSelect;
