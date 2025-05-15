@@ -35,11 +35,11 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              <li><Link href="/"><a className="text-gray-400 hover:text-white transition">Home</a></Link></li>
-              <li><Link href="/#platforms"><a className="text-gray-400 hover:text-white transition">Services</a></Link></li>
-              <li><Link href="/#pricing"><a className="text-gray-400 hover:text-white transition">Pricing</a></Link></li>
-              <li><Link href="/#faq"><a className="text-gray-400 hover:text-white transition">FAQ</a></Link></li>
-              <li><Link href="/#contact"><a className="text-gray-400 hover:text-white transition">Contact Us</a></Link></li>
+              <li><Link href="/" className="text-gray-400 hover:text-white transition">Home</Link></li>
+              <li><Link href="/#platforms" className="text-gray-400 hover:text-white transition">Services</Link></li>
+              <li><Link href="/#pricing" className="text-gray-400 hover:text-white transition">Pricing</Link></li>
+              <li><Link href="/#faq" className="text-gray-400 hover:text-white transition">FAQ</Link></li>
+              <li><Link href="/#contact" className="text-gray-400 hover:text-white transition">Contact Us</Link></li>
             </ul>
           </div>
           
@@ -47,11 +47,11 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Our Services</h3>
             <ul className="space-y-2">
-              <li><Link href="/#twitch"><a className="text-gray-400 hover:text-white transition">Twitch Services</a></Link></li>
-              <li><Link href="/#kick"><a className="text-gray-400 hover:text-white transition">Kick Services</a></Link></li>
-              <li><Link href="/#instagram"><a className="text-gray-400 hover:text-white transition">Instagram Services</a></Link></li>
-              <li><Link href="/#youtube"><a className="text-gray-400 hover:text-white transition">YouTube Services</a></Link></li>
-              <li><Link href="/#platforms"><a className="text-gray-400 hover:text-white transition">All Platforms</a></Link></li>
+              <li><Link href="/#twitch" className="text-gray-400 hover:text-white transition">Twitch Services</Link></li>
+              <li><Link href="/#kick" className="text-gray-400 hover:text-white transition">Kick Services</Link></li>
+              <li><Link href="/#instagram" className="text-gray-400 hover:text-white transition">Instagram Services</Link></li>
+              <li><Link href="/#youtube" className="text-gray-400 hover:text-white transition">YouTube Services</Link></li>
+              <li><Link href="/#platforms" className="text-gray-400 hover:text-white transition">All Platforms</Link></li>
             </ul>
           </div>
           
@@ -69,10 +69,8 @@ const Footer: React.FC = () => {
               </li>
             </ul>
             <div className="mt-6">
-              <Link href="/#contact">
-                <a className="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md text-sm font-medium transition">
-                  Contact Support
-                </a>
+              <Link href="/#contact" className="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md text-sm font-medium transition">
+                Contact Support
               </Link>
             </div>
           </div>
@@ -84,9 +82,9 @@ const Footer: React.FC = () => {
               &copy; {new Date().getFullYear()} ViewerApps. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <Link href="/privacy"><a className="text-gray-400 hover:text-white text-sm transition">Privacy Policy</a></Link>
-              <Link href="/terms"><a className="text-gray-400 hover:text-white text-sm transition">Terms of Service</a></Link>
-              <Link href="/cookies"><a className="text-gray-400 hover:text-white text-sm transition">Cookie Policy</a></Link>
+              <Link href="/privacy" className="text-gray-400 hover:text-white text-sm transition">Privacy Policy</Link>
+              <Link href="/terms" className="text-gray-400 hover:text-white text-sm transition">Terms of Service</Link>
+              <Link href="/cookies" className="text-gray-400 hover:text-white text-sm transition">Cookie Policy</Link>
             </div>
           </div>
         </div>
