@@ -546,137 +546,389 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Update Viewer Settings
   app.put("/api/user-subscriptions/:id/viewer-settings", async (req, res) => {
+    // 1. Authentication check
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
     try {
+      // 2. Get and validate parameters
       const subscriptionId = parseInt(req.params.id);
+      if (isNaN(subscriptionId)) {
+        return res.status(400).json({ 
+          message: "Invalid subscription ID", 
+          details: "The subscription ID must be a valid number" 
+        });
+      }
+      
+      const userId = req.user?.id;
+      if (!userId) {
+        console.error('User ID not found in authenticated session');
+        return res.status(401).json({ 
+          message: "User information missing", 
+          details: "Authentication validated but user ID is missing" 
+        });
+      }
+      
+      // 3. Validate request data
       const { settings } = req.body;
-      
-      // Get the subscription to verify ownership
-      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
-      
-      if (!subscription) {
-        return res.status(404).json({ message: "Subscription not found" });
+      if (!settings) {
+        return res.status(400).json({ 
+          message: "Settings data is required",
+          details: "You must provide viewer settings to update"
+        });
       }
       
-      // Check if subscription belongs to the user
-      if (subscription.subscription.userId !== req.user.id) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
+      console.log(`Updating viewer settings for subscription ID: ${subscriptionId}, user: ${userId}`);
       
-      // Validate settings
-      const settingsSchema = z.object({
-        viewerCount: z.number().min(1).max(subscription.plan.viewerCount),
-        chatMode: z.enum(["quiet", "moderate", "active"]),
-        autoMessages: z.boolean(),
-        customMessages: z.array(z.string()).optional(),
-      });
-      
+      // 4. Get subscription with error handling
       try {
-        settingsSchema.parse(JSON.parse(settings));
-      } catch (validationError) {
-        return res.status(400).json({ message: "Invalid settings format", error: validationError });
+        // Get the subscription to verify ownership
+        const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+        
+        // 5. Check if subscription exists
+        if (!subscription) {
+          return res.status(404).json({ 
+            message: "Subscription not found",
+            details: "The requested subscription does not exist"
+          });
+        }
+        
+        // 6. Security: Check if the subscription belongs to the logged-in user
+        if (subscription.subscription.userId !== userId) {
+          console.warn(`Unauthorized attempt to update viewer settings: User ${userId} tried to update subscription ${subscriptionId} belonging to user ${subscription.subscription.userId}`);
+          return res.status(403).json({ 
+            message: "Forbidden",
+            details: "You do not have permission to update this subscription"
+          });
+        }
+        
+        // 7. Validate settings schema
+        try {
+          const settingsSchema = z.object({
+            viewerCount: z.number().min(1).max(subscription.plan.viewerCount),
+            chatMode: z.enum(["quiet", "moderate", "active"]),
+            autoMessages: z.boolean(),
+            customMessages: z.array(z.string()).optional(),
+          });
+          
+          try {
+            const parsedSettings = typeof settings === 'string' ? JSON.parse(settings) : settings;
+            settingsSchema.parse(parsedSettings);
+          } catch (validationError: any) {
+            console.error('Settings validation error:', validationError);
+            return res.status(400).json({ 
+              message: "Invalid settings format", 
+              error: validationError.errors || validationError.message,
+              details: "The provided settings do not match the required format"
+            });
+          }
+          
+          // 8. Update the settings with proper error handling
+          try {
+            // Ensure settings is a string for storage
+            const settingsString = typeof settings === 'string' 
+              ? settings 
+              : JSON.stringify(settings);
+              
+            const updated = await storage.updateViewerSettings(subscriptionId, settingsString);
+            
+            if (!updated) {
+              return res.status(500).json({ 
+                message: "Failed to update viewer settings",
+                details: "The database operation did not return an updated subscription"
+              });
+            }
+            
+            // 9. Return successful response
+            return res.json(updated);
+          } catch (updateError: any) {
+            console.error(`Database error updating viewer settings for subscription ${subscriptionId}:`, updateError);
+            return res.status(500).json({ 
+              message: "Database error: " + updateError.message,
+              details: "Failed to update viewer settings in database"
+            });
+          }
+        } catch (schemaError: any) {
+          console.error('Error creating validation schema:', schemaError);
+          return res.status(500).json({ 
+            message: "Server error processing validation", 
+            details: "An error occurred while validating your settings"
+          });
+        }
+      } catch (fetchError: any) {
+        console.error(`Database error fetching subscription ${subscriptionId}:`, fetchError);
+        return res.status(500).json({ 
+          message: "Database error: " + fetchError.message,
+          details: "Failed to fetch subscription details from database"
+        });
       }
-      
-      // Update the settings
-      const updated = await storage.updateViewerSettings(subscriptionId, settings);
-      
-      res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: "Error updating viewer settings: " + error.message });
+      // 10. Handle any uncaught errors
+      console.error('Uncaught error in viewer settings update:', error);
+      return res.status(500).json({ 
+        message: "Error updating viewer settings: " + error.message,
+        details: "An unexpected error occurred while processing your request"
+      });
     }
   });
   
   // Update Chat Settings
   app.put("/api/user-subscriptions/:id/chat-settings", async (req, res) => {
+    // 1. Authentication check
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
     try {
+      // 2. Get and validate parameters
       const subscriptionId = parseInt(req.params.id);
+      if (isNaN(subscriptionId)) {
+        return res.status(400).json({ 
+          message: "Invalid subscription ID", 
+          details: "The subscription ID must be a valid number" 
+        });
+      }
+      
+      const userId = req.user?.id;
+      if (!userId) {
+        console.error('User ID not found in authenticated session');
+        return res.status(401).json({ 
+          message: "User information missing", 
+          details: "Authentication validated but user ID is missing" 
+        });
+      }
+      
+      // 3. Validate request data
       const { settings } = req.body;
-      
-      // Get the subscription to verify ownership
-      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
-      
-      if (!subscription) {
-        return res.status(404).json({ message: "Subscription not found" });
+      if (!settings) {
+        return res.status(400).json({ 
+          message: "Settings data is required",
+          details: "You must provide chat settings to update"
+        });
       }
       
-      // Check if subscription belongs to the user
-      if (subscription.subscription.userId !== req.user.id) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
+      console.log(`Updating chat settings for subscription ID: ${subscriptionId}, user: ${userId}`);
       
-      // Validate settings
-      const settingsSchema = z.object({
-        chatCount: z.number().min(1).max(subscription.plan.chatCount),
-        messageFrequency: z.enum(["low", "medium", "high"]),
-        autoRespond: z.boolean(),
-        chatBotNames: z.array(z.string()).optional(),
-        customResponses: z.record(z.string(), z.string()).optional(),
-      });
-      
+      // 4. Get subscription with error handling
       try {
-        settingsSchema.parse(JSON.parse(settings));
-      } catch (validationError) {
-        return res.status(400).json({ message: "Invalid settings format", error: validationError });
+        // Get the subscription to verify ownership
+        const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+        
+        // 5. Check if subscription exists
+        if (!subscription) {
+          return res.status(404).json({ 
+            message: "Subscription not found",
+            details: "The requested subscription does not exist"
+          });
+        }
+        
+        // 6. Security: Check if the subscription belongs to the logged-in user
+        if (subscription.subscription.userId !== userId) {
+          console.warn(`Unauthorized attempt to update chat settings: User ${userId} tried to update subscription ${subscriptionId} belonging to user ${subscription.subscription.userId}`);
+          return res.status(403).json({ 
+            message: "Forbidden",
+            details: "You do not have permission to update this subscription"
+          });
+        }
+        
+        // 7. Validate settings schema
+        try {
+          const settingsSchema = z.object({
+            chatCount: z.number().min(1).max(subscription.plan.chatCount),
+            messageFrequency: z.enum(["low", "medium", "high"]),
+            autoRespond: z.boolean(),
+            chatBotNames: z.array(z.string()).optional(),
+            customResponses: z.record(z.string(), z.string()).optional(),
+          });
+          
+          try {
+            const parsedSettings = typeof settings === 'string' ? JSON.parse(settings) : settings;
+            settingsSchema.parse(parsedSettings);
+          } catch (validationError: any) {
+            console.error('Chat settings validation error:', validationError);
+            return res.status(400).json({ 
+              message: "Invalid settings format", 
+              error: validationError.errors || validationError.message,
+              details: "The provided settings do not match the required format"
+            });
+          }
+          
+          // 8. Update the settings with proper error handling
+          try {
+            // Ensure settings is a string for storage
+            const settingsString = typeof settings === 'string' 
+              ? settings 
+              : JSON.stringify(settings);
+              
+            const updated = await storage.updateChatSettings(subscriptionId, settingsString);
+            
+            if (!updated) {
+              return res.status(500).json({ 
+                message: "Failed to update chat settings",
+                details: "The database operation did not return an updated subscription"
+              });
+            }
+            
+            // 9. Return successful response
+            return res.json(updated);
+          } catch (updateError: any) {
+            console.error(`Database error updating chat settings for subscription ${subscriptionId}:`, updateError);
+            return res.status(500).json({ 
+              message: "Database error: " + updateError.message,
+              details: "Failed to update chat settings in database"
+            });
+          }
+        } catch (schemaError: any) {
+          console.error('Error creating validation schema:', schemaError);
+          return res.status(500).json({ 
+            message: "Server error processing validation", 
+            details: "An error occurred while validating your settings"
+          });
+        }
+      } catch (fetchError: any) {
+        console.error(`Database error fetching subscription ${subscriptionId}:`, fetchError);
+        return res.status(500).json({ 
+          message: "Database error: " + fetchError.message,
+          details: "Failed to fetch subscription details from database"
+        });
       }
-      
-      // Update the settings
-      const updated = await storage.updateChatSettings(subscriptionId, settings);
-      
-      res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: "Error updating chat settings: " + error.message });
+      // 10. Handle any uncaught errors
+      console.error('Uncaught error in chat settings update:', error);
+      return res.status(500).json({ 
+        message: "Error updating chat settings: " + error.message,
+        details: "An unexpected error occurred while processing your request"
+      });
     }
   });
   
   // Update Follower Settings
   app.put("/api/user-subscriptions/:id/follower-settings", async (req, res) => {
+    // 1. Authentication check
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
     try {
+      // 2. Get and validate parameters
       const subscriptionId = parseInt(req.params.id);
+      if (isNaN(subscriptionId)) {
+        return res.status(400).json({ 
+          message: "Invalid subscription ID", 
+          details: "The subscription ID must be a valid number" 
+        });
+      }
+      
+      const userId = req.user?.id;
+      if (!userId) {
+        console.error('User ID not found in authenticated session');
+        return res.status(401).json({ 
+          message: "User information missing", 
+          details: "Authentication validated but user ID is missing" 
+        });
+      }
+      
+      // 3. Validate request data
       const { settings } = req.body;
-      
-      // Get the subscription to verify ownership
-      const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
-      
-      if (!subscription) {
-        return res.status(404).json({ message: "Subscription not found" });
+      if (!settings) {
+        return res.status(400).json({ 
+          message: "Settings data is required",
+          details: "You must provide follower settings to update"
+        });
       }
       
-      // Check if subscription belongs to the user
-      if (subscription.subscription.userId !== req.user.id) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
+      console.log(`Updating follower settings for subscription ID: ${subscriptionId}, user: ${userId}`);
       
-      // Validate settings
-      const settingsSchema = z.object({
-        followerCount: z.number().min(1).max(subscription.plan.followerCount),
-        deliverySpeed: z.enum(["slow", "normal", "fast"]),
-        scheduleDelivery: z.boolean(),
-        scheduleTime: z.string().optional(),
-      });
-      
+      // 4. Get subscription with error handling
       try {
-        settingsSchema.parse(JSON.parse(settings));
-      } catch (validationError) {
-        return res.status(400).json({ message: "Invalid settings format", error: validationError });
+        // Get the subscription to verify ownership
+        const subscription = await storage.getUserSubscriptionWithPlan(subscriptionId);
+        
+        // 5. Check if subscription exists
+        if (!subscription) {
+          return res.status(404).json({ 
+            message: "Subscription not found",
+            details: "The requested subscription does not exist"
+          });
+        }
+        
+        // 6. Security: Check if the subscription belongs to the logged-in user
+        if (subscription.subscription.userId !== userId) {
+          console.warn(`Unauthorized attempt to update follower settings: User ${userId} tried to update subscription ${subscriptionId} belonging to user ${subscription.subscription.userId}`);
+          return res.status(403).json({ 
+            message: "Forbidden",
+            details: "You do not have permission to update this subscription"
+          });
+        }
+        
+        // 7. Validate settings schema
+        try {
+          const settingsSchema = z.object({
+            followerCount: z.number().min(1).max(subscription.plan.followerCount),
+            deliverySpeed: z.enum(["slow", "normal", "fast"]),
+            scheduleDelivery: z.boolean(),
+            scheduleTime: z.string().optional(),
+          });
+          
+          try {
+            const parsedSettings = typeof settings === 'string' ? JSON.parse(settings) : settings;
+            settingsSchema.parse(parsedSettings);
+          } catch (validationError: any) {
+            console.error('Follower settings validation error:', validationError);
+            return res.status(400).json({ 
+              message: "Invalid settings format", 
+              error: validationError.errors || validationError.message,
+              details: "The provided settings do not match the required format"
+            });
+          }
+          
+          // 8. Update the settings with proper error handling
+          try {
+            // Ensure settings is a string for storage
+            const settingsString = typeof settings === 'string' 
+              ? settings 
+              : JSON.stringify(settings);
+              
+            const updated = await storage.updateFollowerSettings(subscriptionId, settingsString);
+            
+            if (!updated) {
+              return res.status(500).json({ 
+                message: "Failed to update follower settings",
+                details: "The database operation did not return an updated subscription"
+              });
+            }
+            
+            // 9. Return successful response
+            return res.json(updated);
+          } catch (updateError: any) {
+            console.error(`Database error updating follower settings for subscription ${subscriptionId}:`, updateError);
+            return res.status(500).json({ 
+              message: "Database error: " + updateError.message,
+              details: "Failed to update follower settings in database"
+            });
+          }
+        } catch (schemaError: any) {
+          console.error('Error creating validation schema:', schemaError);
+          return res.status(500).json({ 
+            message: "Server error processing validation", 
+            details: "An error occurred while validating your settings"
+          });
+        }
+      } catch (fetchError: any) {
+        console.error(`Database error fetching subscription ${subscriptionId}:`, fetchError);
+        return res.status(500).json({ 
+          message: "Database error: " + fetchError.message,
+          details: "Failed to fetch subscription details from database"
+        });
       }
-      
-      // Update the settings
-      const updated = await storage.updateFollowerSettings(subscriptionId, settings);
-      
-      res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: "Error updating follower settings: " + error.message });
+      // 10. Handle any uncaught errors
+      console.error('Uncaught error in follower settings update:', error);
+      return res.status(500).json({ 
+        message: "Error updating follower settings: " + error.message,
+        details: "An unexpected error occurred while processing your request"
+      });
     }
   });
   
