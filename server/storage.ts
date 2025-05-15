@@ -210,6 +210,16 @@ export interface IStorage {
   getLoginAttempts(username: string, timeWindow: number): Promise<LoginAttempt[]>;
   getLoginAttemptsByUsername(username: string, limit?: number): Promise<LoginAttempt[]>;
   getSuccessfulLoginAttempts(username: string, limit?: number): Promise<LoginAttempt[]>;
+  isAccountLocked(username: string, maxAttempts: number, lockoutPeriod: number): Promise<boolean>;
+  
+  // Locked accounts management
+  getLockedAccounts(): Promise<LockedAccount[]>;
+  getLockedAccount(id: number): Promise<LockedAccount | undefined>;
+  getLockedAccountByUsername(username: string): Promise<LockedAccount | undefined>;
+  createLockedAccount(data: InsertLockedAccount): Promise<LockedAccount>;
+  updateLockedAccount(id: number, data: Partial<LockedAccount>): Promise<LockedAccount | undefined>;
+  deleteLockedAccount(id: number): Promise<boolean>;
+  unlockUserAccount(username: string): Promise<boolean>;
   
   // Two-factor authentication
   createTwoFactorAuth(twoFactor: InsertTwoFactorAuth): Promise<TwoFactorAuth>;
@@ -292,15 +302,22 @@ export class DatabaseStorage implements IStorage {
         return false;
       }
       
-      // For an account to be unlocked, we need to:
-      // 1. Check if the account is actually locked
-      const isLocked = await this.isAccountLocked(username);
-      if (!isLocked) {
-        // Account is not locked, nothing to do
-        return true;
+      // Check for locked account record
+      const lockedAccount = await this.getLockedAccountByUsername(username);
+      
+      // 1. If there's a locked account record, update it or delete it
+      if (lockedAccount) {
+        // Option 1: Delete the locked account record entirely
+        await this.deleteLockedAccount(lockedAccount.id);
+        
+        // Option 2: Update the locked account record (setting unlockAt to the current time)
+        // await this.updateLockedAccount(lockedAccount.id, {
+        //   unlockAt: new Date(),
+        //   reason: "Manually unlocked by admin"
+        // });
       }
       
-      // 2. Delete failed login attempts for this user to remove the lock
+      // 2. Delete failed login attempts for this user to reset the count
       await db
         .delete(loginAttempts)
         .where(
@@ -314,8 +331,8 @@ export class DatabaseStorage implements IStorage {
       await this.createLoginAttempt({
         username,
         success: true,
-        ipAddress: null,
-        userAgent: null,
+        ipAddress: "",
+        userAgent: "",
         failureReason: "Account manually unlocked by admin"
       });
       
@@ -367,9 +384,24 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
   
-  async isAccountLocked(username: string, maxAttempts: number, lockoutPeriod: number): Promise<boolean> {
+  async isAccountLocked(username: string, maxAttempts: number = 5, lockoutPeriod: number = 15 * 60 * 1000): Promise<boolean> {
     console.log(`[DB] Checking if account is locked for username: ${username} in PostgreSQL database`);
     
+    // First check if there's a locked account record
+    const lockedAccount = await this.getLockedAccountByUsername(username);
+    if (lockedAccount) {
+      // If there's an unlock time and it's in the future, the account is locked
+      if (lockedAccount.unlockAt && lockedAccount.unlockAt > new Date()) {
+        return true;
+      }
+      
+      // If there's no unlock time, it requires manual unlock
+      if (!lockedAccount.unlockAt) {
+        return true;
+      }
+    }
+    
+    // Otherwise check login attempts
     // Get failed login attempts in the lockout period
     const windowDate = new Date();
     windowDate.setMilliseconds(windowDate.getMilliseconds() - lockoutPeriod);
@@ -387,6 +419,93 @@ export class DatabaseStorage implements IStorage {
     
     // If failed attempts in the window exceed maxAttempts, account is locked
     return failedAttempts.length >= maxAttempts;
+  }
+  
+  // Locked accounts management methods
+  async getLockedAccounts(): Promise<LockedAccount[]> {
+    console.log(`[DB] Fetching all locked accounts from PostgreSQL database`);
+    return await db
+      .select()
+      .from(lockedAccounts)
+      .orderBy(desc(lockedAccounts.lockedAt));
+  }
+  
+  async getLockedAccount(id: number): Promise<LockedAccount | undefined> {
+    console.log(`[DB] Fetching locked account with ID: ${id} from PostgreSQL database`);
+    const [account] = await db
+      .select()
+      .from(lockedAccounts)
+      .where(eq(lockedAccounts.id, id));
+    
+    return account || undefined;
+  }
+  
+  async getLockedAccountByUsername(username: string): Promise<LockedAccount | undefined> {
+    console.log(`[DB] Fetching locked account for username: ${username} from PostgreSQL database`);
+    const [account] = await db
+      .select()
+      .from(lockedAccounts)
+      .where(eq(lockedAccounts.username, username));
+    
+    return account || undefined;
+  }
+  
+  async createLockedAccount(data: InsertLockedAccount): Promise<LockedAccount> {
+    console.log(`[DB] Creating locked account for username: ${data.username} in PostgreSQL database`);
+    
+    // Get user information if userId is not provided
+    if (!data.userId || !data.email) {
+      const user = await this.getUserByUsername(data.username);
+      if (user) {
+        data.userId = user.id;
+        data.email = user.email;
+      }
+    }
+    
+    const [lockedAccount] = await db
+      .insert(lockedAccounts)
+      .values({
+        ...data,
+        lockedAt: new Date(),
+        // If auto-unlock is desired, set unlockAt to a future time (e.g., 30 minutes)
+        // Otherwise leave as undefined for manual unlock
+        unlockAt: data.unlockAt || undefined,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    
+    return lockedAccount;
+  }
+  
+  async updateLockedAccount(id: number, data: Partial<LockedAccount>): Promise<LockedAccount | undefined> {
+    console.log(`[DB] Updating locked account with ID: ${id} in PostgreSQL database`);
+    
+    const [updatedAccount] = await db
+      .update(lockedAccounts)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(lockedAccounts.id, id))
+      .returning();
+    
+    return updatedAccount || undefined;
+  }
+  
+  async deleteLockedAccount(id: number): Promise<boolean> {
+    console.log(`[DB] Deleting locked account with ID: ${id} from PostgreSQL database`);
+    
+    try {
+      await db
+        .delete(lockedAccounts)
+        .where(eq(lockedAccounts.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting locked account: ${error}`);
+      return false;
+    }
   }
   
   async getLoginAttemptsByUsername(username: string, limit?: number): Promise<LoginAttempt[]> {

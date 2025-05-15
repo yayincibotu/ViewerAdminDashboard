@@ -5119,6 +5119,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Account Lock/Unlock Management
+  // Get all locked accounts
+  app.get("/api/admin/security/locked-accounts", requireAdmin, async (req, res) => {
+    try {
+      const lockedAccounts = await storage.getLockedAccounts();
+      res.json(lockedAccounts);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching locked accounts: " + error.message });
+    }
+  });
+  
+  // Unlock an account
   app.post("/api/admin/security/unlock-account", requireAdmin, async (req, res) => {
     try {
       const { username } = req.body;
@@ -5131,6 +5142,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.unlockUserAccount(username);
       
       if (result) {
+        // Log the action for audit
+        await storage.createAuditLog({
+          userId: req.user!.id,
+          action: "unlock_account",
+          details: `Account ${username} unlocked manually by admin`,
+          ipAddress: req.ip || undefined,
+          userAgent: req.get("User-Agent") || undefined
+        });
+        
         res.json({ message: "Account unlocked successfully" });
       } else {
         res.status(404).json({ message: "User not found or account is not locked" });
