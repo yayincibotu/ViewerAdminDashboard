@@ -11,15 +11,58 @@ import { eq, desc } from "drizzle-orm";
 import { getStripe, syncSubscriptionPlansWithStripe, isStripeConfigured, createPaymentIntentForPlan } from "./stripe-helper";
 import { 
   users, userSubscriptions, payments, 
-  invoices, paymentMethods,
-  insertPaymentSchema, insertInvoiceSchema, insertPaymentMethodSchema
+  invoices, paymentMethods, securityQuestions, userSecurityQuestions,
+  twoFactorAuth, loginAttempts, securitySessions,
+  insertPaymentSchema, insertInvoiceSchema, insertPaymentMethodSchema,
+  insertTwoFactorAuthSchema, insertUserSecurityQuestionSchema,
+  insertSecuritySessionSchema, insertLoginAttemptSchema
 } from "@shared/schema";
+import { authenticator } from 'otplib';
+import QRCode from 'qrcode';
 
 // Email verification constants
 const EMAIL_VERIFICATION = {
   COOLDOWN_PERIOD_MS: 60000, // 1 minute cooldown between email sends
   MAX_ATTEMPTS: 5,           // Maximum 5 attempts per hour
   RESET_PERIOD_MS: 3600000   // 1 hour reset period for attempts counter
+};
+
+// Security constants
+const SECURITY = {
+  // Login attempts
+  MAX_LOGIN_ATTEMPTS: 5,     // Maximum failed login attempts before lockout
+  LOCKOUT_PERIOD_MS: 900000, // 15 minutes lockout period
+  ATTEMPT_WINDOW_MS: 300000, // Track attempts in 5 minute window
+
+  // Two-factor authentication
+  TOTP_PERIOD: 30,           // 30-second TOTP period
+  TOTP_DIGITS: 6,            // 6-digit TOTP codes
+  BACKUP_CODES_COUNT: 10,    // Generate 10 backup codes
+  
+  // Sessions
+  SESSION_TIMEOUT_MS: 1800000, // 30 minute inactive session timeout
+  MAX_SESSIONS_PER_USER: 5,   // Maximum concurrent sessions per user
+  
+  // Security questions
+  MIN_SECURITY_QUESTIONS: 2,  // Minimum security questions required
+  ANSWER_MIN_LENGTH: 3        // Minimum length for security question answers
+};
+
+// Configure TOTP authenticator
+authenticator.options = {
+  digits: SECURITY.TOTP_DIGITS,
+  step: SECURITY.TOTP_PERIOD,
+  window: 1
+};
+
+// Generate random backup codes
+const generateBackupCodes = (count: number = SECURITY.BACKUP_CODES_COUNT): string[] => {
+  const codes: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    codes.push(code);
+  }
+  return codes;
 };
 
 // Email verification rate limiting
@@ -59,6 +102,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { hashPassword, comparePasswords } = await import('./auth');
   // Sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
+  
+  // Middleware to check for active session and apply timeout
+  const checkSessionTimeout = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated() || !req.user) {
+      return next();
+    }
+
+    try {
+      // Get current active session
+      const session = await storage.getActiveSessionByToken(req.sessionID);
+      if (!session) {
+        return next();
+      }
+
+      const now = new Date();
+      const lastActive = session.lastActive;
+      
+      // Check if session has timed out
+      if (lastActive && (now.getTime() - lastActive.getTime() > SECURITY.SESSION_TIMEOUT_MS)) {
+        // Session timed out, invalidate it
+        await storage.invalidateSession(req.sessionID);
+        req.logout(() => {
+          res.status(401).json({ message: "Session timed out due to inactivity" });
+        });
+        return;
+      }
+      
+      // Update last active time
+      await storage.updateSessionActivity(req.sessionID);
+      next();
+    } catch (error) {
+      console.error("Session check error:", error);
+      next();
+    }
+  };
+
+  // Apply session timeout check to all API routes
+  app.use('/api', checkSessionTimeout);
   
   // Email verification routes
   app.get("/api/verify-email", async (req, res) => {
