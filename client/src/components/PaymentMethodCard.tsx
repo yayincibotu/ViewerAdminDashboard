@@ -57,10 +57,8 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
         className="w-full h-48 object-cover rounded-lg mb-6" 
       />
       
-      <Link href={buttonLink}>
-        <a className={`block w-full py-3 text-center ${buttonBgColor} text-white rounded-md font-medium transition`}>
-          {buttonText}
-        </a>
+      <Link href={buttonLink} className={`block w-full py-3 text-center ${buttonBgColor} text-white rounded-md font-medium transition`}>
+        {buttonText}
       </Link>
     </div>
   );
