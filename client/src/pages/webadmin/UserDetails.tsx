@@ -765,6 +765,276 @@ const UserDetails: React.FC = () => {
                     </form>
                   </TabsContent>
                   
+                  {/* Profile Tab */}
+                  <TabsContent value="profile">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Kullanıcı Profil Bilgileri</h3>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <form>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="fullName">Tam Ad</Label>
+                                  <Input
+                                    id="fullName"
+                                    value={profileData.fullName}
+                                    onChange={(e) => handleProfileChange('fullName', e.target.value)}
+                                    disabled={!isEditMode}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="phoneNumber">Telefon Numarası</Label>
+                                  <Input
+                                    id="phoneNumber"
+                                    value={profileData.phoneNumber}
+                                    onChange={(e) => handleProfileChange('phoneNumber', e.target.value)}
+                                    disabled={!isEditMode}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="country">Ülke</Label>
+                                  <Input
+                                    id="country"
+                                    value={profileData.country}
+                                    onChange={(e) => handleProfileChange('country', e.target.value)}
+                                    disabled={!isEditMode}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="city">Şehir</Label>
+                                  <Input
+                                    id="city"
+                                    value={profileData.city}
+                                    onChange={(e) => handleProfileChange('city', e.target.value)}
+                                    disabled={!isEditMode}
+                                  />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                  <Label htmlFor="address">Adres</Label>
+                                  <Input
+                                    id="address"
+                                    value={profileData.address}
+                                    onChange={(e) => handleProfileChange('address', e.target.value)}
+                                    disabled={!isEditMode}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="birthDate">Doğum Tarihi</Label>
+                                  <Input
+                                    id="birthDate"
+                                    type="date"
+                                    value={profileData.birthDate}
+                                    onChange={(e) => handleProfileChange('birthDate', e.target.value)}
+                                    disabled={!isEditMode}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="languagePreference">Dil Tercihi</Label>
+                                  <Select
+                                    value={profileData.languagePreference}
+                                    onValueChange={(value) => handleProfileChange('languagePreference', value)}
+                                    disabled={!isEditMode}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Dil seçin" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="en">İngilizce</SelectItem>
+                                      <SelectItem value="tr">Türkçe</SelectItem>
+                                      <SelectItem value="de">Almanca</SelectItem>
+                                      <SelectItem value="fr">Fransızca</SelectItem>
+                                      <SelectItem value="es">İspanyolca</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                  <Label htmlFor="avatarUrl">Profil Resmi URL</Label>
+                                  <Input
+                                    id="avatarUrl"
+                                    value={profileData.avatarUrl}
+                                    onChange={(e) => handleProfileChange('avatarUrl', e.target.value)}
+                                    disabled={!isEditMode}
+                                  />
+                                </div>
+                              </div>
+                            </form>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Bildirim Tercihleri</h3>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">E-posta Bildirimleri</h4>
+                                  <p className="text-sm text-gray-500">
+                                    Önemli güncellemeler ve bilgilendirmeler için e-posta gönderimi
+                                  </p>
+                                </div>
+                                <Switch 
+                                  checked={notificationPrefs.emailEnabled} 
+                                  onCheckedChange={(checked) => handleNotificationChange('emailEnabled', checked)}
+                                  disabled={!isEditMode}
+                                />
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">Abonelik Hatırlatmaları</h4>
+                                  <p className="text-sm text-gray-500">
+                                    Abonelik yenileme, sona erme ve değişiklikler hakkında bildirimler
+                                  </p>
+                                </div>
+                                <Switch 
+                                  checked={notificationPrefs.subscriptionAlerts} 
+                                  onCheckedChange={(checked) => handleNotificationChange('subscriptionAlerts', checked)}
+                                  disabled={!isEditMode}
+                                />
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">Promosyon Bildirimleri</h4>
+                                  <p className="text-sm text-gray-500">
+                                    Özel teklifler, indirimler ve promosyonlar hakkında bildirimler
+                                  </p>
+                                </div>
+                                <Switch 
+                                  checked={notificationPrefs.promotions} 
+                                  onCheckedChange={(checked) => handleNotificationChange('promotions', checked)}
+                                  disabled={!isEditMode}
+                                />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  {/* Security Tab */}
+                  <TabsContent value="security">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Güvenlik Ayarları</h3>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">İki Faktörlü Doğrulama</h4>
+                                  <p className="text-sm text-gray-500">
+                                    Kullanıcı hesabına ekstra güvenlik ekler
+                                  </p>
+                                </div>
+                                <Switch 
+                                  checked={securitySettings.twoFactorEnabled} 
+                                  onCheckedChange={(checked) => handleSecuritySettingChange('twoFactorEnabled', checked)}
+                                  disabled={!isEditMode}
+                                />
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">Hesap Kilidi</h4>
+                                  <p className="text-sm text-gray-500">
+                                    Kullanıcı hesabını kilitler ve girişleri engeller
+                                  </p>
+                                </div>
+                                <Switch 
+                                  checked={securitySettings.accountLocked} 
+                                  onCheckedChange={(checked) => handleSecuritySettingChange('accountLocked', checked)}
+                                  disabled={!isEditMode}
+                                />
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">IP Kısıtlaması</h4>
+                                  <p className="text-sm text-gray-500">
+                                    Sadece belirli IP adreslerinden giriş yapılmasına izin verir
+                                  </p>
+                                </div>
+                                <Switch 
+                                  checked={securitySettings.ipRestricted} 
+                                  onCheckedChange={(checked) => handleSecuritySettingChange('ipRestricted', checked)}
+                                  disabled={!isEditMode}
+                                />
+                              </div>
+                              
+                              {securitySettings.ipRestricted && (
+                                <div className="space-y-2 mt-2 ml-6">
+                                  <Label htmlFor="allowedIps">İzin Verilen IP'ler</Label>
+                                  <Input 
+                                    id="allowedIps" 
+                                    value={securitySettings.allowedIps || ''}
+                                    onChange={(e) => handleSecuritySettingChange('allowedIps', e.target.value)}
+                                    placeholder="Virgülle ayırarak IP adresleri girin"
+                                    disabled={!isEditMode}
+                                  />
+                                  <p className="text-xs text-gray-500">Örnek: 192.168.1.1, 10.0.0.1</p>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Oturum Geçmişi</h3>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Tarih</TableHead>
+                                  <TableHead>IP Adresi</TableHead>
+                                  <TableHead>Tarayıcı</TableHead>
+                                  <TableHead>Durum</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {user?.sessionHistory?.map((session: any, index: number) => (
+                                  <TableRow key={index}>
+                                    <TableCell>{format(new Date(session.timestamp), 'PPP HH:mm')}</TableCell>
+                                    <TableCell>{session.ipAddress}</TableCell>
+                                    <TableCell>{session.userAgent}</TableCell>
+                                    <TableCell>
+                                      {session.successful ? (
+                                        <Badge className="bg-green-500">Başarılı</Badge>
+                                      ) : (
+                                        <Badge className="bg-red-500">Başarısız</Badge>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                                {(!user?.sessionHistory || user.sessionHistory.length === 0) && (
+                                  <TableRow>
+                                    <TableCell colSpan={4} className="text-center py-4 text-gray-500">
+                                      Oturum geçmişi bulunamadı
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
                   {/* Subscriptions Tab */}
                   <TabsContent value="subscriptions">
                     <div className="space-y-4">
