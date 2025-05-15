@@ -905,6 +905,16 @@ const UserDetails: React.FC = () => {
                                   />
                                 </div>
                               </div>
+                              <div className="flex justify-end mt-4">
+                                <Button type="button" onClick={handleSaveProfileData} disabled={!isEditMode || updateProfileMutation.isPending}>
+                                  {updateProfileMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Kaydediliyor...
+                                    </>
+                                  ) : 'Profili Kaydet'}
+                                </Button>
+                              </div>
                             </form>
                           </CardContent>
                         </Card>
