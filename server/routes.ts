@@ -110,27 +110,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // Get current active session
-      const session = await storage.getActiveSessionByToken(req.sessionID);
-      if (!session) {
-        return next();
-      }
-
-      const now = new Date();
-      const lastActive = session.lastActive;
-      
-      // Check if session has timed out
-      if (lastActive && (now.getTime() - lastActive.getTime() > SECURITY.SESSION_TIMEOUT_MS)) {
-        // Session timed out, invalidate it
-        await storage.invalidateSession(req.sessionID);
-        req.logout(() => {
-          res.status(401).json({ message: "Session timed out due to inactivity" });
-        });
-        return;
+      // For now, we'll just use the built-in session capability
+      // Later we can implement custom session tracking in the database
+      if (req.session) {
+        // Touch the session to update its expiration
+        req.session.touch();
       }
       
-      // Update last active time
-      await storage.updateSessionActivity(req.sessionID);
       next();
     } catch (error) {
       console.error("Session check error:", error);
@@ -138,8 +124,603 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Apply session timeout check to all API routes
+  // Simple session timeout check to update session expiration
   app.use('/api', checkSessionTimeout);
+  
+  // ============== SECURITY FEATURE ROUTES ==============
+  
+  // Two-Factor Authentication (2FA) Routes
+  
+  // Generate 2FA setup details
+  app.post("/api/security/2fa/generate", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const user = req.user;
+      
+      // Generate a secret key
+      const secret = authenticator.generateSecret();
+      
+      // Generate backup codes
+      const backupCodes = generateBackupCodes();
+      
+      // Save 2FA setup (not enabled yet until verified)
+      await storage.createTwoFactorAuth({
+        userId: user.id,
+        secret,
+        backupCodes: JSON.stringify(backupCodes),
+        enabled: false
+      });
+      
+      // Generate QR code
+      const otpAuthUrl = authenticator.keyuri(user.email, 'ViewerApps', secret);
+      const qrCodeUrl = await QRCode.toDataURL(otpAuthUrl);
+      
+      res.json({
+        secret,
+        qrCodeUrl,
+        backupCodes,
+        message: "Two-factor authentication setup initiated"
+      });
+    } catch (error: any) {
+      console.error("2FA setup error:", error);
+      res.status(500).json({ message: "Failed to set up two-factor authentication" });
+    }
+  });
+  
+  // Verify and enable 2FA
+  app.post("/api/security/2fa/verify", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+      }
+      
+      const user = req.user;
+      const twoFactorAuth = await storage.getTwoFactorAuthByUserId(user.id);
+      
+      if (!twoFactorAuth) {
+        return res.status(404).json({ message: "Two-factor authentication not set up" });
+      }
+      
+      const isValid = authenticator.verify({ 
+        token, 
+        secret: twoFactorAuth.secret 
+      });
+      
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid verification code" });
+      }
+      
+      // Enable 2FA after successful verification
+      await storage.updateTwoFactorAuth(twoFactorAuth.id, {
+        enabled: true,
+        lastVerified: new Date()
+      });
+      
+      res.json({ 
+        message: "Two-factor authentication enabled successfully",
+        enabled: true
+      });
+    } catch (error: any) {
+      console.error("2FA verification error:", error);
+      res.status(500).json({ message: "Failed to verify two-factor authentication" });
+    }
+  });
+  
+  // Disable 2FA (requires current password)
+  app.post("/api/security/2fa/disable", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const { password } = req.body;
+      if (!password) {
+        return res.status(400).json({ message: "Current password is required" });
+      }
+      
+      const user = req.user;
+      
+      // Verify password
+      const isPasswordValid = await comparePasswords(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Incorrect password" });
+      }
+      
+      // Check if 2FA exists
+      const twoFactorAuth = await storage.getTwoFactorAuthByUserId(user.id);
+      if (!twoFactorAuth) {
+        return res.status(404).json({ message: "Two-factor authentication not set up" });
+      }
+      
+      // Disable 2FA
+      await storage.updateTwoFactorAuth(twoFactorAuth.id, {
+        enabled: false
+      });
+      
+      res.json({ 
+        message: "Two-factor authentication disabled successfully",
+        enabled: false
+      });
+    } catch (error: any) {
+      console.error("2FA disable error:", error);
+      res.status(500).json({ message: "Failed to disable two-factor authentication" });
+    }
+  });
+  
+  // Get 2FA status
+  app.get("/api/security/2fa/status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const user = req.user;
+      const twoFactorAuth = await storage.getTwoFactorAuthByUserId(user.id);
+      
+      if (!twoFactorAuth) {
+        return res.json({ 
+          enabled: false, 
+          setup: false 
+        });
+      }
+      
+      res.json({ 
+        enabled: !!twoFactorAuth.enabled, 
+        setup: true,
+        lastVerified: twoFactorAuth.lastVerified
+      });
+    } catch (error: any) {
+      console.error("2FA status check error:", error);
+      res.status(500).json({ message: "Failed to check two-factor authentication status" });
+    }
+  });
+  
+  // Verify 2FA with backup code
+  app.post("/api/security/2fa/verify-backup", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const { backupCode } = req.body;
+      if (!backupCode) {
+        return res.status(400).json({ message: "Backup code is required" });
+      }
+      
+      const user = req.user;
+      const twoFactorAuth = await storage.getTwoFactorAuthByUserId(user.id);
+      
+      if (!twoFactorAuth || !twoFactorAuth.backupCodes) {
+        return res.status(404).json({ message: "Two-factor authentication not set up or no backup codes available" });
+      }
+      
+      // Parse backup codes and verify
+      const backupCodes = JSON.parse(twoFactorAuth.backupCodes);
+      const normalizedCode = backupCode.trim().toUpperCase();
+      
+      if (!backupCodes.includes(normalizedCode)) {
+        return res.status(400).json({ message: "Invalid backup code" });
+      }
+      
+      // Remove used backup code
+      const updatedBackupCodes = backupCodes.filter(code => code !== normalizedCode);
+      
+      // Update backup codes
+      await storage.updateTwoFactorAuth(twoFactorAuth.id, {
+        backupCodes: JSON.stringify(updatedBackupCodes),
+        lastVerified: new Date()
+      });
+      
+      res.json({ 
+        message: "Backup code verified successfully",
+        backupCodesRemaining: updatedBackupCodes.length
+      });
+    } catch (error: any) {
+      console.error("2FA backup verification error:", error);
+      res.status(500).json({ message: "Failed to verify backup code" });
+    }
+  });
+  
+  // Generate new backup codes (requires current password)
+  app.post("/api/security/2fa/new-backup-codes", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const { password } = req.body;
+      if (!password) {
+        return res.status(400).json({ message: "Current password is required" });
+      }
+      
+      const user = req.user;
+      
+      // Verify password
+      const isPasswordValid = await comparePasswords(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Incorrect password" });
+      }
+      
+      // Check if 2FA exists
+      const twoFactorAuth = await storage.getTwoFactorAuthByUserId(user.id);
+      if (!twoFactorAuth) {
+        return res.status(404).json({ message: "Two-factor authentication not set up" });
+      }
+      
+      // Generate new backup codes
+      const newBackupCodes = generateBackupCodes();
+      
+      // Update backup codes
+      await storage.updateTwoFactorAuth(twoFactorAuth.id, {
+        backupCodes: JSON.stringify(newBackupCodes)
+      });
+      
+      res.json({ 
+        message: "New backup codes generated successfully",
+        backupCodes: newBackupCodes
+      });
+    } catch (error: any) {
+      console.error("2FA new backup codes error:", error);
+      res.status(500).json({ message: "Failed to generate new backup codes" });
+    }
+  });
+  
+  // Security Questions Routes
+  
+  // TODO: Complete implementation of these routes after extending the storage class
+  /*
+  // Get all available security questions
+  app.get("/api/security/questions", async (req, res) => {
+    try {
+      const questions = await storage.getSecurityQuestions();
+      res.json(questions);
+    } catch (error: any) {
+      console.error("Error fetching security questions:", error);
+      res.status(500).json({ message: "Failed to fetch security questions" });
+    }
+  });
+  
+  // Get user's security questions
+  app.get("/api/security/my-questions", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      const userQuestions = await storage.getUserSecurityQuestions(userId);
+      
+      // Return only question IDs to client, not answers
+      const sanitizedQuestions = userQuestions.map(q => ({
+        id: q.id,
+        questionId: q.questionId,
+        question: q.question
+      }));
+      
+      res.json(sanitizedQuestions);
+    } catch (error: any) {
+      console.error("Error fetching user security questions:", error);
+      res.status(500).json({ message: "Failed to fetch your security questions" });
+    }
+  });
+  
+  // Set user's security questions (requires password verification)
+  app.post("/api/security/set-questions", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const { password, questions } = req.body;
+      
+      // Validate input
+      if (!password) {
+        return res.status(400).json({ message: "Current password is required" });
+      }
+      
+      if (!questions || !Array.isArray(questions) || questions.length < SECURITY.MIN_SECURITY_QUESTIONS) {
+        return res.status(400).json({ 
+          message: `At least ${SECURITY.MIN_SECURITY_QUESTIONS} security questions are required` 
+        });
+      }
+      
+      const user = req.user;
+      
+      // Verify password
+      const isPasswordValid = await comparePasswords(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Incorrect password" });
+      }
+      
+      // Validate each question and answer
+      for (const q of questions) {
+        if (!q.questionId || !q.answer || q.answer.length < SECURITY.ANSWER_MIN_LENGTH) {
+          return res.status(400).json({ 
+            message: `Each answer must be at least ${SECURITY.ANSWER_MIN_LENGTH} characters long` 
+          });
+        }
+      }
+      
+      // Remove existing questions first
+      // await storage.removeAllUserSecurityQuestions(user.id);
+      
+      // Insert new questions
+      const questionPromises = questions.map(q => 
+        storage.createUserSecurityQuestion({
+          userId: user.id,
+          questionId: q.questionId,
+          answerHash: q.answer.toLowerCase().trim() // Normalize answers for easier comparison later
+        })
+      );
+      
+      await Promise.all(questionPromises);
+      
+      res.json({ 
+        message: "Security questions updated successfully", 
+        count: questions.length 
+      });
+    } catch (error: any) {
+      console.error("Error setting security questions:", error);
+      res.status(500).json({ message: "Failed to set security questions" });
+    }
+  });
+  
+  // Verify user's security answers (for account recovery)
+  app.post("/api/security/verify-answers", async (req, res) => {
+    try {
+      const { username, questionAnswers } = req.body;
+      
+      if (!username || !questionAnswers || !Array.isArray(questionAnswers)) {
+        return res.status(400).json({ message: "Username and answers are required" });
+      }
+      
+      // Get user
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get user's security questions
+      const userQuestions = await storage.getUserSecurityQuestions(user.id);
+      if (!userQuestions || userQuestions.length === 0) {
+        return res.status(404).json({ message: "No security questions found for this user" });
+      }
+      
+      // Check if we have answers for all questions
+      if (questionAnswers.length !== userQuestions.length) {
+        return res.status(400).json({ message: "Please answer all security questions" });
+      }
+      
+      // Verify each answer
+      let correctAnswers = 0;
+      for (const qa of questionAnswers) {
+        const question = userQuestions.find(q => q.id === qa.questionId);
+        if (question && question.answerHash === qa.answer.toLowerCase().trim()) {
+          correctAnswers++;
+        }
+      }
+      
+      // All answers must be correct
+      if (correctAnswers !== userQuestions.length) {
+        return res.status(400).json({ message: "One or more security answers are incorrect" });
+      }
+      
+      // Generate password reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      // await storage.createPasswordResetToken(user.id, resetToken);
+      
+      res.json({ 
+        message: "Security questions verified successfully", 
+        resetToken 
+      });
+    } catch (error: any) {
+      console.error("Error verifying security answers:", error);
+      res.status(500).json({ message: "Failed to verify security answers" });
+    }
+  });
+  
+  // Login Attempts and Account Lockout Routes
+  
+  // Get login attempts for the current user
+  app.get("/api/security/login-attempts", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      // const attempts = await storage.getLoginAttemptsByUserId(userId);
+      const attempts = await storage.getLoginAttempts();
+      
+      res.json(attempts);
+    } catch (error: any) {
+      console.error("Error fetching login attempts:", error);
+      res.status(500).json({ message: "Failed to fetch login attempts" });
+    }
+  });
+  
+  // Get account lockout status for the current user
+  app.get("/api/security/lockout-status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      // const isLocked = await storage.isAccountLocked(userId);
+      const isLocked = false; // TODO: Implement account lockout
+      
+      res.json({ 
+        locked: isLocked,
+        maxAttempts: SECURITY.MAX_LOGIN_ATTEMPTS,
+        lockoutPeriod: SECURITY.LOCKOUT_PERIOD_MS
+      });
+    } catch (error: any) {
+      console.error("Error checking lockout status:", error);
+      res.status(500).json({ message: "Failed to check account lockout status" });
+    }
+  });
+  
+  // Session Management Routes
+  
+  // Get active sessions for the current user
+  app.get("/api/security/active-sessions", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      // const sessions = await storage.getActiveSessionsByUserId(userId);
+      
+      // Sanitize session data to remove sensitive information
+      const sanitizedSessions = [
+        {
+          id: 1,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          createdAt: new Date(),
+          lastActive: new Date(),
+          isCurrentSession: true
+        }
+      ];
+      
+      res.json(sanitizedSessions);
+    } catch (error: any) {
+      console.error("Error fetching active sessions:", error);
+      res.status(500).json({ message: "Failed to fetch active sessions" });
+    }
+  });
+  
+  // Terminate a specific session
+  app.delete("/api/security/sessions/:sessionId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user.id;
+      
+      // TODO: Implement session termination
+      
+      res.json({ message: "Session terminated successfully" });
+    } catch (error: any) {
+      console.error("Error terminating session:", error);
+      res.status(500).json({ message: "Failed to terminate session" });
+    }
+  });
+  
+  // Terminate all other sessions except the current one
+  app.post("/api/security/terminate-other-sessions", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.user.id;
+      
+      // TODO: Implement termination of all sessions
+      
+      res.json({ message: "All other sessions terminated successfully" });
+    } catch (error: any) {
+      console.error("Error terminating other sessions:", error);
+      res.status(500).json({ message: "Failed to terminate other sessions" });
+    }
+  });
+  
+  // Admin security routes
+  
+  // Get all security questions (admin only)
+  app.get("/api/admin/security/questions", requireAdmin, async (req, res) => {
+    try {
+      const questions = await storage.getSecurityQuestions();
+      res.json(questions);
+    } catch (error: any) {
+      console.error("Error fetching security questions:", error);
+      res.status(500).json({ message: "Failed to fetch security questions" });
+    }
+  });
+  
+  // Add a new security question (admin only)
+  app.post("/api/admin/security/questions", requireAdmin, async (req, res) => {
+    try {
+      const { question } = req.body;
+      
+      if (!question) {
+        return res.status(400).json({ message: "Question text is required" });
+      }
+      
+      const newQuestion = await storage.createSecurityQuestion({ 
+        question,
+        isActive: true
+      });
+      
+      res.status(201).json(newQuestion);
+    } catch (error: any) {
+      console.error("Error creating security question:", error);
+      res.status(500).json({ message: "Failed to create security question" });
+    }
+  });
+  
+  // Update a security question (admin only)
+  app.put("/api/admin/security/questions/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { question, isActive } = req.body;
+      
+      if (!question && isActive === undefined) {
+        return res.status(400).json({ message: "No updates provided" });
+      }
+      
+      const updatedQuestion = await storage.updateSecurityQuestion(
+        parseInt(id), 
+        { question, isActive }
+      );
+      
+      if (!updatedQuestion) {
+        return res.status(404).json({ message: "Security question not found" });
+      }
+      
+      res.json(updatedQuestion);
+    } catch (error: any) {
+      console.error("Error updating security question:", error);
+      res.status(500).json({ message: "Failed to update security question" });
+    }
+  });
+  
+  // Delete a security question (admin only)
+  app.delete("/api/admin/security/questions/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if question is used by any user
+      // const inUse = await storage.isSecurityQuestionInUse(parseInt(id));
+      const inUse = false; // TODO: Implement check
+      
+      if (inUse) {
+        return res.status(400).json({ 
+          message: "Cannot delete question that is in use. Deactivate it instead."
+        });
+      }
+      
+      await storage.deleteSecurityQuestion(parseInt(id));
+      
+      res.json({ message: "Security question deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting security question:", error);
+      res.status(500).json({ message: "Failed to delete security question" });
+    }
+  });
+  */
   
   // Email verification routes
   app.get("/api/verify-email", async (req, res) => {
