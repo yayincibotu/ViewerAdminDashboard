@@ -231,8 +231,14 @@ const UserDetails: React.FC = () => {
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async (data: { newPassword: string }) => {
-      const res = await apiRequest('POST', `/api/admin/users/${userId}/reset-password`, data);
-      return res.json();
+      try {
+        const res = await apiRequest('POST', `/api/admin/users/${userId}/reset-password`, data);
+        const responseData = await res.json();
+        return responseData;
+      } catch (error) {
+        console.error('Error resetting password:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
