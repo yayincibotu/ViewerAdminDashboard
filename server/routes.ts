@@ -1456,7 +1456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         planId,
         status: status || "active",
-        currentPrice: plan.price, // Add the current price from the plan
+        // currentPrice alanı şema tanımında yok, bu yüzden kaldırıldı
         startDate,
         endDate,
         twitchChannel,
