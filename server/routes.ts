@@ -1465,16 +1465,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate.setDate(endDate.getDate() + 30);
       }
       
-      const subscription = await storage.createUserSubscription({
+      // Debug logs to diagnose the issue
+      console.log('Creating subscription with data:', {
         userId,
         planId,
         status: paymentStatus || status || "active",
         startDate,
         endDate,
-        twitchChannel,
+        twitchChannel: twitchChannel || null,
         isActive: true,
-        geographicTargeting
+        geographicTargeting: geographicTargeting || null
       });
+      
+      try {
+        const subscription = await storage.createUserSubscription({
+          userId,
+          planId,
+          status: paymentStatus || status || "active",
+          startDate,
+          endDate,
+          twitchChannel: twitchChannel || null,
+          isActive: true,
+          geographicTargeting: geographicTargeting || null
+        });
+      } catch (error) {
+        console.error('Error creating subscription:', error);
+        return res.status(500).json({ message: `Database error: ${error.message}` });
+      }
       
       // Log action in audit log
       await storage.createAuditLog({
