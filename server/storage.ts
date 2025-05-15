@@ -32,7 +32,7 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, and, or, gt, gte, lt, lte, desc, asc, isNull, isNotNull, sql, not } from "drizzle-orm";
+import { eq, and, or, gt, gte, lt, lte, desc, asc, isNull, isNotNull, sql, not, ne } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import crypto from "crypto";
@@ -813,7 +813,7 @@ export class DatabaseStorage implements IStorage {
       .update(securitySessions)
       .set({
         ...updates,
-        lastActivityAt: updates.lastActivityAt || new Date()
+        lastActive: updates.lastActive || new Date()
       })
       .where(eq(securitySessions.id, id))
       .returning();
@@ -829,7 +829,7 @@ export class DatabaseStorage implements IStorage {
         .update(securitySessions)
         .set({ 
           isActive: false,
-          invalidatedAt: new Date()
+          lastActive: new Date() // Update the last active time to record when it was invalidated
         })
         .where(eq(securitySessions.sessionToken, sessionToken));
       
@@ -844,11 +844,12 @@ export class DatabaseStorage implements IStorage {
     console.log(`[DB] Invalidating all sessions for user ID: ${userId} from PostgreSQL database`);
     
     try {
-      let query = db
+      // Create the base query
+      const baseQuery = db
         .update(securitySessions)
         .set({ 
           isActive: false,
-          invalidatedAt: new Date()
+          lastActive: new Date() // Update lastActive instead of invalidatedAt
         })
         .where(
           and(
@@ -859,12 +860,15 @@ export class DatabaseStorage implements IStorage {
       
       // If exceptSessionToken is provided, don't invalidate that session
       if (exceptSessionToken) {
-        query = query.where(
+        // We need to add an additional filter to the where clause
+        await baseQuery.where(
           not(eq(securitySessions.sessionToken, exceptSessionToken))
         );
+      } else {
+        // If no exception, just run the base query
+        await baseQuery;
       }
       
-      await query;
       return true;
     } catch (error) {
       console.error(`[DB] Error invalidating all user sessions: ${error}`);
