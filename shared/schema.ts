@@ -80,6 +80,10 @@ export const userSubscriptions = pgTable("user_subscriptions", {
   chatSettings: text("chat_settings").default("{}"), // JSON settings for chat bots
   followerSettings: text("follower_settings").default("{}"), // JSON settings for followers
   geographicTargeting: text("geographic_targeting"), // Countries targeted
+  billingCycle: text("billing_cycle").default("monthly"), // payment cycle (monthly, yearly, etc.)
+  currentPrice: integer("current_price").notNull(), // current subscription price
+  nextBillingDate: timestamp("next_billing_date"), // when the next payment is due
+  stripeCurrentPriceId: text("stripe_current_price_id"), // Stripe price ID for the current subscription
 });
 
 export const insertSubscriptionSchema = createInsertSchema(userSubscriptions).omit({

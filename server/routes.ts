@@ -1912,8 +1912,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         viewerSettings: '{}',
         chatSettings: '{}',
         followerSettings: '{}',
-        // Required field that was missing
-        current_price: planPrice,
+        // Required field that was missing - use camelCase field name to match schema.ts
+        currentPrice: planPrice,
         // Set billing cycle from the plan
         billingCycle: plan.billingCycle || 'monthly' // Default to monthly
       };
