@@ -740,8 +740,7 @@ export class DatabaseStorage implements IStorage {
       .insert(securitySessions)
       .values({
         ...session,
-        createdAt: new Date(),
-        lastActivityAt: new Date()
+        lastActive: new Date() // Use the correct field name
       })
       .returning();
     
@@ -885,7 +884,7 @@ export class DatabaseStorage implements IStorage {
         .update(securitySessions)
         .set({
           isActive: false,
-          invalidatedAt: new Date()
+          lastActive: new Date() // Update lastActive instead of invalidatedAt
         })
         .where(eq(securitySessions.id, sessionId))
         .returning();
@@ -905,7 +904,7 @@ export class DatabaseStorage implements IStorage {
         .update(securitySessions)
         .set({
           isActive: false,
-          invalidatedAt: new Date()
+          lastActive: new Date() // Update lastActive instead of invalidatedAt
         })
         .where(
           and(
@@ -931,7 +930,7 @@ export class DatabaseStorage implements IStorage {
         .update(securitySessions)
         .set({
           isActive: false,
-          invalidatedAt: new Date()
+          lastActive: new Date() // Update lastActive instead of invalidatedAt
         })
         .where(
           and(
