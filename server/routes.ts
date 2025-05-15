@@ -5227,31 +5227,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Terminate a specific session
-  app.delete("/api/user/sessions/:sessionToken", async (req, res) => {
+  app.delete("/api/user/sessions/:sessionId", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
     try {
-      const { sessionToken } = req.params;
+      const sessionId = parseInt(req.params.sessionId);
       
-      if (!sessionToken) {
-        return res.status(400).json({ message: "Session token is required" });
+      if (isNaN(sessionId)) {
+        return res.status(400).json({ message: "Invalid session ID" });
       }
       
-      // Only allow users to terminate their own sessions
-      const session = await storage.getSecuritySession(sessionToken);
+      // Get all user's sessions
+      const sessions = await storage.getUserActiveSessions(req.user.id);
+      const session = sessions.find(s => s.id === sessionId);
       
       if (!session) {
-        return res.status(404).json({ message: "Session not found" });
+        return res.status(404).json({ message: "Session not found or doesn't belong to you" });
       }
       
-      // Admins can terminate any session, regular users only their own
-      if (session.userId !== req.user.id && req.user.role !== 'admin') {
-        return res.status(403).json({ message: "You can only terminate your own sessions" });
+      // Don't allow terminating the current session through this endpoint
+      if (session.sessionToken === req.sessionID) {
+        return res.status(400).json({ message: "Cannot terminate current session via this endpoint" });
       }
       
-      const result = await storage.terminateSession(sessionToken);
+      const result = await storage.terminateSession(sessionId);
       
       if (result) {
         res.json({ message: "Session terminated successfully" });
@@ -5296,6 +5297,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: `${result} session(s) terminated successfully` });
     } catch (error: any) {
       res.status(500).json({ message: "Error terminating sessions: " + error.message });
+    }
+  });
+  
+  // Admin can terminate a specific session
+  app.delete("/api/admin/security/session/:sessionId", requireAdmin, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      if (isNaN(sessionId)) {
+        return res.status(400).json({ message: "Valid Session ID is required" });
+      }
+      
+      // Don't allow admin to terminate their own session through this endpoint
+      const sessions = await storage.getAllActiveSessions();
+      const session = sessions.find(s => s.id === sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      if (session.sessionToken === req.sessionID) {
+        return res.status(400).json({ message: "Cannot terminate your current session via this endpoint" });
+      }
+      
+      const result = await storage.terminateSession(sessionId);
+      
+      if (result) {
+        // Create audit log for this admin action
+        await storage.createAuditLog({
+          userId: req.user!.id,
+          action: "terminate_session",
+          details: `Session ${sessionId} for user ${session.username || session.userId} terminated by admin`,
+          ipAddress: req.ip || undefined,
+          userAgent: req.get("User-Agent") || undefined
+        });
+        
+        res.json({ message: "Session terminated successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to terminate session" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: "Error terminating session: " + error.message });
     }
   });
 
