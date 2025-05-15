@@ -203,10 +203,34 @@ const UserDetails: React.FC = () => {
       notificationPreferences?: any;
     }) => {
       try {
+        // Log the data we're sending
+        console.log('Updating user with data:', userData);
+        
+        // Make the API request
         const res = await apiRequest('PUT', `/api/admin/users/${userId}`, userData);
+        
+        // Check for error response before parsing JSON
+        if (!res.ok) {
+          let errorMessage = '';
+          try {
+            // Try to parse error response as JSON
+            const errorData = await res.json();
+            errorMessage = errorData.message || 'Failed to update user';
+          } catch (parseError) {
+            // If JSON parsing fails, use text or status
+            try {
+              errorMessage = await res.text();
+            } catch (textError) {
+              errorMessage = `HTTP error ${res.status}`;
+            }
+          }
+          throw new Error(errorMessage);
+        }
+        
+        // Only parse JSON for successful responses
         const responseData = await res.json();
         return responseData;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error updating user:', error);
         throw error;
       }
@@ -220,9 +244,10 @@ const UserDetails: React.FC = () => {
       });
     },
     onError: (error: any) => {
+      console.error('User update error details:', error);
       toast({
         title: 'Error updating user',
-        description: error.message,
+        description: error.message || 'An unknown error occurred',
         variant: 'destructive',
       });
     }
@@ -232,10 +257,34 @@ const UserDetails: React.FC = () => {
   const resetPasswordMutation = useMutation({
     mutationFn: async (data: { newPassword: string }) => {
       try {
+        // Log the action we're performing
+        console.log('Resetting password for user ID:', userId);
+        
+        // Make the API request
         const res = await apiRequest('POST', `/api/admin/users/${userId}/reset-password`, data);
+        
+        // Check for error response before parsing JSON
+        if (!res.ok) {
+          let errorMessage = '';
+          try {
+            // Try to parse error response as JSON
+            const errorData = await res.json();
+            errorMessage = errorData.message || 'Failed to reset password';
+          } catch (parseError) {
+            // If JSON parsing fails, use text or status
+            try {
+              errorMessage = await res.text();
+            } catch (textError) {
+              errorMessage = `HTTP error ${res.status}`;
+            }
+          }
+          throw new Error(errorMessage);
+        }
+        
+        // Only parse JSON for successful responses
         const responseData = await res.json();
         return responseData;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error resetting password:', error);
         throw error;
       }
@@ -249,9 +298,10 @@ const UserDetails: React.FC = () => {
       setNewPassword('');
     },
     onError: (error: any) => {
+      console.error('Password reset error details:', error);
       toast({
         title: 'Error resetting password',
-        description: error.message,
+        description: error.message || 'An unknown error occurred',
         variant: 'destructive',
       });
     }
@@ -260,8 +310,38 @@ const UserDetails: React.FC = () => {
   // Manual email verification mutation
   const verifyEmailMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', `/api/admin/users/${userId}/verify-email`, {});
-      return res.json();
+      try {
+        // Log the action we're performing
+        console.log('Manually verifying email for user ID:', userId);
+        
+        // Make the API request
+        const res = await apiRequest('POST', `/api/admin/users/${userId}/verify-email`, {});
+        
+        // Check for error response before parsing JSON
+        if (!res.ok) {
+          let errorMessage = '';
+          try {
+            // Try to parse error response as JSON
+            const errorData = await res.json();
+            errorMessage = errorData.message || 'Failed to verify email';
+          } catch (parseError) {
+            // If JSON parsing fails, use text or status
+            try {
+              errorMessage = await res.text();
+            } catch (textError) {
+              errorMessage = `HTTP error ${res.status}`;
+            }
+          }
+          throw new Error(errorMessage);
+        }
+        
+        // Only parse JSON for successful responses
+        const responseData = await res.json();
+        return responseData;
+      } catch (error: any) {
+        console.error('Error verifying email:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
@@ -271,9 +351,10 @@ const UserDetails: React.FC = () => {
       });
     },
     onError: (error: any) => {
+      console.error('Email verification error details:', error);
       toast({
         title: 'Error verifying email',
-        description: error.message,
+        description: error.message || 'An unknown error occurred',
         variant: 'destructive',
       });
     }
@@ -291,10 +372,34 @@ const UserDetails: React.FC = () => {
       paymentStatus?: string;
     }) => {
       try {
+        // Log the data we're sending
+        console.log('Sending subscription data:', data);
+        
+        // Make the API request
         const res = await apiRequest('POST', `/api/admin/users/${userId}/subscriptions`, data);
+        
+        // Check for error response before parsing JSON
+        if (!res.ok) {
+          let errorMessage = '';
+          try {
+            // Try to parse error response as JSON
+            const errorData = await res.json();
+            errorMessage = errorData.message || 'Failed to add subscription';
+          } catch (parseError) {
+            // If JSON parsing fails, use text or status
+            try {
+              errorMessage = await res.text();
+            } catch (textError) {
+              errorMessage = `HTTP error ${res.status}`;
+            }
+          }
+          throw new Error(errorMessage);
+        }
+        
+        // Only parse JSON for successful responses
         const responseData = await res.json();
         return responseData;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error adding subscription:', error);
         throw error;
       }
@@ -311,9 +416,10 @@ const UserDetails: React.FC = () => {
       });
     },
     onError: (error: any) => {
+      console.error('Subscription error details:', error);
       toast({
         title: 'Error adding subscription',
-        description: error.message,
+        description: error.message || 'An unknown error occurred',
         variant: 'destructive',
       });
     }
@@ -323,10 +429,34 @@ const UserDetails: React.FC = () => {
   const updateSubscriptionMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: any }) => {
       try {
+        // Log the data we're sending
+        console.log('Sending subscription update data:', data);
+        
+        // Make the API request
         const res = await apiRequest('PUT', `/api/admin/users/${userId}/subscriptions/${id}`, data);
+        
+        // Check for error response before parsing JSON
+        if (!res.ok) {
+          let errorMessage = '';
+          try {
+            // Try to parse error response as JSON
+            const errorData = await res.json();
+            errorMessage = errorData.message || 'Failed to update subscription';
+          } catch (parseError) {
+            // If JSON parsing fails, use text or status
+            try {
+              errorMessage = await res.text();
+            } catch (textError) {
+              errorMessage = `HTTP error ${res.status}`;
+            }
+          }
+          throw new Error(errorMessage);
+        }
+        
+        // Only parse JSON for successful responses
         const responseData = await res.json();
         return responseData;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error updating subscription:', error);
         throw error;
       }
@@ -341,9 +471,10 @@ const UserDetails: React.FC = () => {
       });
     },
     onError: (error: any) => {
+      console.error('Subscription update error details:', error);
       toast({
         title: 'Error updating subscription',
-        description: error.message,
+        description: error.message || 'An unknown error occurred',
         variant: 'destructive',
       });
     }
@@ -353,10 +484,34 @@ const UserDetails: React.FC = () => {
   const cancelSubscriptionMutation = useMutation({
     mutationFn: async (subscriptionId: number) => {
       try {
+        // Log the subscription we're cancelling
+        console.log('Cancelling subscription ID:', subscriptionId);
+        
+        // Make the API request
         const res = await apiRequest('DELETE', `/api/admin/users/${userId}/subscriptions/${subscriptionId}`);
+        
+        // Check for error response before parsing JSON
+        if (!res.ok) {
+          let errorMessage = '';
+          try {
+            // Try to parse error response as JSON
+            const errorData = await res.json();
+            errorMessage = errorData.message || 'Failed to cancel subscription';
+          } catch (parseError) {
+            // If JSON parsing fails, use text or status
+            try {
+              errorMessage = await res.text();
+            } catch (textError) {
+              errorMessage = `HTTP error ${res.status}`;
+            }
+          }
+          throw new Error(errorMessage);
+        }
+        
+        // Only parse JSON for successful responses
         const responseData = await res.json();
         return responseData;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error cancelling subscription:', error);
         throw error;
       }
@@ -383,10 +538,10 @@ const UserDetails: React.FC = () => {
       });
     },
     onError: (error: any) => {
-      console.error('Subscription cancellation error:', error);
+      console.error('Subscription cancellation error details:', error);
       toast({
         title: 'Error cancelling subscription',
-        description: error.message,
+        description: error.message || 'An unknown error occurred',
         variant: 'destructive',
       });
     }
