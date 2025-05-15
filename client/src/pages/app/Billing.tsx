@@ -580,7 +580,7 @@ const Billing = () => {
   });
   
   // Fetch user subscriptions from the API
-  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery<any[]>({
+  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery<{subscription: any, plan: any}[]>({
     queryKey: ['/api/user-subscriptions'],
     enabled: !!user,
   });
@@ -943,15 +943,15 @@ const Billing = () => {
                   ) : (
                     <div className="grid gap-4 sm:grid-cols-2">
                       {subscriptions.map((subscription) => (
-                        <Card key={subscription.id} className="overflow-hidden border-l-4 border-l-primary">
+                        <Card key={subscription.subscription.id} className="overflow-hidden border-l-4 border-l-primary">
                           <CardHeader className="pb-3 relative">
                             <div className="absolute top-0 right-0 p-3">
-                              {subscription.status === 'active' ? (
+                              {subscription.subscription.status === 'active' ? (
                                 <div className="flex items-center gap-1.5 text-green-600">
                                   <div className="h-2.5 w-2.5 rounded-full bg-green-600 animate-pulse"></div>
                                   <span className="text-xs font-medium">Active</span>
                                 </div>
-                              ) : subscription.status === 'canceled' ? (
+                              ) : subscription.subscription.status === 'canceled' ? (
                                 <div className="flex items-center gap-1.5 text-red-500">
                                   <div className="h-2.5 w-2.5 rounded-full bg-red-500"></div>
                                   <span className="text-xs font-medium">Canceled</span>
@@ -959,7 +959,7 @@ const Billing = () => {
                               ) : (
                                 <div className="flex items-center gap-1.5 text-yellow-500">
                                   <div className="h-2.5 w-2.5 rounded-full bg-yellow-500"></div>
-                                  <span className="text-xs font-medium">{subscription.status}</span>
+                                  <span className="text-xs font-medium">{subscription.subscription.status}</span>
                                 </div>
                               )}
                             </div>
@@ -975,25 +975,25 @@ const Billing = () => {
                               <div className="flex justify-between border-b pb-2">
                                 <span className="font-medium text-gray-500">Price:</span>
                                 <span className="font-semibold">
-                                  ${Number(subscription.amount / 100).toFixed(2)} / 
-                                  {subscription.cycle === 'monthly' ? 'month' : 
-                                  subscription.cycle === 'yearly' ? 'year' : 
-                                  subscription.cycle === 'weekly' ? 'week' : 'day'}
+                                  ${subscription.subscription.currentPrice ? subscription.subscription.currentPrice : 'N/A'} / 
+                                  {subscription.subscription.billingCycle === 'monthly' ? 'month' : 
+                                  subscription.subscription.billingCycle === 'yearly' ? 'year' : 
+                                  subscription.subscription.billingCycle === 'weekly' ? 'week' : 'day'}
                                 </span>
                               </div>
                               
                               <div className="flex justify-between">
                                 <span className="font-medium text-gray-500">Start Date:</span>
                                 <span>
-                                  {new Date(subscription.startDate).toLocaleDateString()}
+                                  {subscription?.subscription?.startDate ? new Date(subscription.subscription.startDate).toLocaleDateString() : 'N/A'}
                                 </span>
                               </div>
                               
-                              {subscription.status === 'canceled' && subscription.endDate && (
+                              {subscription?.subscription?.status === 'canceled' && subscription?.subscription?.endDate && (
                                 <div className="flex justify-between">
                                   <span className="font-medium text-gray-500">End Date:</span>
                                   <span>
-                                    {new Date(subscription.endDate).toLocaleDateString()}
+                                    {new Date(subscription.subscription.endDate).toLocaleDateString()}
                                   </span>
                                 </div>
                               )}
@@ -1001,8 +1001,9 @@ const Billing = () => {
                               <div className="flex justify-between">
                                 <span className="font-medium text-gray-500">Next Billing:</span>
                                 <span>
-                                  {subscription.status === 'canceled' ? 'No further billing' : 
-                                    new Date(subscription.nextBillingDate).toLocaleDateString()}
+                                  {subscription?.subscription?.status === 'canceled' ? 'No further billing' : 
+                                    (subscription?.subscription?.nextBillingDate ? 
+                                      new Date(subscription.subscription.nextBillingDate).toLocaleDateString() : 'N/A')}
                                 </span>
                               </div>
                             </div>
@@ -1016,7 +1017,7 @@ const Billing = () => {
                               <Eye className="h-4 w-4 mr-1.5" /> View Plan
                             </Button>
                             
-                            {subscription.status === 'active' && (
+                            {subscription.subscription.status === 'active' && (
                               <Button 
                                 size="sm" 
                                 variant="destructive"
