@@ -1013,11 +1013,14 @@ const Billing = () => {
                               size="sm" 
                               variant="outline"
                               onClick={() => {
-                                // Doğrudan window.location ile tam sayfa yenileme yaparak kesin çözüm
+                                // Daha güvenli navigasyon için navigate kullanılıyor
                                 window.location.href = `/app/bot-control?id=${subscription.subscription.id}`;
                               }}
+                              asChild={false}
                             >
-                              <Eye className="h-4 w-4 mr-1.5" /> View Plan
+                              <span className="flex items-center">
+                                <Eye className="h-4 w-4 mr-1.5" /> View Plan
+                              </span>
                             </Button>
                             
                             {subscription.subscription.status === 'active' && (
