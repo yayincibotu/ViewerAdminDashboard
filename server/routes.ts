@@ -1477,30 +1477,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         geographicTargeting: geographicTargeting || null
       });
       
-      try {
-        const subscription = await storage.createUserSubscription({
-          userId,
-          planId,
-          status: paymentStatus || status || "active",
-          startDate,
-          endDate,
-          twitchChannel: twitchChannel || null,
-          isActive: true,
-          geographicTargeting: geographicTargeting || null
-        });
-      } catch (error) {
-        console.error('Error creating subscription:', error);
-        return res.status(500).json({ message: `Database error: ${error.message}` });
-      }
+      const subscriptionData = {
+        userId,
+        planId,
+        status: paymentStatus || status || "active",
+        startDate,
+        endDate,
+        twitchChannel: twitchChannel || null,
+        isActive: true,
+        geographicTargeting: geographicTargeting || null
+      };
+      
+      const subscription = await storage.createUserSubscription(subscriptionData);
       
       // Log action in audit log
       await storage.createAuditLog({
-        userId: req.user.id || 0,
+        userId: req.user?.id || 0,
         action: "assign_subscription",
         details: JSON.stringify({
           targetUserId: userId,
           planId,
-          subscriptionId: subscription.id
+          subscriptionId: subscription?.id
         }),
         ipAddress: req.ip || ""
       });
