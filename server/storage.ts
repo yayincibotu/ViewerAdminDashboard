@@ -2872,6 +2872,74 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Failed to record performance metrics');
     }
   }
+  
+  // Admin Notification Methods
+  async getAdminNotifications(userId?: number): Promise<AdminNotification[]> {
+    try {
+      console.log('[DB] Fetching admin notifications with schema:', adminNotifications);
+      
+      let query = db.select().from(adminNotifications);
+      
+      if (userId) {
+        console.log(`[DB] Filtering notifications by userId: ${userId}`);
+        query = query.where(eq(adminNotifications.userId, userId));
+      }
+      
+      console.log('[DB] Executing admin notifications query');
+      const results = await query.orderBy(desc(adminNotifications.createdAt));
+      console.log('[DB] Admin notifications results:', results);
+      
+      return results;
+    } catch (error) {
+      console.error('[DB] Error fetching admin notifications:', error);
+      return [];
+    }
+  }
+  
+  async createAdminNotification(notification: InsertAdminNotification): Promise<AdminNotification> {
+    try {
+      const [newNotification] = await db
+        .insert(adminNotifications)
+        .values({
+          ...notification,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return newNotification;
+    } catch (error) {
+      console.error('[DB] Error creating admin notification:', error);
+      throw new Error('Failed to create admin notification');
+    }
+  }
+  
+  async markNotificationsAsRead(notificationIds: number[]): Promise<boolean> {
+    try {
+      await db
+        .update(adminNotifications)
+        .set({ read: true, updatedAt: new Date() })
+        .where(inArray(adminNotifications.id, notificationIds));
+      
+      return true;
+    } catch (error) {
+      console.error('[DB] Error marking notifications as read:', error);
+      return false;
+    }
+  }
+  
+  async deleteNotifications(notificationIds: number[]): Promise<boolean> {
+    try {
+      await db
+        .delete(adminNotifications)
+        .where(inArray(adminNotifications.id, notificationIds));
+      
+      return true;
+    } catch (error) {
+      console.error('[DB] Error deleting notifications:', error);
+      return false;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
