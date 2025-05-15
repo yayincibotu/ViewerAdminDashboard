@@ -29,14 +29,14 @@ const PlatformCard: React.FC<PlatformCardProps> = ({ icon, bgColor, name, descri
           {services.map((service, index) => (
             <li key={index} className="flex items-center text-sm text-gray-700">
               <span className="text-primary-500 mr-2">•</span>
-              <Link href={service.url}>
-                <a className="hover:text-primary-600 transition">{service.name}</a>
+              <Link href={service.url} className="hover:text-primary-600 transition">
+                {service.name}
               </Link>
             </li>
           ))}
         </ul>
-        <Link href={`/${name.toLowerCase()}`}>
-          <a className="text-primary-600 font-medium text-sm hover:text-primary-800 transition">Learn more →</a>
+        <Link href={`/${name.toLowerCase()}`} className="text-primary-600 font-medium text-sm hover:text-primary-800 transition">
+          Learn more →
         </Link>
       </div>
     </div>
