@@ -303,13 +303,50 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(desc(loginAttempts.createdAt));
-    
+      
     if (limit) {
       query.limit(limit);
     }
     
-    const attempts = await query;
-    return attempts;
+    return await query;
+  }
+  
+  async isAccountLocked(username: string, maxAttempts: number, lockoutPeriod: number): Promise<boolean> {
+    console.log(`[DB] Checking if account is locked for username: ${username} in PostgreSQL database`);
+    
+    // Get failed login attempts in the lockout period
+    const windowDate = new Date();
+    windowDate.setMilliseconds(windowDate.getMilliseconds() - lockoutPeriod);
+    
+    const failedAttempts = await db
+      .select()
+      .from(loginAttempts)
+      .where(
+        and(
+          eq(loginAttempts.username, username),
+          eq(loginAttempts.success, false),
+          gte(loginAttempts.timestamp, windowDate)
+        )
+      );
+    
+    // If failed attempts in the window exceed maxAttempts, account is locked
+    return failedAttempts.length >= maxAttempts;
+  }
+  
+  async getLoginAttemptsByUserId(userId: number, limit?: number): Promise<LoginAttempt[]> {
+    console.log(`[DB] Fetching login attempts for user ID: ${userId} from PostgreSQL database`);
+    
+    const query = db
+      .select()
+      .from(loginAttempts)
+      .where(eq(loginAttempts.userId, userId))
+      .orderBy(desc(loginAttempts.timestamp));
+      
+    if (limit) {
+      query.limit(limit);
+    }
+    
+    return await query;
   }
   
   // Two-factor authentication
@@ -339,27 +376,47 @@ export class DatabaseStorage implements IStorage {
   async getTwoFactorAuthByUserId(userId: number): Promise<TwoFactorAuth | undefined> {
     console.log(`[DB] Fetching two-factor auth for user ID: ${userId} from PostgreSQL database`);
     
-    const [twoFactor] = await db
+    const [twoFactorRecord] = await db
       .select()
       .from(twoFactorAuth)
       .where(eq(twoFactorAuth.userId, userId));
     
-    return twoFactor;
+    return twoFactorRecord;
   }
   
-  async updateTwoFactorAuth(userId: number, updates: Partial<TwoFactorAuth>): Promise<TwoFactorAuth | undefined> {
+  async updateTwoFactorAuth(userId: number, data: Partial<TwoFactorAuth>): Promise<TwoFactorAuth> {
     console.log(`[DB] Updating two-factor auth for user ID: ${userId} in PostgreSQL database`);
     
-    const [updatedTwoFactor] = await db
+    const [updated] = await db
       .update(twoFactorAuth)
       .set({
-        ...updates,
+        ...data,
         updatedAt: new Date()
       })
       .where(eq(twoFactorAuth.userId, userId))
       .returning();
     
-    return updatedTwoFactor;
+    if (!updated) {
+      throw new Error(`No two-factor auth record found for user ${userId}`);
+    }
+    
+    return updated;
+  }
+  
+  // Security questions
+  async getSecurityQuestions(activeOnly: boolean = true): Promise<SecurityQuestion[]> {
+    console.log(`[DB] Fetching all security questions from PostgreSQL database${activeOnly ? ' (active only)' : ''}`);
+    
+    let query = db
+      .select()
+      .from(securityQuestions)
+      .orderBy(asc(securityQuestions.question));
+      
+    if (activeOnly) {
+      query = query.where(eq(securityQuestions.isActive, true));
+    }
+    
+    return await query;
   }
   
   async deleteTwoFactorAuth(userId: number): Promise<boolean> {
@@ -390,8 +447,7 @@ export class DatabaseStorage implements IStorage {
       query = query.where(eq(securityQuestions.isActive, true));
     }
     
-    const questions = await query;
-    return questions;
+    return await query;
   }
   
   async getSecurityQuestion(id: number): Promise<SecurityQuestion | undefined> {
