@@ -38,11 +38,55 @@ const UserDetails: React.FC = () => {
     isEmailVerified: false
   });
   
+  // Extended profile data
+  const [profileData, setProfileData] = useState({
+    fullName: '',
+    phoneNumber: '',
+    country: '',
+    city: '',
+    address: '',
+    birthDate: '',
+    languagePreference: 'en',
+    avatarUrl: '',
+  });
+  
+  // Security settings
+  const [securitySettings, setSecuritySettings] = useState({
+    twoFactorEnabled: false,
+    accountLocked: false,
+    ipRestricted: false,
+    allowedIps: '',
+  });
+  
+  // Notification preferences
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    emailEnabled: true,
+    subscriptionAlerts: true,
+    promotions: false,
+  });
+  
+  // User statistics
+  const [userStats, setUserStats] = useState({
+    totalViewers: 0,
+    totalSpent: 0,
+    activeServices: 0,
+  });
+  
+  // Activity tracking
+  const [activityFilter, setActivityFilter] = useState('all');
+  const [activitySearch, setActivitySearch] = useState('');
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  
   // Subscription assignment dialog state
   const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<number | string>('');
   const [twitchChannel, setTwitchChannel] = useState('');
   const [geoTargeting, setGeoTargeting] = useState('');
+  const [subscriptionDuration, setSubscriptionDuration] = useState('monthly');
+  const [customDurationDays, setCustomDurationDays] = useState(30);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
+  const [paymentStatus, setPaymentStatus] = useState('pending');
   
   // Subscription edit dialog state
   const [isEditSubDialogOpen, setIsEditSubDialogOpen] = useState(false);
@@ -76,6 +120,62 @@ const UserDetails: React.FC = () => {
             role: data.role || '',
             isEmailVerified: data.isEmailVerified || false
           });
+          
+          // Parse JSON strings to objects if they exist
+          try {
+            if (data.profileData) {
+              const parsedProfile = typeof data.profileData === 'string' 
+                ? JSON.parse(data.profileData) 
+                : data.profileData;
+              
+              setProfileData({
+                fullName: parsedProfile.fullName || '',
+                phoneNumber: parsedProfile.phoneNumber || '',
+                country: parsedProfile.country || '',
+                city: parsedProfile.city || '',
+                address: parsedProfile.address || '',
+                birthDate: parsedProfile.birthDate || '',
+                languagePreference: parsedProfile.languagePreference || 'en',
+                avatarUrl: parsedProfile.avatarUrl || '',
+              });
+            }
+            
+            if (data.securitySettings) {
+              const parsedSecurity = typeof data.securitySettings === 'string'
+                ? JSON.parse(data.securitySettings)
+                : data.securitySettings;
+                
+              setSecuritySettings({
+                twoFactorEnabled: parsedSecurity.twoFactorEnabled || false,
+                accountLocked: parsedSecurity.accountLocked || false,
+                ipRestricted: parsedSecurity.ipRestricted || false,
+                allowedIps: parsedSecurity.allowedIps || '',
+              });
+            }
+            
+            if (data.notificationPreferences) {
+              const parsedNotifications = typeof data.notificationPreferences === 'string'
+                ? JSON.parse(data.notificationPreferences)
+                : data.notificationPreferences;
+                
+              setNotificationPrefs({
+                emailEnabled: parsedNotifications.emailEnabled ?? true,
+                subscriptionAlerts: parsedNotifications.subscriptionAlerts ?? true,
+                promotions: parsedNotifications.promotions ?? false,
+              });
+            }
+            
+            // Calculate user statistics
+            const activeSubscriptions = data.subscriptions?.filter((sub: any) => sub.isActive) || [];
+            setUserStats({
+              totalViewers: activeSubscriptions.reduce((total: number, sub: any) => total + (sub.planExists ? sub.viewerCount : 0), 0),
+              totalSpent: data.payments?.reduce((total: number, payment: any) => total + payment.amount, 0) / 100 || 0,
+              activeServices: activeSubscriptions.length,
+            });
+            
+          } catch (e) {
+            console.error("Error parsing user JSON data:", e);
+          }
         }
         
         return data;
@@ -93,6 +193,9 @@ const UserDetails: React.FC = () => {
       email?: string;
       role?: string;
       isEmailVerified?: boolean;
+      profileData?: any;
+      securitySettings?: any;
+      notificationPreferences?: any;
     }) => {
       const res = await apiRequest('PUT', `/api/admin/users/${userId}`, userData);
       return res.json();
@@ -165,6 +268,10 @@ const UserDetails: React.FC = () => {
       planId: number | string;
       twitchChannel?: string;
       geographicTargeting?: string;
+      startDate?: string;
+      endDate?: string;
+      discountPercentage?: number;
+      paymentStatus?: string;
     }) => {
       const res = await apiRequest('POST', `/api/admin/users/${userId}/subscriptions`, data);
       return res.json();
@@ -266,10 +373,109 @@ const UserDetails: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
   
+  // Fetch activity logs for user
+  const fetchActivityLogs = async () => {
+    setIsActivityLoading(true);
+    try {
+      const res = await apiRequest('GET', `/api/admin/users/${userId}/activity`);
+      const data = await res.json();
+      setActivityLogs(data);
+    } catch (err) {
+      console.error("Error fetching activity logs:", err);
+      toast({
+        title: "Error loading activity logs",
+        description: "Could not load user activity history",
+        variant: 'destructive',
+      });
+    } finally {
+      setIsActivityLoading(false);
+    }
+  };
+  
+  // Handle profile data changes
+  const handleProfileChange = (field: string, value: string) => {
+    setProfileData(prev => ({ ...prev, [field]: value }));
+  };
+  
+  // Handle security setting changes
+  const handleSecuritySettingChange = (field: string, value: any) => {
+    setSecuritySettings(prev => ({ ...prev, [field]: value }));
+  };
+  
+  // Handle notification preference changes
+  const handleNotificationChange = (field: string, value: boolean) => {
+    setNotificationPrefs(prev => ({ ...prev, [field]: value }));
+  };
+  
+  // Handle assign subscription with extended options
+  const handleAssignSubscription = () => {
+    if (!selectedPlanId) {
+      toast({
+        title: 'No plan selected',
+        description: 'Please select a subscription plan',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Calculate end date based on duration
+    const startDate = new Date();
+    let endDate = new Date();
+    
+    if (subscriptionDuration === 'monthly') {
+      endDate.setMonth(endDate.getMonth() + 1);
+    } else if (subscriptionDuration === 'quarterly') {
+      endDate.setMonth(endDate.getMonth() + 3);
+    } else if (subscriptionDuration === 'yearly') {
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    } else if (subscriptionDuration === 'custom' && customDurationDays > 0) {
+      endDate.setDate(endDate.getDate() + customDurationDays);
+    }
+    
+    addSubscriptionMutation.mutate({
+      planId: selectedPlanId,
+      twitchChannel: twitchChannel || undefined,
+      geographicTargeting: geoTargeting || undefined,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      discountPercentage: discountPercentage > 0 ? discountPercentage : undefined,
+      paymentStatus: paymentStatus
+    });
+  };
+  
+  // Handle refresh activity logs
+  const handleRefreshActivityLogs = () => {
+    fetchActivityLogs();
+  };
+  
+  // Filter activity logs based on search and filter
+  const filteredActivityLogs = activityLogs.filter(log => {
+    // Apply type filter
+    if (activityFilter !== 'all' && log.type !== activityFilter) {
+      return false;
+    }
+    
+    // Apply search filter
+    if (activitySearch && !log.description.toLowerCase().includes(activitySearch.toLowerCase())) {
+      return false;
+    }
+    
+    return true;
+  });
+
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateUserMutation.mutate(formData);
+    
+    // Prepare the complete user data
+    const completeUserData = {
+      ...formData,
+      profileData: profileData,
+      securitySettings: securitySettings,
+      notificationPreferences: notificationPrefs
+    };
+    
+    updateUserMutation.mutate(completeUserData);
   };
   
   // Handle password reset
@@ -441,9 +647,12 @@ const UserDetails: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <CardTitle>User Information</CardTitle>
                     <TabsList>
-                      <TabsTrigger value="details">Details</TabsTrigger>
-                      <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
-                      <TabsTrigger value="activity">Activity</TabsTrigger>
+                      <TabsTrigger value="details">Detaylar</TabsTrigger>
+                      <TabsTrigger value="profile">Profil</TabsTrigger>
+                      <TabsTrigger value="security">Güvenlik</TabsTrigger>
+                      <TabsTrigger value="subscriptions">Abonelikler</TabsTrigger>
+                      <TabsTrigger value="activity">Aktiviteler</TabsTrigger>
+                      <TabsTrigger value="statistics">İstatistikler</TabsTrigger>
                     </TabsList>
                   </div>
                 </CardHeader>
