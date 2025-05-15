@@ -5099,6 +5099,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // SECURITY MANAGEMENT ROUTES
   
+  // Admin Notifications API endpoints
+  app.get("/api/admin/notifications", requireAdmin, async (req, res) => {
+    try {
+      const notifications = await storage.getAdminNotifications(req.user?.id);
+      res.json(notifications);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching notifications: " + error.message });
+    }
+  });
+  
+  app.post("/api/admin/notifications/mark-read", requireAdmin, async (req, res) => {
+    try {
+      const { notificationIds } = req.body;
+      const success = await storage.markNotificationsAsRead(notificationIds);
+      res.json({ success });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error marking notifications as read: " + error.message });
+    }
+  });
+  
+  app.delete("/api/admin/notifications", requireAdmin, async (req, res) => {
+    try {
+      const { notificationIds } = req.body;
+      const success = await storage.deleteNotifications(notificationIds);
+      res.json({ success });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error deleting notifications: " + error.message });
+    }
+  });
+  
   // Login Attempts Management
   app.get("/api/admin/security/login-attempts", requireAdmin, async (req, res) => {
     try {

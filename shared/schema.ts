@@ -904,6 +904,29 @@ export type InsertUserSecurityQuestion = z.infer<typeof insertUserSecurityQuesti
 export type SecuritySession = typeof securitySessions.$inferSelect;
 export type InsertSecuritySession = z.infer<typeof insertSecuritySessionSchema>;
 
+// Admin Notifications
+export const adminNotifications = pgTable("admin_notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"), // If the notification is specific to a user/admin
+  type: text("type").notNull(), // info, warning, success, error
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  read: boolean("read").default(false).notNull(),
+  link: text("link"), // Optional link to navigate to
+  data: text("data"), // Additional JSON data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertAdminNotificationSchema = createInsertSchema(adminNotifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AdminNotification = typeof adminNotifications.$inferSelect;
+export type InsertAdminNotification = z.infer<typeof insertAdminNotificationSchema>;
+
 // Analytics types
 export type UserAnalytics = typeof userAnalytics.$inferSelect;
 export type SubscriptionAnalytics = typeof subscriptionAnalytics.$inferSelect;

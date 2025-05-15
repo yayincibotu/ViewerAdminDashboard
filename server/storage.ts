@@ -18,6 +18,8 @@ import {
   subscriptionAnalytics, SubscriptionAnalytics,
   financialAnalytics, FinancialAnalytics,
   performanceMetrics, PerformanceMetrics,
+  // Admin notifications
+  adminNotifications, AdminNotification, InsertAdminNotification,
   systemConfigs, SystemConfig, InsertSystemConfig,
   emailTemplates, EmailTemplate, InsertEmailTemplate,
   ipRestrictions, IpRestriction, InsertIpRestriction,
