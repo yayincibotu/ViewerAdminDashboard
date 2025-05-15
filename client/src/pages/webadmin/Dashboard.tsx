@@ -6,8 +6,7 @@ import StatCard from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, DollarSign, CreditCard, BarChart4, Clock, ActivitySquare, TrendingUp } from 'lucide-react';
+import { Users, DollarSign, CreditCard, BarChart4, ActivitySquare, TrendingUp } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -91,18 +90,7 @@ const AdminDashboard: React.FC = () => {
         description="Overview of platform performance and metrics"
         actions={
           <div className="flex items-center space-x-4">
-            <Select defaultValue="30">
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-                <SelectItem value="365">Last year</SelectItem>
-              </SelectContent>
-            </Select>
-            
+            {/* Time period selector removed */}
           </div>
         }
       >
