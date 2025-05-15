@@ -31,7 +31,7 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, and, or, gt, gte, lt, lte, desc, asc, isNull, isNotNull, sql } from "drizzle-orm";
+import { eq, and, or, gt, gte, lt, lte, desc, asc, isNull, isNotNull, sql, not } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import crypto from "crypto";
@@ -202,6 +202,40 @@ export interface IStorage {
   updateContactMessageStatus(id: number, status: string): Promise<ContactMessage | undefined>;
   replyToContactMessage(id: number, userId: number): Promise<ContactMessage | undefined>;
   deleteContactMessage(id: number): Promise<boolean>;
+  
+  // Security Features
+  // Login attempts and account lockout
+  createLoginAttempt(attempt: InsertLoginAttempt): Promise<LoginAttempt>;
+  getLoginAttempts(username: string, timeWindow: number): Promise<LoginAttempt[]>;
+  getSuccessfulLoginAttempts(userId: number, limit?: number): Promise<LoginAttempt[]>;
+  
+  // Two-factor authentication
+  createTwoFactorAuth(twoFactor: InsertTwoFactorAuth): Promise<TwoFactorAuth>;
+  getTwoFactorAuthByUserId(userId: number): Promise<TwoFactorAuth | undefined>;
+  updateTwoFactorAuth(userId: number, updates: Partial<TwoFactorAuth>): Promise<TwoFactorAuth | undefined>;
+  deleteTwoFactorAuth(userId: number): Promise<boolean>;
+  
+  // Security questions
+  getSecurityQuestions(activeOnly?: boolean): Promise<SecurityQuestion[]>;
+  getSecurityQuestion(id: number): Promise<SecurityQuestion | undefined>;
+  createSecurityQuestion(question: InsertSecurityQuestion): Promise<SecurityQuestion>;
+  updateSecurityQuestion(id: number, updates: Partial<SecurityQuestion>): Promise<SecurityQuestion | undefined>;
+  deleteSecurityQuestion(id: number): Promise<boolean>;
+  
+  // User security questions
+  getUserSecurityQuestions(userId: number): Promise<UserSecurityQuestion[]>;
+  getUserSecurityQuestion(id: number): Promise<UserSecurityQuestion | undefined>;
+  createUserSecurityQuestion(userQuestion: InsertUserSecurityQuestion): Promise<UserSecurityQuestion>;
+  updateUserSecurityQuestion(id: number, updates: Partial<UserSecurityQuestion>): Promise<UserSecurityQuestion | undefined>;
+  deleteUserSecurityQuestion(id: number): Promise<boolean>;
+  
+  // Session management
+  createSecuritySession(session: InsertSecuritySession): Promise<SecuritySession>;
+  getSecuritySession(sessionToken: string): Promise<SecuritySession | undefined>;
+  getUserActiveSessions(userId: number): Promise<SecuritySession[]>;
+  updateSecuritySession(id: number, updates: Partial<SecuritySession>): Promise<SecuritySession | undefined>;
+  invalidateSecuritySession(sessionToken: string): Promise<boolean>;
+  invalidateAllUserSessions(userId: number, exceptSessionToken?: string): Promise<boolean>;
 
   // Session store
   sessionStore: any; // session.Store
@@ -218,6 +252,378 @@ export class DatabaseStorage implements IStorage {
     
     // Initialize sample data
     this.initializeSampleData();
+  }
+  
+  // Security Features Implementation
+  
+  // Login attempts and account lockout
+  async createLoginAttempt(attempt: InsertLoginAttempt): Promise<LoginAttempt> {
+    console.log(`[DB] Creating login attempt for username: ${attempt.username} in PostgreSQL database`);
+    const [newAttempt] = await db
+      .insert(loginAttempts)
+      .values({
+        ...attempt,
+        createdAt: new Date()
+      })
+      .returning();
+    
+    return newAttempt;
+  }
+  
+  async getLoginAttempts(username: string, timeWindow: number): Promise<LoginAttempt[]> {
+    console.log(`[DB] Fetching login attempts for username: ${username} in the last ${timeWindow} minutes from PostgreSQL database`);
+    
+    const windowDate = new Date();
+    windowDate.setMinutes(windowDate.getMinutes() - timeWindow);
+    
+    const attempts = await db
+      .select()
+      .from(loginAttempts)
+      .where(
+        and(
+          eq(loginAttempts.username, username),
+          gte(loginAttempts.createdAt, windowDate)
+        )
+      )
+      .orderBy(desc(loginAttempts.createdAt));
+    
+    return attempts;
+  }
+  
+  async getSuccessfulLoginAttempts(userId: number, limit?: number): Promise<LoginAttempt[]> {
+    console.log(`[DB] Fetching successful login attempts for user ID: ${userId} from PostgreSQL database`);
+    
+    const query = db
+      .select()
+      .from(loginAttempts)
+      .where(
+        and(
+          eq(loginAttempts.userId, userId),
+          eq(loginAttempts.success, true)
+        )
+      )
+      .orderBy(desc(loginAttempts.createdAt));
+    
+    if (limit) {
+      query.limit(limit);
+    }
+    
+    const attempts = await query;
+    return attempts;
+  }
+  
+  // Two-factor authentication
+  async createTwoFactorAuth(twoFactor: InsertTwoFactorAuth): Promise<TwoFactorAuth> {
+    console.log(`[DB] Creating two-factor auth for user ID: ${twoFactor.userId} in PostgreSQL database`);
+    
+    // Check if there's an existing record for this user
+    const existing = await this.getTwoFactorAuthByUserId(twoFactor.userId);
+    
+    if (existing) {
+      // Update the existing record instead of creating a new one
+      return await this.updateTwoFactorAuth(twoFactor.userId, twoFactor);
+    }
+    
+    const [newTwoFactor] = await db
+      .insert(twoFactorAuth)
+      .values({
+        ...twoFactor,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    
+    return newTwoFactor;
+  }
+  
+  async getTwoFactorAuthByUserId(userId: number): Promise<TwoFactorAuth | undefined> {
+    console.log(`[DB] Fetching two-factor auth for user ID: ${userId} from PostgreSQL database`);
+    
+    const [twoFactor] = await db
+      .select()
+      .from(twoFactorAuth)
+      .where(eq(twoFactorAuth.userId, userId));
+    
+    return twoFactor;
+  }
+  
+  async updateTwoFactorAuth(userId: number, updates: Partial<TwoFactorAuth>): Promise<TwoFactorAuth | undefined> {
+    console.log(`[DB] Updating two-factor auth for user ID: ${userId} in PostgreSQL database`);
+    
+    const [updatedTwoFactor] = await db
+      .update(twoFactorAuth)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(twoFactorAuth.userId, userId))
+      .returning();
+    
+    return updatedTwoFactor;
+  }
+  
+  async deleteTwoFactorAuth(userId: number): Promise<boolean> {
+    console.log(`[DB] Deleting two-factor auth for user ID: ${userId} from PostgreSQL database`);
+    
+    try {
+      await db
+        .delete(twoFactorAuth)
+        .where(eq(twoFactorAuth.userId, userId));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting two-factor auth: ${error}`);
+      return false;
+    }
+  }
+  
+  // Security questions
+  async getSecurityQuestions(activeOnly: boolean = true): Promise<SecurityQuestion[]> {
+    console.log(`[DB] Fetching all security questions from PostgreSQL database${activeOnly ? ' (active only)' : ''}`);
+    
+    let query = db
+      .select()
+      .from(securityQuestions)
+      .orderBy(asc(securityQuestions.question));
+    
+    if (activeOnly) {
+      query = query.where(eq(securityQuestions.isActive, true));
+    }
+    
+    const questions = await query;
+    return questions;
+  }
+  
+  async getSecurityQuestion(id: number): Promise<SecurityQuestion | undefined> {
+    console.log(`[DB] Fetching security question with ID: ${id} from PostgreSQL database`);
+    
+    const [question] = await db
+      .select()
+      .from(securityQuestions)
+      .where(eq(securityQuestions.id, id));
+    
+    return question;
+  }
+  
+  async createSecurityQuestion(question: InsertSecurityQuestion): Promise<SecurityQuestion> {
+    console.log(`[DB] Creating security question: ${question.question} in PostgreSQL database`);
+    
+    const [newQuestion] = await db
+      .insert(securityQuestions)
+      .values({
+        ...question,
+        createdAt: new Date()
+      })
+      .returning();
+    
+    return newQuestion;
+  }
+  
+  async updateSecurityQuestion(id: number, updates: Partial<SecurityQuestion>): Promise<SecurityQuestion | undefined> {
+    console.log(`[DB] Updating security question with ID: ${id} in PostgreSQL database`);
+    
+    const [updatedQuestion] = await db
+      .update(securityQuestions)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(securityQuestions.id, id))
+      .returning();
+    
+    return updatedQuestion;
+  }
+  
+  async deleteSecurityQuestion(id: number): Promise<boolean> {
+    console.log(`[DB] Deleting security question with ID: ${id} from PostgreSQL database`);
+    
+    try {
+      await db
+        .delete(securityQuestions)
+        .where(eq(securityQuestions.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting security question: ${error}`);
+      return false;
+    }
+  }
+  
+  // User security questions
+  async getUserSecurityQuestions(userId: number): Promise<UserSecurityQuestion[]> {
+    console.log(`[DB] Fetching user security questions for user ID: ${userId} from PostgreSQL database`);
+    
+    const questions = await db
+      .select()
+      .from(userSecurityQuestions)
+      .where(eq(userSecurityQuestions.userId, userId));
+    
+    return questions;
+  }
+  
+  async getUserSecurityQuestion(id: number): Promise<UserSecurityQuestion | undefined> {
+    console.log(`[DB] Fetching user security question with ID: ${id} from PostgreSQL database`);
+    
+    const [question] = await db
+      .select()
+      .from(userSecurityQuestions)
+      .where(eq(userSecurityQuestions.id, id));
+    
+    return question;
+  }
+  
+  async createUserSecurityQuestion(userQuestion: InsertUserSecurityQuestion): Promise<UserSecurityQuestion> {
+    console.log(`[DB] Creating user security question for user ID: ${userQuestion.userId} in PostgreSQL database`);
+    
+    const [newUserQuestion] = await db
+      .insert(userSecurityQuestions)
+      .values({
+        ...userQuestion,
+        createdAt: new Date()
+      })
+      .returning();
+    
+    return newUserQuestion;
+  }
+  
+  async updateUserSecurityQuestion(id: number, updates: Partial<UserSecurityQuestion>): Promise<UserSecurityQuestion | undefined> {
+    console.log(`[DB] Updating user security question with ID: ${id} in PostgreSQL database`);
+    
+    const [updatedUserQuestion] = await db
+      .update(userSecurityQuestions)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(userSecurityQuestions.id, id))
+      .returning();
+    
+    return updatedUserQuestion;
+  }
+  
+  async deleteUserSecurityQuestion(id: number): Promise<boolean> {
+    console.log(`[DB] Deleting user security question with ID: ${id} from PostgreSQL database`);
+    
+    try {
+      await db
+        .delete(userSecurityQuestions)
+        .where(eq(userSecurityQuestions.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error deleting user security question: ${error}`);
+      return false;
+    }
+  }
+  
+  // Session management
+  async createSecuritySession(session: InsertSecuritySession): Promise<SecuritySession> {
+    console.log(`[DB] Creating security session for user ID: ${session.userId} in PostgreSQL database`);
+    
+    const [newSession] = await db
+      .insert(securitySessions)
+      .values({
+        ...session,
+        createdAt: new Date(),
+        lastActivityAt: new Date()
+      })
+      .returning();
+    
+    return newSession;
+  }
+  
+  async getSecuritySession(sessionToken: string): Promise<SecuritySession | undefined> {
+    console.log(`[DB] Fetching security session with token from PostgreSQL database`);
+    
+    const [session] = await db
+      .select()
+      .from(securitySessions)
+      .where(eq(securitySessions.sessionToken, sessionToken));
+    
+    return session;
+  }
+  
+  async getUserActiveSessions(userId: number): Promise<SecuritySession[]> {
+    console.log(`[DB] Fetching active sessions for user ID: ${userId} from PostgreSQL database`);
+    
+    const sessions = await db
+      .select()
+      .from(securitySessions)
+      .where(
+        and(
+          eq(securitySessions.userId, userId),
+          eq(securitySessions.isActive, true)
+        )
+      )
+      .orderBy(desc(securitySessions.lastActivityAt));
+    
+    return sessions;
+  }
+  
+  async updateSecuritySession(id: number, updates: Partial<SecuritySession>): Promise<SecuritySession | undefined> {
+    console.log(`[DB] Updating security session with ID: ${id} in PostgreSQL database`);
+    
+    const [updatedSession] = await db
+      .update(securitySessions)
+      .set({
+        ...updates,
+        lastActivityAt: updates.lastActivityAt || new Date()
+      })
+      .where(eq(securitySessions.id, id))
+      .returning();
+    
+    return updatedSession;
+  }
+  
+  async invalidateSecuritySession(sessionToken: string): Promise<boolean> {
+    console.log(`[DB] Invalidating security session with token in PostgreSQL database`);
+    
+    try {
+      await db
+        .update(securitySessions)
+        .set({ 
+          isActive: false,
+          invalidatedAt: new Date()
+        })
+        .where(eq(securitySessions.sessionToken, sessionToken));
+      
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error invalidating security session: ${error}`);
+      return false;
+    }
+  }
+  
+  async invalidateAllUserSessions(userId: number, exceptSessionToken?: string): Promise<boolean> {
+    console.log(`[DB] Invalidating all sessions for user ID: ${userId} from PostgreSQL database`);
+    
+    try {
+      let query = db
+        .update(securitySessions)
+        .set({ 
+          isActive: false,
+          invalidatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(securitySessions.userId, userId),
+            eq(securitySessions.isActive, true)
+          )
+        );
+      
+      // If exceptSessionToken is provided, don't invalidate that session
+      if (exceptSessionToken) {
+        query = query.where(
+          not(eq(securitySessions.sessionToken, exceptSessionToken))
+        );
+      }
+      
+      await query;
+      return true;
+    } catch (error) {
+      console.error(`[DB] Error invalidating all user sessions: ${error}`);
+      return false;
+    }
   }
 
   private async initializeSampleData() {
