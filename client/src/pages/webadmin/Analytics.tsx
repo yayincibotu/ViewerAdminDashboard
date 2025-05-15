@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LoaderCircle, RefreshCw, Calendar, ArrowRight, ArrowUpRight, ArrowDownRight, Users, CreditCard, Activity, Shield, AlertTriangle, Check, X, Info, AlertCircle, Lock, Unlock } from 'lucide-react';
+import { LoaderCircle, RefreshCw, Calendar, ArrowRight, ArrowUpRight, ArrowDownRight, Users, CreditCard, Activity, Shield, AlertTriangle, Check, X, Info, AlertCircle, Lock, Unlock, KeyRound, LogOut, User, UserCog } from 'lucide-react';
 import AdminLayout from '@/components/dashboard/AdminLayout';
 import AdminHeader from '@/components/dashboard/AdminHeader';
 import { apiRequest } from '@/lib/queryClient';
