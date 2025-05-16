@@ -137,6 +137,352 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
   
+  // SMM PROVIDERS API
+  // Get all SMM providers
+  app.get("/api/admin/smm-providers", requireAdmin, async (req, res) => {
+    try {
+      const providers = await db.select().from(schema.smmProviders);
+      res.json(providers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Add a new SMM provider
+  app.post("/api/admin/smm-providers", requireAdmin, async (req, res) => {
+    try {
+      const { name, apiUrl, apiKey, isActive } = req.body;
+      
+      if (!name || !apiUrl || !apiKey) {
+        return res.status(400).json({ message: "Name, API URL and API key are required" });
+      }
+      
+      const [provider] = await db.insert(schema.smmProviders)
+        .values({
+          name,
+          apiUrl,
+          apiKey,
+          isActive: isActive !== undefined ? isActive : true,
+        })
+        .returning();
+      
+      res.status(201).json(provider);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update a SMM provider
+  app.put("/api/admin/smm-providers/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name, apiUrl, apiKey, isActive } = req.body;
+      
+      if (!name || !apiUrl || !apiKey) {
+        return res.status(400).json({ message: "Name, API URL and API key are required" });
+      }
+      
+      const [provider] = await db.update(schema.smmProviders)
+        .set({
+          name,
+          apiUrl,
+          apiKey,
+          isActive,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.smmProviders.id, id))
+        .returning();
+      
+      if (!provider) {
+        return res.status(404).json({ message: "SMM provider not found" });
+      }
+      
+      res.json(provider);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete a SMM provider
+  app.delete("/api/admin/smm-providers/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      const [provider] = await db.delete(schema.smmProviders)
+        .where(eq(schema.smmProviders.id, id))
+        .returning();
+      
+      if (!provider) {
+        return res.status(404).json({ message: "SMM provider not found" });
+      }
+      
+      res.json({ message: "SMM provider deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Test SMM provider connection
+  app.post("/api/admin/smm-providers/test-connection", requireAdmin, async (req, res) => {
+    try {
+      const { apiUrl, apiKey } = req.body;
+      
+      if (!apiUrl || !apiKey) {
+        return res.status(400).json({ message: "API URL and API key are required" });
+      }
+      
+      const result = await testSmmApiConnection(apiUrl, apiKey);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Import services from SMM provider
+  app.post("/api/admin/smm-providers/:id/import-services", requireAdmin, async (req, res) => {
+    try {
+      const providerId = parseInt(req.params.id);
+      
+      // Get the provider
+      const [provider] = await db.select().from(schema.smmProviders)
+        .where(eq(schema.smmProviders.id, providerId));
+      
+      if (!provider) {
+        return res.status(404).json({ message: "SMM provider not found" });
+      }
+      
+      // Get services from the SMM provider
+      const services = await getSmmServiceList(provider);
+      
+      // Map services to platforms
+      const platforms = await db.select().from(schema.platforms);
+      
+      // Track number of imported services
+      let importedCount = 0;
+      
+      // Process each service
+      for (const service of services) {
+        // Skip if service doesn't have necessary fields
+        if (!service.name || !service.category || !service.rate) {
+          continue;
+        }
+        
+        // Find matching platform
+        let platformId = null;
+        for (const platform of platforms) {
+          if (service.name.toLowerCase().includes(platform.name.toLowerCase())) {
+            platformId = platform.id;
+            break;
+          }
+        }
+        
+        // Skip if no matching platform found
+        if (!platformId) {
+          continue;
+        }
+        
+        try {
+          // Check if product already exists with this external service ID
+          const existingProduct = await db.select()
+            .from(schema.digitalProducts)
+            .where(eq(schema.digitalProducts.externalServiceId, service.service.toString()))
+            .limit(1);
+            
+          if (existingProduct.length > 0) {
+            // Update existing product
+            await db.update(schema.digitalProducts)
+              .set({
+                name: service.name,
+                price: Math.round(service.rate * 100), // Convert to cents
+                minQuantity: service.min || 1,
+                maxQuantity: service.max || 1000,
+                updatedAt: new Date(),
+              })
+              .where(eq(schema.digitalProducts.externalServiceId, service.service.toString()));
+              
+            importedCount++;
+          } else {
+            // Determine category (followers, likes, etc.)
+            let category = "other";
+            const name = service.name.toLowerCase();
+            
+            if (name.includes("follower")) {
+              category = "followers";
+            } else if (name.includes("like")) {
+              category = "likes";
+            } else if (name.includes("view")) {
+              category = "views";
+            } else if (name.includes("comment")) {
+              category = "comments";
+            } else if (name.includes("subscriber")) {
+              category = "subscribers";
+            }
+            
+            // Create new product
+            await db.insert(schema.digitalProducts)
+              .values({
+                name: service.name,
+                description: service.name,
+                price: Math.round(service.rate * 100), // Convert to cents
+                platformId,
+                category,
+                serviceType: "instant", // Default to instant
+                externalProductId: service.id?.toString() || null,
+                externalServiceId: service.service.toString(),
+                providerName: provider.name,
+                minQuantity: service.min || 1,
+                maxQuantity: service.max || 1000,
+                isActive: true,
+              });
+              
+            importedCount++;
+          }
+        } catch (err) {
+          console.error(`Error importing service ${service.name}:`, err);
+          // Continue with next service even if one fails
+        }
+      }
+      
+      res.json({ 
+        message: `Successfully imported ${importedCount} services from ${provider.name}`,
+        importedCount 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // DIGITAL PRODUCTS API
+  // Get all digital products
+  app.get("/api/admin/digital-products", requireAdmin, async (req, res) => {
+    try {
+      const products = await db.select().from(schema.digitalProducts);
+      res.json(products);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Add a new digital product
+  app.post("/api/admin/digital-products", requireAdmin, async (req, res) => {
+    try {
+      const {
+        name,
+        description,
+        price,
+        platformId,
+        category,
+        serviceType,
+        externalProductId,
+        externalServiceId,
+        providerName,
+        minQuantity,
+        maxQuantity,
+        isActive,
+        sortOrder,
+      } = req.body;
+      
+      if (!name || !description || price === undefined || !platformId || !category || !serviceType) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      const [product] = await db.insert(schema.digitalProducts)
+        .values({
+          name,
+          description,
+          price,
+          platformId,
+          category,
+          serviceType,
+          externalProductId,
+          externalServiceId,
+          providerName,
+          minQuantity: minQuantity || 1,
+          maxQuantity: maxQuantity || 1000,
+          isActive: isActive !== undefined ? isActive : true,
+          sortOrder: sortOrder || 0,
+        })
+        .returning();
+      
+      res.status(201).json(product);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update a digital product
+  app.put("/api/admin/digital-products/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const {
+        name,
+        description,
+        price,
+        platformId,
+        category,
+        serviceType,
+        externalProductId,
+        externalServiceId,
+        providerName,
+        minQuantity,
+        maxQuantity,
+        isActive,
+        sortOrder,
+      } = req.body;
+      
+      if (!name || !description || price === undefined || !platformId || !category || !serviceType) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      const [product] = await db.update(schema.digitalProducts)
+        .set({
+          name,
+          description,
+          price,
+          platformId,
+          category,
+          serviceType,
+          externalProductId,
+          externalServiceId,
+          providerName,
+          minQuantity: minQuantity || 1,
+          maxQuantity: maxQuantity || 1000,
+          isActive,
+          sortOrder: sortOrder || 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.digitalProducts.id, id))
+        .returning();
+      
+      if (!product) {
+        return res.status(404).json({ message: "Digital product not found" });
+      }
+      
+      res.json(product);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete a digital product
+  app.delete("/api/admin/digital-products/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      const [product] = await db.delete(schema.digitalProducts)
+        .where(eq(schema.digitalProducts.id, id))
+        .returning();
+      
+      if (!product) {
+        return res.status(404).json({ message: "Digital product not found" });
+      }
+      
+      res.json({ message: "Digital product deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // Middleware to check for active session and apply timeout
   const checkSessionTimeout = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated() || !req.user) {

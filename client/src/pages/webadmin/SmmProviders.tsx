@@ -50,7 +50,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 // Form schema for SMM providers
 const smmProviderSchema = z.object({
   name: z.string().min(1, { message: 'Sağlayıcı adı gereklidir' }),
-  apiUrl: z.string().url({ message: 'Geçerli bir API URL'si giriniz' }),
+  apiUrl: z.string().url({ message: 'Geçerli bir API URL giriniz' }),
   apiKey: z.string().min(1, { message: 'API Anahtarı gereklidir' }),
   isActive: z.boolean().default(true),
 });

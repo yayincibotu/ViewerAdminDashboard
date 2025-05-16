@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/pagination";
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Plus, Search, Trash } from 'lucide-react';
+import { FormDescription } from '@/components/ui/form';
 
 // Form schema for digital products
 const digitalProductSchema = z.object({
