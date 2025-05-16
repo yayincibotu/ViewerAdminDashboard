@@ -22,7 +22,9 @@ const PlatformCard: React.FC<PlatformCardProps> = ({ icon, bgColor, name, descri
           <div className={`${bgColor} p-2 rounded text-white mr-3`}>
             <i className={`${icon} text-xl`}></i>
           </div>
-          <h3 className="text-xl font-semibold">{name}</h3>
+          <Link href={`/${name.toLowerCase()}`}>
+            <h3 className="text-xl font-semibold hover:text-primary-600 transition cursor-pointer">{name}</h3>
+          </Link>
         </div>
         <p className="text-gray-600 mb-4">{description}</p>
         <ul className="space-y-2 mb-4">
