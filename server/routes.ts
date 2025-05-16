@@ -15,7 +15,8 @@ import {
   twoFactorAuth, loginAttempts, securitySessions,
   insertPaymentSchema, insertInvoiceSchema, insertPaymentMethodSchema,
   insertTwoFactorAuthSchema, insertUserSecurityQuestionSchema,
-  insertSecuritySessionSchema, insertLoginAttemptSchema
+  insertSecuritySessionSchema, insertLoginAttemptSchema,
+  digitalProducts, smmProviders
 } from "@shared/schema";
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';

@@ -59,6 +59,20 @@ const AdminSidebar: React.FC = () => {
               Services
             </div>
           </Link>
+          
+          <Link href="/webadmin/digital-products">
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/digital-products')}`}>
+              <i className="fas fa-shopping-cart mr-3"></i>
+              Dijital Ürünler
+            </div>
+          </Link>
+          
+          <Link href="/webadmin/smm-providers">
+            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/smm-providers')}`}>
+              <i className="fas fa-cloud mr-3"></i>
+              SMM Sağlayıcıları
+            </div>
+          </Link>
         </nav>
         
         <div className="mt-6 mb-2 px-4 text-xs font-semibold text-sidebar-foreground/60 uppercase">
