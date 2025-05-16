@@ -317,8 +317,76 @@ export const userSubscriptionsRelations = relations(userSubscriptions, ({ one, m
   payments: many(payments, { relationName: "subscription_payments" }),
 }));
 
+// Digital Products
+export const digitalProducts = pgTable("digital_products", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: integer("price").notNull(), // Price in cents
+  platformId: integer("platform_id").notNull(),
+  category: text("category").notNull(), // followers, likes, views, etc.
+  serviceType: text("service_type").notNull(), // instant, gradual, etc.
+  externalProductId: text("external_product_id"), // ID from external SMM provider
+  externalServiceId: text("external_service_id"), // Service ID from external SMM provider
+  providerName: text("provider_name"), // JustAnotherPanel, etc.
+  minQuantity: integer("min_quantity").default(1),
+  maxQuantity: integer("max_quantity"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDigitalProductSchema = createInsertSchema(digitalProducts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// SMM Providers
+export const smmProviders = pgTable("smm_providers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  apiUrl: text("api_url").notNull(),
+  apiKey: text("api_key").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSmmProviderSchema = createInsertSchema(smmProviders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Digital Product Orders
+export const digitalProductOrders = pgTable("digital_product_orders", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  productId: integer("product_id").notNull(),
+  quantity: integer("quantity").notNull(),
+  amount: integer("amount").notNull(), // Total amount in cents
+  status: text("status").notNull(), // pending, processing, completed, failed, refunded
+  targetUsername: text("target_username"), // Target social media username
+  targetUrl: text("target_url"), // Target URL for the service
+  externalOrderId: text("external_order_id"), // Order ID from external SMM provider
+  refundReason: text("refund_reason"),
+  paymentId: integer("payment_id"),
+  metadata: text("metadata"), // Additional order metadata as JSON
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDigitalProductOrderSchema = createInsertSchema(digitalProductOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const platformsRelations = relations(platforms, ({ many }) => ({
   services: many(services),
+  digitalProducts: many(digitalProducts),
 }));
 
 export const servicesRelations = relations(services, ({ one }) => ({

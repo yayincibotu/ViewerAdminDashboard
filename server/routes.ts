@@ -97,6 +97,40 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
+// SMM API Integration Helpers
+async function testSmmApiConnection(apiUrl: string, apiKey: string) {
+  try {
+    // API endpoint for service list (most SMM providers have this endpoint)
+    const endpoint = `${apiUrl.replace(/\/$/, '')}/services`;
+    
+    // Common parameters for SMM panel APIs
+    const params = new URLSearchParams({
+      key: apiKey,
+      action: 'services'
+    });
+    
+    const response = await fetch(`${endpoint}?${params}`);
+    
+    if (!response.ok) {
+      throw new Error(`API returned status ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    return data;
+  } catch (error: any) {
+    throw new Error(`SMM API connection failed: ${error.message}`);
+  }
+}
+
+async function getSmmServiceList(provider: any) {
+  return testSmmApiConnection(provider.apiUrl, provider.apiKey);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Import required functions and modules
   const { hashPassword, comparePasswords } = await import('./auth');
