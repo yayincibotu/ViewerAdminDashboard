@@ -59,9 +59,13 @@ type SmmProviderFormValues = z.infer<typeof smmProviderSchema>;
 
 const SmmProviders: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isServicesDialogOpen, setIsServicesDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const [testResults, setTestResults] = useState<any>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [servicesList, setServicesList] = useState<any>(null);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [platformMapping, setPlatformMapping] = useState<Record<string, number>>({});
 
   const { toast } = useToast();
 
@@ -153,9 +157,12 @@ const SmmProviders: React.FC = () => {
   // Test connection mutation
   const testConnectionMutation = useMutation({
     mutationFn: async (values: SmmProviderFormValues) => {
-      return apiRequest('POST', '/api/admin/smm-providers/test-connection', values);
+      // Check if we should use test mode
+      const useMockData = values.apiUrl.includes('testing') || values.apiKey.includes('test');
+      return apiRequest('POST', `/api/admin/smm-providers/test-connection?mock=${useMockData}`, values);
     },
-    onSuccess: (data) => {
+    onSuccess: async (response) => {
+      const data = await response.json();
       setTestResults({ success: true, data });
       setIsTestingConnection(false);
       toast({
@@ -174,16 +181,53 @@ const SmmProviders: React.FC = () => {
     },
   });
 
-  // Import services mutation
-  const importServicesMutation = useMutation({
-    mutationFn: async (providerId: number) => {
-      return apiRequest('POST', `/api/admin/smm-providers/${providerId}/import-services`);
+  // Get services list mutation
+  const getServicesMutation = useMutation({
+    mutationFn: async ({ providerId, useMockData }: { providerId: number, useMockData?: boolean }) => {
+      return apiRequest('GET', `/api/admin/smm-providers/${providerId}/services?mock=${useMockData ? 'true' : 'false'}`);
     },
-    onSuccess: (data) => {
+    onSuccess: async (response) => {
+      const data = await response.json();
+      setServicesList(data);
+      setIsServicesDialogOpen(true);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Servis Listesi Alınamadı',
+        description: `Servisler alınırken bir hata oluştu: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Import selected services mutation
+  const importServicesMutation = useMutation({
+    mutationFn: async ({ 
+      providerId, 
+      serviceIds, 
+      platformFilter,
+      useMockData 
+    }: { 
+      providerId: number, 
+      serviceIds: string[], 
+      platformFilter?: Record<string, number>,
+      useMockData?: boolean 
+    }) => {
+      return apiRequest('POST', `/api/admin/smm-providers/${providerId}/import-services`, {
+        serviceIds,
+        platformFilter,
+        useMockData
+      });
+    },
+    onSuccess: async (response) => {
+      const data = await response.json();
       toast({
         title: 'Servisler İçe Aktarıldı',
         description: `${data.importedCount} servis başarıyla içe aktarıldı`,
       });
+      setIsServicesDialogOpen(false);
+      setServicesList(null);
+      setSelectedServices([]);
       queryClient.invalidateQueries({ queryKey: ['/api/admin/digital-products'] });
     },
     onError: (error: any) => {

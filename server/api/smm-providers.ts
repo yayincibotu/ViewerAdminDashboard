@@ -175,12 +175,14 @@ router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
 router.post("/test-connection", requireAdmin, async (req: Request, res: Response) => {
   try {
     const { apiUrl, apiKey } = req.body;
+    const useMockData = req.query.mock === 'true' || apiUrl.includes('testing') || apiKey.includes('test');
     
     if (!apiUrl || !apiKey) {
       return res.status(400).json({ message: "API URL and API key are required" });
     }
     
-    const result = await testSmmApiConnection(apiUrl, apiKey);
+    console.log("[SMM API] Testing connection with mock data:", useMockData);
+    const result = await testSmmApiConnection(apiUrl, apiKey, useMockData);
     res.json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
