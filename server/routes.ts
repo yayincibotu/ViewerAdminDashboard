@@ -262,8 +262,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get services from the SMM provider
       const services = await getSmmServiceList(provider);
       
-      // Map services to platforms
-      const platforms = await db.select().from(platforms);
+      // Get all platforms for mapping services
+      const platformsData = await db.select().from(platforms);
+      const availablePlatforms = platformsData || [];
       
       // Track number of imported services
       let importedCount = 0;
@@ -277,7 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Find matching platform
         let platformId = null;
-        for (const platform of platforms) {
+        for (const platform of availablePlatforms) {
           if (service.name.toLowerCase().includes(platform.name.toLowerCase())) {
             platformId = platform.id;
             break;
@@ -394,7 +395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields" });
       }
       
-      const [product] = await db.insert(schema.digitalProducts)
+      const [product] = await db.insert(digitalProducts)
         .values({
           name,
           description,
@@ -442,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields" });
       }
       
-      const [product] = await db.update(schema.digitalProducts)
+      const [product] = await db.update(digitalProducts)
         .set({
           name,
           description,
@@ -459,7 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sortOrder: sortOrder || 0,
           updatedAt: new Date(),
         })
-        .where(eq(schema.digitalProducts.id, id))
+        .where(eq(digitalProducts.id, id))
         .returning();
       
       if (!product) {
@@ -477,8 +478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
-      const [product] = await db.delete(schema.digitalProducts)
-        .where(eq(schema.digitalProducts.id, id))
+      const [product] = await db.delete(digitalProducts)
+        .where(eq(digitalProducts.id, id))
         .returning();
       
       if (!product) {
