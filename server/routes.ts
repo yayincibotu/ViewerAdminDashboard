@@ -292,13 +292,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           // Check if product already exists with this external service ID
           const existingProduct = await db.select()
-            .from(schema.digitalProducts)
-            .where(eq(schema.digitalProducts.externalServiceId, service.service.toString()))
+            .from(digitalProducts)
+            .where(eq(digitalProducts.externalServiceId, service.service.toString()))
             .limit(1);
             
           if (existingProduct.length > 0) {
             // Update existing product
-            await db.update(schema.digitalProducts)
+            await db.update(digitalProducts)
               .set({
                 name: service.name,
                 price: Math.round(service.rate * 100), // Convert to cents
@@ -306,7 +306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 maxQuantity: service.max || 1000,
                 updatedAt: new Date(),
               })
-              .where(eq(schema.digitalProducts.externalServiceId, service.service.toString()));
+              .where(eq(digitalProducts.externalServiceId, service.service.toString()));
               
             importedCount++;
           } else {
@@ -327,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             // Create new product
-            await db.insert(schema.digitalProducts)
+            await db.insert(digitalProducts)
               .values({
                 name: service.name,
                 description: service.name,
@@ -364,7 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all digital products
   app.get("/api/admin/digital-products", requireAdmin, async (req, res) => {
     try {
-      const products = await db.select().from(schema.digitalProducts);
+      const products = await db.select().from(digitalProducts);
       res.json(products);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

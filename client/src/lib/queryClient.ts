@@ -7,7 +7,7 @@ async function throwIfResNotOk(res: Response) {
     
     if (contentType && contentType.includes('application/json')) {
       try {
-        const errorData = await res.json();
+        const errorData = await res.clone().json();
         const errorMessage = errorData.message || res.statusText;
         const error: any = new Error(`${res.status}: ${errorMessage}`);
         error.response = res;
@@ -15,14 +15,14 @@ async function throwIfResNotOk(res: Response) {
         throw error;
       } catch (parseError) {
         // If JSON parsing fails, fall back to text
-        const text = await res.text();
+        const text = await res.clone().text();
         const error: any = new Error(`${res.status}: ${text || res.statusText}`);
         error.response = res;
         throw error;
       }
     } else {
       // Handle as text
-      const text = await res.text();
+      const text = await res.clone().text();
       const error: any = new Error(`${res.status}: ${text || res.statusText}`);
       error.response = res;
       throw error;
