@@ -43,15 +43,24 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle, Pencil, Plus, RefreshCcw, Trash } from 'lucide-react';
+import { AlertCircle, CheckCircle, Pencil, Plus, RefreshCcw, Trash, Download, Filter, Check, List } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Form schema for SMM providers
 const smmProviderSchema = z.object({
   name: z.string().min(1, { message: 'Sağlayıcı adı gereklidir' }),
-  apiUrl: z.string().url({ message: 'Geçerli bir API URL giriniz' }),
-  apiKey: z.string().min(1, { message: 'API Anahtarı gereklidir' }),
+  apiUrl: z.string().min(1, { message: 'API URL gereklidir' }),
+  apiKey: z.string().min(1, { message: 'API anahtarı gereklidir' }),
   isActive: z.boolean().default(true),
 });
 
@@ -255,6 +264,60 @@ const SmmProviders: React.FC = () => {
     setIsAddDialogOpen(true);
   };
 
+  // Handle deleting a provider
+  const handleDeleteProvider = (id: number) => {
+    if (window.confirm('Bu sağlayıcıyı silmek istediğinizden emin misiniz?')) {
+      deleteProviderMutation.mutate(id);
+    }
+  };
+
+  // Handle view services
+  const handleViewServices = (provider: any) => {
+    setSelectedProvider(provider);
+    getServicesMutation.mutate({ 
+      providerId: provider.id, 
+      useMockData: provider.apiUrl.includes('testing') || provider.apiKey.includes('test')
+    });
+  };
+  
+  // Handle import selected services
+  const handleImportSelectedServices = () => {
+    if (!selectedProvider || selectedServices.length === 0) {
+      toast({
+        title: 'Seçim Yapılmadı',
+        description: 'İçe aktarmak için en az bir servis seçmelisiniz',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    importServicesMutation.mutate({
+      providerId: selectedProvider.id,
+      serviceIds: selectedServices,
+      platformFilter: platformMapping,
+      useMockData: selectedProvider.apiUrl.includes('testing') || selectedProvider.apiKey.includes('test')
+    });
+  };
+  
+  // Handle service selection
+  const toggleServiceSelection = (serviceId: string) => {
+    setSelectedServices(prev => {
+      if (prev.includes(serviceId)) {
+        return prev.filter(id => id !== serviceId);
+      } else {
+        return [...prev, serviceId];
+      }
+    });
+  };
+  
+  // Handle platform mapping
+  const handlePlatformChange = (serviceId: string, platformId: string) => {
+    setPlatformMapping(prev => ({
+      ...prev,
+      [serviceId]: parseInt(platformId)
+    }));
+  };
+
   // Test API connection
   const handleTestConnection = () => {
     const formValues = form.getValues();
@@ -310,8 +373,11 @@ const SmmProviders: React.FC = () => {
                       <FormItem>
                         <FormLabel>Sağlayıcı Adı</FormLabel>
                         <FormControl>
-                          <Input placeholder="JustAnotherPanel" {...field} />
+                          <Input {...field} placeholder="Örn: HepsiSosyal" />
                         </FormControl>
+                        <FormDescription>
+                          Sağlayıcının tanımlayıcı adı
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -324,10 +390,10 @@ const SmmProviders: React.FC = () => {
                       <FormItem>
                         <FormLabel>API URL</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://api.example.com/v1" {...field} />
+                          <Input {...field} placeholder="https://example.com/api" />
                         </FormControl>
                         <FormDescription>
-                          API sağlayıcınızın belirttiği tam URL'yi girin
+                          SMM panel API endpoint URL'si (İpucu: Test için 'testing' içeren bir URL kullanabilirsiniz)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -341,10 +407,10 @@ const SmmProviders: React.FC = () => {
                       <FormItem>
                         <FormLabel>API Anahtarı</FormLabel>
                         <FormControl>
-                          <Input placeholder="API anahtarınız" type="password" {...field} />
+                          <Input {...field} type="password" placeholder="API Key" />
                         </FormControl>
                         <FormDescription>
-                          API sağlayıcınızdan aldığınız gizli anahtarı girin
+                          SMM panel API erişim anahtarı (İpucu: Test için 'test' içeren bir anahtar kullanabilirsiniz)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -355,11 +421,11 @@ const SmmProviders: React.FC = () => {
                     control={form.control}
                     name="isActive"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                         <div className="space-y-0.5">
-                          <FormLabel className="text-base">Aktif</FormLabel>
+                          <FormLabel>Aktif</FormLabel>
                           <FormDescription>
-                            Bu API bağlantısını kullan
+                            Sağlayıcı aktif olarak kullanılsın mı?
                           </FormDescription>
                         </div>
                         <FormControl>
@@ -368,6 +434,7 @@ const SmmProviders: React.FC = () => {
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -419,12 +486,10 @@ const SmmProviders: React.FC = () => {
                     <Button type="submit" disabled={addProviderMutation.isPending || updateProviderMutation.isPending}>
                       {addProviderMutation.isPending || updateProviderMutation.isPending ? (
                         <div className="flex items-center">
-                          <span className="animate-spin mr-2">⟳</span> İşleniyor...
+                          <span className="animate-spin mr-2">⟳</span> Kaydediliyor...
                         </div>
-                      ) : selectedProvider ? (
-                        'Güncelle'
                       ) : (
-                        'Ekle'
+                        'Kaydet'
                       )}
                     </Button>
                   </DialogFooter>
@@ -433,25 +498,22 @@ const SmmProviders: React.FC = () => {
             </DialogContent>
           </Dialog>
         </div>
-
+        
         <Card>
           <CardHeader>
             <CardTitle>SMM Sağlayıcılar</CardTitle>
             <CardDescription>
-              Dijital ürün içe aktarma ve otomatik sipariş işleme için API bağlantılarını yönetin
+              Tüm SMM sağlayıcılarınızı yönetin
             </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingProviders ? (
-              <div className="flex justify-center items-center h-40">
-                <div className="animate-spin text-3xl">⟳</div>
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" aria-label="Loading"/>
               </div>
             ) : providers.length === 0 ? (
-              <div className="text-center py-10">
-                <p className="text-gray-500">Henüz hiç SMM sağlayıcı bulunmuyor.</p>
-                <Button className="mt-4" onClick={() => setIsAddDialogOpen(true)}>
-                  İlk Sağlayıcıyı Ekle
-                </Button>
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Henüz bir SMM sağlayıcı eklenmemiş</p>
               </div>
             ) : (
               <Table>
@@ -461,52 +523,43 @@ const SmmProviders: React.FC = () => {
                     <TableHead>Sağlayıcı Adı</TableHead>
                     <TableHead>API URL</TableHead>
                     <TableHead>Durum</TableHead>
-                    <TableHead>İşlemler</TableHead>
+                    <TableHead className="text-right">İşlemler</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {providers.map((provider: any) => (
                     <TableRow key={provider.id}>
-                      <TableCell>{provider.id}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">{provider.name}</div>
-                        <div className="text-xs text-gray-500">{new Date(provider.createdAt).toLocaleDateString()}</div>
-                      </TableCell>
-                      <TableCell>
-                        <code className="text-xs">{provider.apiUrl}</code>
-                      </TableCell>
+                      <TableCell className="font-medium">{provider.id}</TableCell>
+                      <TableCell>{provider.name}</TableCell>
+                      <TableCell className="truncate max-w-[200px]">{provider.apiUrl}</TableCell>
                       <TableCell>
                         {provider.isActive ? (
-                          <Badge className="bg-green-500">Aktif</Badge>
+                          <Badge>Aktif</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-gray-500">Pasif</Badge>
+                          <Badge variant="secondary">Pasif</Badge>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-2">
                           <Button
-                            size="sm"
                             variant="outline"
+                            size="sm"
                             onClick={() => handleEditProvider(provider)}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
-                            size="sm"
                             variant="outline"
-                            onClick={() => importServicesMutation.mutate(provider.id)}
-                            disabled={importServicesMutation.isPending}
+                            size="sm"
+                            className="mr-2"
+                            onClick={() => handleViewServices(provider)}
                           >
-                            <RefreshCcw className="h-4 w-4" />
+                            <List className="h-4 w-4 mr-1" /> Servisleri Görüntüle
                           </Button>
                           <Button
-                            size="sm"
                             variant="destructive"
-                            onClick={() => {
-                              if (window.confirm('Bu sağlayıcıyı silmek istediğinizden emin misiniz?')) {
-                                deleteProviderMutation.mutate(provider.id);
-                              }
-                            }}
+                            size="sm"
+                            onClick={() => handleDeleteProvider(provider.id)}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>
@@ -519,6 +572,119 @@ const SmmProviders: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Servis Seçme ve İçe Aktarma Dialog'u */}
+        <Dialog open={isServicesDialogOpen} onOpenChange={setIsServicesDialogOpen}>
+          <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>SMM Servisleri - {selectedProvider?.name}</DialogTitle>
+              <DialogDescription>
+                İçe aktarmak istediğiniz servisleri seçin ve servisleri platform ile eşleştirin.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {servicesList && (
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">Toplam {Object.values(servicesList.services).flat().length} servis bulundu</span>
+                    {selectedServices.length > 0 && (
+                      <Badge variant="outline">{selectedServices.length} servis seçildi</Badge>
+                    )}
+                  </div>
+                  
+                  <Button 
+                    disabled={selectedServices.length === 0} 
+                    onClick={handleImportSelectedServices}
+                  >
+                    <Download className="h-4 w-4 mr-2" /> Seçilen Servisleri İçe Aktar
+                  </Button>
+                </div>
+                
+                <div className="flex-1 overflow-hidden">
+                  <Tabs defaultValue={Object.keys(servicesList.services)[0]}>
+                    <TabsList className="mb-2 overflow-auto flex w-full justify-start">
+                      {Object.keys(servicesList.services).map((category) => (
+                        <TabsTrigger key={category} value={category} className="whitespace-nowrap">
+                          {category} ({servicesList.services[category].length})
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    
+                    {Object.keys(servicesList.services).map((category) => (
+                      <TabsContent key={category} value={category} className="flex-1 overflow-auto">
+                        <ScrollArea className="h-[calc(80vh-220px)]">
+                          <Table className="border">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[50px]">Seç</TableHead>
+                                <TableHead>ID</TableHead>
+                                <TableHead>Servis Adı</TableHead>
+                                <TableHead>Fiyat</TableHead>
+                                <TableHead>Min-Max</TableHead>
+                                <TableHead className="w-[200px]">Platform</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {servicesList.services[category].map((service: any) => (
+                                <TableRow key={service.id}>
+                                  <TableCell>
+                                    <Checkbox 
+                                      checked={selectedServices.includes(service.id.toString())}
+                                      onCheckedChange={() => toggleServiceSelection(service.id.toString())}
+                                    />
+                                  </TableCell>
+                                  <TableCell>{service.id}</TableCell>
+                                  <TableCell>{service.name}</TableCell>
+                                  <TableCell>{service.rate} ₺</TableCell>
+                                  <TableCell>{service.min} - {service.max}</TableCell>
+                                  <TableCell>
+                                    <Select 
+                                      value={platformMapping[service.id]?.toString() || ""}
+                                      onValueChange={(value) => handlePlatformChange(service.id.toString(), value)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Platform seçin" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {servicesList.platforms.map((platform: any) => (
+                                          <SelectItem key={platform.id} value={platform.id.toString()}>
+                                            {platform.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </ScrollArea>
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+                </div>
+              </div>
+            )}
+            
+            {!servicesList && (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" aria-label="Loading"/>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsServicesDialogOpen(false);
+                setServicesList(null);
+                setSelectedServices([]);
+                setPlatformMapping({});
+              }}>
+                Kapat
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
