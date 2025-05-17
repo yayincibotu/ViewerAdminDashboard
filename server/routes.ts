@@ -10,13 +10,13 @@ import { db, pool } from "./db";
 import { eq, desc } from "drizzle-orm";
 import { getStripe, syncSubscriptionPlansWithStripe, isStripeConfigured, createPaymentIntentForPlan } from "./stripe-helper";
 import { 
-  users, userSubscriptions, payments, 
+  users, userSubscriptions, payments, platforms,
   invoices, paymentMethods, securityQuestions, userSecurityQuestions,
   twoFactorAuth, loginAttempts, securitySessions,
   insertPaymentSchema, insertInvoiceSchema, insertPaymentMethodSchema,
   insertTwoFactorAuthSchema, insertUserSecurityQuestionSchema,
   insertSecuritySessionSchema, insertLoginAttemptSchema,
-  digitalProducts, smmProviders
+  digitalProducts, smmProviders, digitalProductOrders
 } from "@shared/schema";
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
@@ -142,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all SMM providers
   app.get("/api/admin/smm-providers", requireAdmin, async (req, res) => {
     try {
-      const providers = await db.select().from(schema.smmProviders);
+      const providers = await db.select().from(smmProviders);
       res.json(providers);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -158,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Name, API URL and API key are required" });
       }
       
-      const [provider] = await db.insert(schema.smmProviders)
+      const [provider] = await db.insert(smmProviders)
         .values({
           name,
           apiUrl,
@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Name, API URL and API key are required" });
       }
       
-      const [provider] = await db.update(schema.smmProviders)
+      const [provider] = await db.update(smmProviders)
         .set({
           name,
           apiUrl,
@@ -191,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isActive,
           updatedAt: new Date(),
         })
-        .where(eq(schema.smmProviders.id, id))
+        .where(eq(smmProviders.id, id))
         .returning();
       
       if (!provider) {
@@ -209,8 +209,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
-      const [provider] = await db.delete(schema.smmProviders)
-        .where(eq(schema.smmProviders.id, id))
+      const [provider] = await db.delete(smmProviders)
+        .where(eq(smmProviders.id, id))
         .returning();
       
       if (!provider) {
@@ -245,8 +245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const providerId = parseInt(req.params.id);
       
       // Get the provider
-      const [provider] = await db.select().from(schema.smmProviders)
-        .where(eq(schema.smmProviders.id, providerId));
+      const [provider] = await db.select().from(smmProviders)
+        .where(eq(smmProviders.id, providerId));
       
       if (!provider) {
         return res.status(404).json({ message: "SMM provider not found" });
@@ -256,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const services = await getSmmServiceList(provider);
       
       // Map services to platforms
-      const platforms = await db.select().from(schema.platforms);
+      const platforms = await db.select().from(platforms);
       
       // Track number of imported services
       let importedCount = 0;
