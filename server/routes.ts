@@ -135,8 +135,15 @@ async function getSmmServiceList(provider: any) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Import required functions and modules
   const { hashPassword, comparePasswords } = await import('./auth');
+  const digitalProductsRouter = await import('./api/digital-products').then(m => m.default);
+  const smmProvidersRouter = await import('./api/smm-providers').then(m => m.default);
+  
   // Sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
+  
+  // SMM module API routes
+  app.use('/api/admin/digital-products', digitalProductsRouter);
+  app.use('/api/admin/smm-providers', smmProvidersRouter);
   
   // SMM PROVIDERS API
   // Get all SMM providers
