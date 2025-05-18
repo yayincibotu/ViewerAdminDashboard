@@ -113,6 +113,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/admin/digital-products', digitalProductsRouter);
   app.use('/api/admin/smm-providers', smmProvidersRouter);
   
+  // Import platforms API router
+  import { platformsRouter } from "./api/platforms";
+  app.use('/api/platforms', platformsRouter);
+  
+  // Import product categories API router
+  import { productCategoriesRouter } from "./api/product-categories";
+  app.use('/api/product-categories', productCategoriesRouter);
+  
   // SMM PROVIDERS API
   // Get all SMM providers
   app.get("/api/admin/smm-providers", requireAdmin, async (req, res) => {

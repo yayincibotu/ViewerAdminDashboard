@@ -95,9 +95,12 @@ export const platforms = pgTable("platforms", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
-  description: text("description").notNull(),
-  iconClass: text("icon_class").notNull(),
-  bgColor: text("bg_color").notNull(),
+  description: text("description"),
+  iconClass: text("icon_class"),
+  bgColor: text("bg_color"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertPlatformSchema = createInsertSchema(platforms).omit({
