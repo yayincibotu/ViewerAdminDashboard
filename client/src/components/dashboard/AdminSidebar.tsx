@@ -63,7 +63,12 @@ const AdminSidebar: React.FC = () => {
           <div>
             <Link href="/webadmin/digital-products">
               <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-                location.startsWith('/webadmin/digital-products') ? 'bg-sidebar-accent text-white' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                location.startsWith('/webadmin/digital-products') || 
+                location.startsWith('/webadmin/platforms') || 
+                location.startsWith('/webadmin/product-categories') || 
+                location.startsWith('/webadmin/smm-providers') 
+                  ? 'bg-sidebar-accent text-white' 
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
               }`}>
                 <i className="fas fa-shopping-cart mr-3"></i>
                 Dijital Ürünler
@@ -82,15 +87,14 @@ const AdminSidebar: React.FC = () => {
                   Kategoriler
                 </div>
               </Link>
+              <Link href="/webadmin/smm-providers">
+                <div className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-md ${isActivePath('/webadmin/smm-providers')}`}>
+                  <i className="fas fa-cloud mr-2"></i>
+                  SMM Sağlayıcıları
+                </div>
+              </Link>
             </div>
           </div>
-          
-          <Link href="/webadmin/smm-providers">
-            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/smm-providers')}`}>
-              <i className="fas fa-cloud mr-3"></i>
-              SMM Sağlayıcıları
-            </div>
-          </Link>
         </nav>
         
         <div className="mt-6 mb-2 px-4 text-xs font-semibold text-sidebar-foreground/60 uppercase">
