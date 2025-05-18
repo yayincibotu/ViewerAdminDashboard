@@ -105,6 +105,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { hashPassword, comparePasswords } = await import('./auth');
   const digitalProductsRouter = await import('./api/digital-products').then(m => m.default);
   const smmProvidersRouter = await import('./api/smm-providers').then(m => m.default);
+  const platformsRouter = await import('./api/platforms').then(m => m.default);
+  const productCategoriesRouter = await import('./api/product-categories').then(m => m.default);
   
   // Sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
@@ -112,13 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SMM module API routes
   app.use('/api/admin/digital-products', digitalProductsRouter);
   app.use('/api/admin/smm-providers', smmProvidersRouter);
-  
-  // Import platforms API router
-  import { platformsRouter } from "./api/platforms";
   app.use('/api/platforms', platformsRouter);
-  
-  // Import product categories API router
-  import { productCategoriesRouter } from "./api/product-categories";
   app.use('/api/product-categories', productCategoriesRouter);
   
   // SMM PROVIDERS API

@@ -4,10 +4,11 @@ import { db } from "../db";
 import { platforms } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-export const platformsRouter = express.Router();
+const router = express.Router();
+export default router;
 
 // Get all platforms
-platformsRouter.get("/", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const allPlatforms = await db.select().from(platforms);
     res.json(allPlatforms);

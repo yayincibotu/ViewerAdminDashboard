@@ -15,7 +15,8 @@ export const productCategories = pgTable("product_categories", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const productCategoriesRouter = express.Router();
+const productCategoriesRouter = express.Router();
+export default productCategoriesRouter;
 
 // Tüm kategorileri getir
 productCategoriesRouter.get("/", async (req, res) => {
