@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { useRoute, Link } from 'wouter';
+import { useRoute, Link, useLocation } from 'wouter';
 import { 
   Card, 
   CardContent, 
@@ -39,6 +39,7 @@ const ProductDetail = () => {
   const productId = params?.id;
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
+  const [, setLocation] = useLocation();
 
   // Ürün detaylarını çek
   const { data: product, isLoading, error } = useQuery({
@@ -76,12 +77,11 @@ const ProductDetail = () => {
     }
   };
 
-  const handleAddToCart = () => {
-    // Sepete ekleme işlemi
-    toast({
-      title: 'Ürün Sepete Eklendi',
-      description: `${product.name} ürünü sepete eklendi.`,
-    });
+  const handleBuyNow = () => {
+    if (!productId || !product) return;
+    
+    // Ödeme sayfasına yönlendir
+    setLocation(`/shop/checkout/${productId}?quantity=${quantity}`);
   };
 
   const calculateTotalPrice = () => {

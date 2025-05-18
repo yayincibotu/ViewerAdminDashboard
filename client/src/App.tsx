@@ -39,6 +39,8 @@ import ShopPage from "./pages/shop/Shop";
 import ProductDetail from "./pages/shop/ProductDetail";
 import PlatformShop from "./pages/shop/PlatformShop";
 import CategoryShop from "./pages/shop/CategoryShop";
+import ShopCheckout from "./pages/shop/Checkout";
+import PaymentSuccess from "./pages/shop/PaymentSuccess";
 
 // Service Pages
 import TwitchViewers from "@/pages/services/TwitchViewers";
@@ -62,6 +64,8 @@ function Router() {
       <Route path="/shop/product/:id" component={ProductDetail} />
       <Route path="/shop/:platformSlug" component={PlatformShop} />
       <Route path="/shop/category/:categorySlug" component={CategoryShop} />
+      <Route path="/shop/checkout/:productId" component={ShopCheckout} />
+      <Route path="/shop/success" component={PaymentSuccess} />
       
       {/* Platform Pages */}
       <Route path="/twitch" component={TwitchPlatform} />
