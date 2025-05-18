@@ -2,16 +2,18 @@
  * Perplexity SEO Content Generation API
  * This API endpoint handles requests for generating SEO content using Perplexity AI
  */
-import { Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import { generateSEOContent } from '../perplexity-service';
 import { db } from '../db';
 import { digitalProducts } from '../schema/digital-products';
 import { eq } from 'drizzle-orm';
 
+const router = express.Router();
+
 /**
  * Test the Perplexity API connection
  */
-export async function testPerplexityAPIConnection(req: Request, res: Response) {
+router.post("/test", async (req: Request, res: Response) => {
   try {
     const { apiKey } = req.body;
     
@@ -65,7 +67,7 @@ export async function testPerplexityAPIConnection(req: Request, res: Response) {
 /**
  * Generate SEO content for a product
  */
-export async function generateSEOContentForProduct(req: Request, res: Response) {
+router.post("/generate", async (req: Request, res: Response) => {
   try {
     const {
       productId,
