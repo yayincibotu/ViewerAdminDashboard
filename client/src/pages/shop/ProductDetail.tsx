@@ -119,22 +119,34 @@ const ProductDetail = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
   
-  // Fetch product details with direct API call
+  // Fetch product details with direct API call and enhanced error handling
   const { 
     data: product, 
     isLoading, 
-    error 
+    error,
+    isError 
   } = useQuery<Product>({
     queryKey: ['/api/digital-products', productId],
     queryFn: () => {
       console.log('Fetching product data for ID:', productId);
       return apiRequest('GET', `/api/digital-products/${productId}`)
-        .then(res => {
+        .then(async res => {
+          const data = await res.json();
+          
           if (!res.ok) {
             console.error('Product fetch failed with status:', res.status);
+            // If we got JSON with error info, log it
+            console.error('Error response:', data);
             throw new Error('Failed to fetch product');
           }
-          return res.json();
+          
+          // Check if the data has expected product properties
+          if (!data || !data.id || !data.name) {
+            console.error('Invalid product data received:', data);
+            throw new Error('Invalid product data received');
+          }
+          
+          return data;
         })
         .catch(err => {
           console.error('Error in product fetch:', err);
@@ -143,7 +155,7 @@ const ProductDetail = () => {
     },
     enabled: !!productId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2,
+    retry: 3, // Increased retry attempts
   });
   
   // Fetch related products
@@ -240,19 +252,34 @@ const ProductDetail = () => {
     );
   }
   
-  if (error || !product) {
+  // We now use isError instead of checking error directly
+  // and we give our API multiple retries, so if we get an error it's probably legitimate
+  if (isError || (product === undefined && !isLoading)) {
+    // Log detailed error information for debugging
+    console.error("Product detail error:", error);
+    console.error("ProductID:", productId);
+    
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <NavBar />
         <div className="container mx-auto px-4 py-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-8">
-              We couldn't find the product you're looking for. It may have been removed or unavailable.
+            <h2 className="text-2xl font-bold mb-4">Loading Product...</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              We're having trouble loading this product. Please try again in a moment.
             </p>
-            <Button asChild size="lg">
-              <Link href="/shop">Browse Our Products</Link>
-            </Button>
+            <div className="flex justify-center items-center space-x-4">
+              <Button variant="outline" asChild size="lg" className="mb-4">
+                <Link href="/shop">Browse Other Products</Link>
+              </Button>
+              <Button 
+                size="lg" 
+                className="mb-4"
+                onClick={() => window.location.reload()}
+              >
+                Try Again
+              </Button>
+            </div>
           </div>
         </div>
       </div>
