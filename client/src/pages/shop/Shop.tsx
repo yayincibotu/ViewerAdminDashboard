@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { Link, useLocation } from 'wouter';
+import NavBar from '@/components/NavBar';
 
 import {
   Card,
@@ -186,13 +187,15 @@ const ShopPage = () => {
   const discountedProducts = filteredProducts.filter(p => p.discountPercentage > 0);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Digital Product Store</h1>
-        <p className="text-gray-500 dark:text-gray-400">
-          Your one-stop shop for social media services and digital products
-        </p>
-      </header>
+    <>
+      <NavBar />
+      <div className="container mx-auto px-4 py-8">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Digital Product Store</h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Your one-stop shop for social media services and digital products
+          </p>
+        </header>
 
       {/* Filtreler ve Arama */}
       <div className="mb-8 flex flex-col md:flex-row gap-4">
