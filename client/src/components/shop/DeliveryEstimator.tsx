@@ -10,41 +10,58 @@ interface DeliveryEstimatorProps {
 }
 
 // Parse time string like "1-2 hours" or "24 hours" to minutes
-const parseTimeToMinutes = (timeString: string): { min: number; max: number } => {
-  // Handle ranges like "1-2 hours"
-  if (timeString.includes('-')) {
-    const [minStr, maxPart] = timeString.split('-');
-    const [maxStr, unit] = maxPart.trim().split(' ');
-    
-    const min = parseInt(minStr.trim());
-    const max = parseInt(maxStr.trim());
-    
-    // Convert to minutes based on unit
-    if (unit.toLowerCase().includes('minute')) {
-      return { min, max };
-    } else if (unit.toLowerCase().includes('hour')) {
-      return { min: min * 60, max: max * 60 };
-    } else if (unit.toLowerCase().includes('day')) {
-      return { min: min * 24 * 60, max: max * 24 * 60 };
-    }
-  } 
-  // Handle single values like "24 hours"
-  else {
-    const [valueStr, unit] = timeString.trim().split(' ');
-    const value = parseInt(valueStr);
-    
-    // Convert to minutes based on unit
-    if (unit.toLowerCase().includes('minute')) {
-      return { min: value, max: value };
-    } else if (unit.toLowerCase().includes('hour')) {
-      return { min: value * 60, max: value * 60 };
-    } else if (unit.toLowerCase().includes('day')) {
-      return { min: value * 24 * 60, max: value * 24 * 60 };
-    }
+const parseTimeToMinutes = (timeString: string | undefined): { min: number; max: number } => {
+  // Handle undefined or empty timeString
+  if (!timeString) {
+    console.log("Warning: timeString is undefined or empty, using default delivery time");
+    return { min: 60, max: 120 }; // Default to 1-2 hours
   }
   
-  // Default
-  return { min: 60, max: 120 };
+  try {
+    // Handle ranges like "1-2 hours"
+    if (timeString.includes('-')) {
+      const [minStr, maxPart] = timeString.split('-');
+      const [maxStr, unit] = maxPart.trim().split(' ');
+      
+      const min = parseInt(minStr.trim()) || 1;
+      const max = parseInt(maxStr.trim()) || 2;
+      
+      // Convert to minutes based on unit
+      if (unit && unit.toLowerCase().includes('minute')) {
+        return { min, max };
+      } else if (unit && unit.toLowerCase().includes('hour')) {
+        return { min: min * 60, max: max * 60 };
+      } else if (unit && unit.toLowerCase().includes('day')) {
+        return { min: min * 24 * 60, max: max * 24 * 60 };
+      }
+      
+      // If unit is not recognized, assume hours
+      return { min: min * 60, max: max * 60 };
+    } 
+    // Handle single values like "24 hours"
+    else {
+      const parts = timeString.trim().split(' ');
+      const valueStr = parts[0];
+      const unit = parts.length > 1 ? parts[1] : 'hours'; // Default to hours
+      
+      const value = parseInt(valueStr) || 24; // Default to 24 if parsing fails
+      
+      // Convert to minutes based on unit
+      if (unit && unit.toLowerCase().includes('minute')) {
+        return { min: value, max: value };
+      } else if (unit && unit.toLowerCase().includes('hour')) {
+        return { min: value * 60, max: value * 60 };
+      } else if (unit && unit.toLowerCase().includes('day')) {
+        return { min: value * 24 * 60, max: value * 24 * 60 };
+      }
+      
+      // If unit is not recognized, assume hours
+      return { min: value * 60, max: value * 60 };
+    }
+  } catch (error) {
+    console.error("Error parsing delivery time:", timeString, error);
+    return { min: 60, max: 120 }; // Default to 1-2 hours
+  }
 };
 
 // Format minutes to human-readable time

@@ -726,8 +726,9 @@ const ProductDetail = () => {
                   <Separator className="my-6" />
                   
                   <DeliveryEstimator 
-                    deliveryTime={product.deliveryTime || '24-48 hours'}
-                    deliverySpeed={product.deliverySpeed || 'Standard'}
+                    baseDeliveryTime={product.deliveryTime || '24-48 hours'}
+                    quantity={quantity}
+                    speedFactor={product.deliverySpeed === 'Express' ? 0.5 : product.deliverySpeed === 'Slow' ? 1.5 : 1}
                   />
                   
                   <div className="mt-6 space-y-3">
