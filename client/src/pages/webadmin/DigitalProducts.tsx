@@ -107,9 +107,11 @@ const DigitalProducts: React.FC = () => {
 
   // Filtered and paginated products
   const filteredProducts = products.filter((product: any) => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    || product.description.toLowerCase().includes(searchQuery.toLowerCase())
-    || product.category.toLowerCase().includes(searchQuery.toLowerCase())
+    product.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    || product.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    || (typeof product.category === 'string' 
+        ? product.category.toLowerCase().includes(searchQuery.toLowerCase())
+        : product.category?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const paginatedProducts = filteredProducts.slice(
@@ -603,9 +605,9 @@ const DigitalProducts: React.FC = () => {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>{platform?.name || 'Bilinmiyor'}</TableCell>
+                          <TableCell>{product.platform?.name || 'Bilinmiyor'}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">{product.category}</Badge>
+                            <Badge variant="outline">{product.category?.name || product.category}</Badge>
                           </TableCell>
                           <TableCell>₺{(product.price / 100).toFixed(2)}</TableCell>
                           <TableCell>
