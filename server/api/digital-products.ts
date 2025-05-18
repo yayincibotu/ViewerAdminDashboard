@@ -51,6 +51,8 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
     const productId = parseInt(id);
     
+    console.log("Fetching product with ID:", productId);
+    
     if (isNaN(productId)) {
       return res.status(400).json({ error: 'Invalid product ID' });
     }
@@ -61,11 +63,15 @@ router.get('/:id', async (req, res) => {
       .where(eq(digitalProducts.id, productId))
       .limit(1);
     
+    console.log("Product data:", JSON.stringify(productData, null, 2));
+    
     if (!productData.length) {
       return res.status(404).json({ error: 'Product not found' });
     }
     
     const { digital_products, platforms } = productData[0];
+    console.log("Digital product:", JSON.stringify(digital_products, null, 2));
+    console.log("Platform:", JSON.stringify(platforms, null, 2));
     
     const product = {
       id: digital_products.id,
