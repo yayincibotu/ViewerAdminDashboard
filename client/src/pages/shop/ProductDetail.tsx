@@ -44,15 +44,19 @@ const ProductDetail = () => {
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['/api/digital-products', productId],
     queryFn: () => apiRequest('GET', `/api/digital-products/${productId}`).then(res => res.json()),
-    enabled: !!productId,
-    onError: (error) => {
+    enabled: !!productId
+  });
+  
+  // Hata durumunda kullanıcıya bildirim göster
+  React.useEffect(() => {
+    if (error) {
       toast({
         title: 'Ürün Yüklenemedi',
         description: 'Ürün detayları yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.',
         variant: 'destructive',
       });
     }
-  });
+  }, [error, toast]);
 
   // İlgili ürünleri çek (aynı kategorideki veya platformdaki)
   const { data: relatedProducts = [], isLoading: isLoadingRelated } = useQuery({

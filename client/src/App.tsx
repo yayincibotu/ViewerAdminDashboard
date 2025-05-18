@@ -34,6 +34,12 @@ import Checkout from "@/pages/payment/Checkout";
 import Subscribe from "@/pages/payment/Subscribe";
 import { useAuth } from "@/hooks/use-auth";
 
+// Shop Pages
+import ShopPage from "./pages/shop/Shop";
+import ProductDetail from "./pages/shop/ProductDetail";
+import PlatformShop from "./pages/shop/PlatformShop";
+import CategoryShop from "./pages/shop/CategoryShop";
+
 // Service Pages
 import TwitchViewers from "@/pages/services/TwitchViewers";
 import KickViewers from "@/pages/services/KickViewers";
@@ -50,6 +56,12 @@ function Router() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
+      
+      {/* Shop Pages */}
+      <Route path="/shop" component={ShopPage} />
+      <Route path="/shop/product/:id" component={ProductDetail} />
+      <Route path="/shop/:platformSlug" component={PlatformShop} />
+      <Route path="/shop/category/:categorySlug" component={CategoryShop} />
       
       {/* Platform Pages */}
       <Route path="/twitch" component={TwitchPlatform} />

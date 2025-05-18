@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { Link, useLocation } from 'wouter';
+import { Link, useRoute, useLocation } from 'wouter';
 
 import {
   Card,
@@ -20,15 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { CardSkeleton } from '@/components/skeletons/CardSkeleton';
 import { useToast } from '@/hooks/use-toast';
 
 // İkonlar
-import { Filter, Search, ShoppingCart, Star, ArrowRight, Tag, TrendingUp } from 'lucide-react';
+import { Filter, Search, ShoppingCart, ArrowLeft, ArrowRight } from 'lucide-react';
 
+// Ürün kartı bileşenini Shop.tsx'den import edebilirdik, ancak bu örnek için yeniden tanımlıyoruz
 const ProductCard = ({ product }: any) => {
   const platformColor = {
     'twitch': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
@@ -88,13 +87,6 @@ const ProductCard = ({ product }: any) => {
             <span className="text-sm">{product.maxOrder || 10000}</span>
           </div>
         </div>
-
-        {product.popularityScore && product.popularityScore > 80 && (
-          <div className="mt-4 flex items-center">
-            <TrendingUp className="h-4 w-4 text-orange-500 mr-1" />
-            <span className="text-xs text-orange-500 font-medium">En çok satılan ürün</span>
-          </div>
-        )}
       </CardContent>
       <CardFooter className="pt-0 pb-4 border-t flex flex-col space-y-3">
         <div className="flex justify-between items-center w-full">
@@ -122,18 +114,20 @@ const ProductCard = ({ product }: any) => {
   );
 };
 
-const ShopPage = () => {
+const PlatformShop = () => {
+  const [, params] = useRoute('/shop/:platformSlug');
+  const platformSlug = params?.platformSlug;
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [platformFilter, setPlatformFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('popularity');
 
-  // Platformları çek
-  const { data: platforms = [], isLoading: isLoadingPlatforms } = useQuery({
-    queryKey: ['/api/platforms'],
-    queryFn: () => apiRequest('GET', '/api/platforms').then(res => res.json()),
+  // Platform bilgisini çek
+  const { data: platform, isLoading: isLoadingPlatform } = useQuery({
+    queryKey: ['/api/platforms', platformSlug],
+    queryFn: () => apiRequest('GET', `/api/platforms/slug/${platformSlug}`).then(res => res.json()),
+    enabled: !!platformSlug,
   });
 
   // Kategorileri çek
@@ -142,10 +136,11 @@ const ShopPage = () => {
     queryFn: () => apiRequest('GET', '/api/product-categories').then(res => res.json()),
   });
 
-  // Ürünleri çek
+  // Platform bazlı ürünleri çek
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
-    queryKey: ['/api/digital-products'],
-    queryFn: () => apiRequest('GET', '/api/digital-products').then(res => res.json()),
+    queryKey: ['/api/digital-products/platform', platformSlug],
+    queryFn: () => apiRequest('GET', `/api/digital-products/platform/${platformSlug}`).then(res => res.json()),
+    enabled: !!platformSlug,
   });
 
   // Ürünleri filtrele ve sırala
@@ -158,13 +153,10 @@ const ShopPage = () => {
           product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           product.description?.toLowerCase().includes(searchQuery.toLowerCase());
         
-        const matchesPlatform = platformFilter === 'all' || 
-          (product.platform && product.platform.slug === platformFilter);
-        
         const matchesCategory = categoryFilter === 'all' || 
           (product.category && product.category.slug === categoryFilter);
         
-        return matchesSearch && matchesPlatform && matchesCategory;
+        return matchesSearch && matchesCategory;
       })
       .sort((a, b) => {
         switch (sortBy) {
@@ -179,18 +171,41 @@ const ShopPage = () => {
             return (b.popularityScore || 0) - (a.popularityScore || 0);
         }
       });
-  }, [products, searchQuery, platformFilter, categoryFilter, sortBy]);
+  }, [products, searchQuery, categoryFilter, sortBy]);
 
-  // Gruplanmış ürünler
-  const featuredProducts = filteredProducts.filter(p => p.isFeatured);
-  const discountedProducts = filteredProducts.filter(p => p.discountPercentage > 0);
+  if (isLoadingPlatform || !platform) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <Link href="/shop">
+            <Button variant="ghost">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Tüm Ürünlere Dön
+            </Button>
+          </Link>
+        </div>
+        <div className="flex items-center justify-center h-40">
+          <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <Link href="/shop">
+          <Button variant="ghost">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Tüm Ürünlere Dön
+          </Button>
+        </Link>
+      </div>
+
       <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Dijital Ürün Mağazası</h1>
+        <h1 className="text-3xl font-bold mb-2">{platform.name} Ürünleri</h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Sosyal medya hizmetleri ve dijital ürünler için tek durak noktanız
+          {platform.description || `${platform.name} için tüm dijital hizmetlerimizi keşfedin`}
         </p>
       </header>
 
@@ -210,20 +225,6 @@ const ShopPage = () => {
         </div>
         
         <div className="flex flex-wrap gap-2">
-          <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Platform" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Platformlar</SelectItem>
-              {Array.isArray(platforms) && platforms.map(platform => (
-                <SelectItem key={platform.id} value={platform.slug}>
-                  {platform.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Kategori" />
@@ -252,92 +253,37 @@ const ShopPage = () => {
         </div>
       </div>
 
-      {/* İçerik */}
-      <Tabs defaultValue="all" className="mb-8">
-        <TabsList>
-          <TabsTrigger value="all">Tüm Ürünler</TabsTrigger>
-          <TabsTrigger value="featured">Öne Çıkanlar</TabsTrigger>
-          <TabsTrigger value="discounted">İndirimli Ürünler</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="all" className="mt-6">
-          {isLoadingProducts ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <CardSkeleton key={i} />
-              ))}
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-semibold mb-2">Ürün Bulunamadı</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                Arama kriterlerinize uygun ürün bulunamadı. Lütfen farklı filtreler deneyin.
-              </p>
-              <Button onClick={() => {
-                setSearchQuery('');
-                setPlatformFilter('all');
-                setCategoryFilter('all');
-              }}>
-                Filtreleri Sıfırla
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="featured" className="mt-6">
-          {isLoadingProducts ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <CardSkeleton key={i} />
-              ))}
-            </div>
-          ) : featuredProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-semibold mb-2">Öne Çıkan Ürün Bulunamadı</h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Şu anda öne çıkan ürün bulunmuyor.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {featuredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="discounted" className="mt-6">
-          {isLoadingProducts ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <CardSkeleton key={i} />
-              ))}
-            </div>
-          ) : discountedProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-semibold mb-2">İndirimli Ürün Bulunamadı</h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Şu anda indirimli ürün bulunmuyor.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {discountedProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Ürün Listesi */}
+      <div className="mt-6">
+        {isLoadingProducts ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold mb-2">Ürün Bulunamadı</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              Bu platform için arama kriterlerinize uygun ürün bulunamadı. Lütfen farklı filtreler deneyin.
+            </p>
+            <Button onClick={() => {
+              setSearchQuery('');
+              setCategoryFilter('all');
+            }}>
+              Filtreleri Sıfırla
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredProducts.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default ShopPage;
+export default PlatformShop;
