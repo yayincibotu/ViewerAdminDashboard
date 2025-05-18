@@ -30,6 +30,7 @@ import DigitalProducts from "@/pages/webadmin/DigitalProducts";
 import SmmProviders from "@/pages/webadmin/SmmProviders";
 import Platforms from "@/pages/webadmin/Platforms";
 import ProductCategories from "@/pages/webadmin/ProductCategories";
+import CommentManagement from "@/pages/admin/CommentManagement";
 import Checkout from "@/pages/payment/Checkout";
 import Subscribe from "@/pages/payment/Subscribe";
 import { useAuth } from "@/hooks/use-auth";
@@ -96,6 +97,7 @@ function Router() {
       <ProtectedRoute path="/webadmin/platforms" component={Platforms} />
       <ProtectedRoute path="/webadmin/product-categories" component={ProductCategories} />
       <ProtectedRoute path="/webadmin/smm-providers" component={SmmProviders} />
+      <ProtectedRoute path="/webadmin/comments" component={CommentManagement} />
       <ProtectedRoute path="/webadmin/page-contents" component={AdminPageContents} />
       <ProtectedRoute path="/webadmin/blog" component={Blog} />
       <ProtectedRoute path="/webadmin/blog-categories" component={BlogCategories} />
