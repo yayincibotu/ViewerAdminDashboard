@@ -5739,6 +5739,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dijital ürün için ödeme niyeti oluşturma endpoint'i
+  app.post("/api/create-digital-product-payment", async (req, res) => {
+    try {
+      const { productId, quantity } = req.body;
+      
+      if (!productId || !quantity) {
+        return res.status(400).json({ error: "Ürün ID ve miktar gereklidir" });
+      }
+      
+      // Ürünü veritabanından al
+      const [product] = await db.select()
+        .from(digitalProducts)
+        .where(eq(digitalProducts.id, productId));
+      
+      if (!product) {
+        return res.status(404).json({ error: "Ürün bulunamadı" });
+      }
+      
+      // Miktarı kontrol et
+      if (quantity < product.minQuantity || quantity > product.maxQuantity) {
+        return res.status(400).json({ 
+          error: `Miktar ${product.minQuantity} ile ${product.maxQuantity} arasında olmalıdır`
+        });
+      }
+      
+      // Toplam fiyatı hesapla (cent olarak)
+      const totalAmount = product.price * quantity;
+      
+      // Ödeme niyeti oluştur
+      const stripe = getStripe();
+      
+      if (!stripe) {
+        return res.status(500).json({ error: "Ödeme sistemi yapılandırması eksik" });
+      }
+      
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: totalAmount,
+        currency: "try", // Türk Lirası
+        metadata: {
+          productId: product.id.toString(),
+          productName: product.name,
+          quantity: quantity.toString(),
+          type: "digital_product"
+        }
+      });
+      
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        productDetails: {
+          id: product.id,
+          name: product.name,
+          price: product.price / 100, // TL olarak göster
+          quantity,
+          totalAmount: totalAmount / 100, // TL olarak göster
+        }
+      });
+    } catch (error: any) {
+      console.error("Ödeme niyeti oluşturma hatası:", error);
+      res.status(500).json({ error: "Ödeme başlatılırken bir hata oluştu" });
+    }
+  });
+  
+  // Ödeme başarılı webhook işleyicisi
+  app.post("/webhook/stripe", async (req, res) => {
+    const stripe = getStripe();
+    if (!stripe) {
+      return res.status(500).send("Stripe yapılandırması eksik");
+    }
+    
+    const sig = req.headers["stripe-signature"];
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    
+    if (!sig || !endpointSecret) {
+      return res.status(400).send("Webhook imzası eksik");
+    }
+    
+    let event;
+    
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    } catch (err: any) {
+      console.error(`Webhook Error: ${err.message}`);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    
+    if (event.type === "payment_intent.succeeded") {
+      const paymentIntent = event.data.object;
+      
+      // Ödeme başarılı olduğunda siparişi işle
+      if (paymentIntent.metadata.type === "digital_product") {
+        try {
+          const productId = parseInt(paymentIntent.metadata.productId);
+          const quantity = parseInt(paymentIntent.metadata.quantity);
+          const userId = req.user?.id || null;
+          
+          // Sipariş oluştur
+          await db.insert(digitalProductOrders).values({
+            userId,
+            productId,
+            quantity,
+            totalPrice: paymentIntent.amount,
+            status: "completed",
+            paymentIntentId: paymentIntent.id,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          
+          // SMM API'sine siparişi gönderme işlemleri burada yapılacak
+          // Bu işlemler ayrı bir API endpointi veya arka plan işi olarak da yapılabilir
+        } catch (error) {
+          console.error("Sipariş kaydetme hatası:", error);
+        }
+      }
+    }
+    
+    res.json({ received: true });
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

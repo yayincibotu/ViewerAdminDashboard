@@ -195,14 +195,6 @@ router.get('/digital-products/category/:slug', async (req, res) => {
       name: digitalProducts.name,
       description: digitalProducts.description,
       price: digitalProducts.price,
-      originalPrice: digitalProducts.originalPrice,
-      discountPercentage: digitalProducts.discountPercentage,
-      isFeatured: digitalProducts.isFeatured,
-      isActive: digitalProducts.isActive,
-      popularityScore: digitalProducts.popularityScore,
-      minOrder: digitalProducts.minOrder,
-      maxOrder: digitalProducts.maxOrder,
-      deliveryTime: digitalProducts.deliveryTime,
       platform: {
         id: platforms.id,
         name: platforms.name,
@@ -214,21 +206,39 @@ router.get('/digital-products/category/:slug', async (req, res) => {
         name: productCategories.name,
         slug: productCategories.slug
       },
+      isActive: digitalProducts.isActive,
+      minQuantity: digitalProducts.minQuantity,
+      maxQuantity: digitalProducts.maxQuantity,
+      serviceType: digitalProducts.serviceType,
       createdAt: digitalProducts.createdAt,
       updatedAt: digitalProducts.updatedAt
     })
     .from(digitalProducts)
     .innerJoin(platforms, eq(digitalProducts.platformId, platforms.id))
-    .innerJoin(productCategories, eq(digitalProducts.categoryId, productCategories.id))
+    .innerJoin(productCategories, eq(digitalProducts.category, productCategories.slug))
     .where(
       and(
         eq(digitalProducts.isActive, true),
         eq(productCategories.slug, categorySlug)
       )
     )
-    .orderBy(desc(digitalProducts.popularityScore));
+    .orderBy(desc(digitalProducts.sortOrder));
     
-    res.json(products);
+    // Ürünleri mağaza için biçimlendir
+    const enrichedProducts = products.map(product => ({
+      ...product,
+      originalPrice: Math.round(product.price * 1.2) / 100, // Örnek indirim %20
+      price: product.price / 100, // Cent -> TL dönüşümü
+      discountPercentage: 20, // Örnek sabit indirim yüzdesi
+      isFeatured: Math.random() > 0.7, // Rastgele öne çıkan ürünleri
+      popularityScore: Math.floor(Math.random() * 100), // Rastgele popülerlik puanı
+      minOrder: product.minQuantity,
+      maxOrder: product.maxQuantity,
+      deliveryTime: "1-2 saat", // Varsayılan teslimat süresi
+      deliverySpeed: "Normal" // Varsayılan teslimat hızı
+    }));
+    
+    res.json(enrichedProducts);
   } catch (error) {
     console.error('Category products fetch error:', error);
     res.status(500).json({ error: 'Kategori ürünleri yüklenirken bir hata oluştu' });
@@ -244,10 +254,10 @@ router.get('/digital-products/related/:id', async (req, res) => {
   }
   
   try {
-    // Önce mevcut ürünün platform ve kategori ID'lerini al
+    // Önce mevcut ürünün platform ve kategori değerlerini al
     const [currentProduct] = await db.select({
       platformId: digitalProducts.platformId,
-      categoryId: digitalProducts.categoryId,
+      category: digitalProducts.category,
     })
     .from(digitalProducts)
     .where(eq(digitalProducts.id, id));
@@ -262,8 +272,6 @@ router.get('/digital-products/related/:id', async (req, res) => {
       name: digitalProducts.name,
       description: digitalProducts.description,
       price: digitalProducts.price,
-      originalPrice: digitalProducts.originalPrice,
-      discountPercentage: digitalProducts.discountPercentage,
       platform: {
         id: platforms.id,
         name: platforms.name,
@@ -273,22 +281,34 @@ router.get('/digital-products/related/:id', async (req, res) => {
         id: productCategories.id,
         name: productCategories.name,
         slug: productCategories.slug
-      }
+      },
+      minQuantity: digitalProducts.minQuantity,
+      maxQuantity: digitalProducts.maxQuantity
     })
     .from(digitalProducts)
     .innerJoin(platforms, eq(digitalProducts.platformId, platforms.id))
-    .innerJoin(productCategories, eq(digitalProducts.categoryId, productCategories.id))
+    .innerJoin(productCategories, eq(digitalProducts.category, productCategories.slug))
     .where(
       and(
         eq(digitalProducts.isActive, true),
         sql`${digitalProducts.id} != ${id}`,
-        sql`(${digitalProducts.platformId} = ${currentProduct.platformId} OR ${digitalProducts.categoryId} = ${currentProduct.categoryId})`
+        sql`(${digitalProducts.platformId} = ${currentProduct.platformId} OR ${digitalProducts.category} = ${currentProduct.category})`
       )
     )
-    .orderBy(desc(digitalProducts.popularityScore))
+    .orderBy(desc(digitalProducts.sortOrder))
     .limit(4);
     
-    res.json(relatedProducts);
+    // Ürünleri mağaza için biçimlendir
+    const enrichedProducts = relatedProducts.map(product => ({
+      ...product,
+      originalPrice: Math.round(product.price * 1.2) / 100, // Örnek indirim %20
+      price: product.price / 100, // Cent -> TL dönüşümü
+      discountPercentage: 20, // Örnek sabit indirim yüzdesi
+      minOrder: product.minQuantity,
+      maxOrder: product.maxQuantity
+    }));
+    
+    res.json(enrichedProducts);
   } catch (error) {
     console.error('Related products fetch error:', error);
     res.status(500).json({ error: 'İlgili ürünler yüklenirken bir hata oluştu' });
