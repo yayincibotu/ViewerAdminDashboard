@@ -5084,7 +5084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product Review Routes
   app.get("/api/product-reviews", async (req, res) => {
     try {
-      const { getProductReviews } = await import("./api/reviews");
+      const { getProductReviews } = await import("./api/simple-reviews");
       return getProductReviews(req, res);
     } catch (error) {
       console.error("Error in product reviews route:", error);
