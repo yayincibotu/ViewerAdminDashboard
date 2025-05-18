@@ -604,7 +604,27 @@ const SettingsPage: React.FC = () => {
                       className="flex items-center gap-2"
                       onClick={async () => {
                         try {
-                          const res = await apiRequest('GET', '/api/perplexity/test');
+                          // Add loading state
+                          toast({
+                            title: 'Testing Connection',
+                            description: 'Connecting to Perplexity API...',
+                          });
+                          
+                          // Specify the headers and response type explicitly
+                          const res = await fetch('/api/perplexity/test', {
+                            method: 'GET',
+                            headers: {
+                              'Accept': 'application/json',
+                              'Content-Type': 'application/json',
+                            },
+                          });
+                          
+                          // Check for non-JSON responses
+                          const contentType = res.headers.get('content-type');
+                          if (!contentType || !contentType.includes('application/json')) {
+                            throw new Error(`Expected JSON response but got ${contentType}`);
+                          }
+                          
                           const data = await res.json();
                           
                           if (data.success) {
@@ -620,6 +640,7 @@ const SettingsPage: React.FC = () => {
                             });
                           }
                         } catch (error: any) {
+                          console.error('Perplexity API test error:', error);
                           toast({
                             title: 'Error',
                             description: error.message || 'Failed to test Perplexity API connection',

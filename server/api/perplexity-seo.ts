@@ -15,7 +15,11 @@ router.use(isAdmin);
  */
 router.get('/test', async (req, res) => {
   try {
+    // Make sure we're setting the correct content type header
+    res.setHeader('Content-Type', 'application/json');
+    
     const apiKey = await getPerplexityApiKey();
+    console.log('Testing Perplexity API with key available:', !!apiKey);
     
     if (!apiKey) {
       return res.status(400).json({
@@ -24,28 +28,46 @@ router.get('/test', async (req, res) => {
       });
     }
     
-    // Simple test prompt to verify the API connection
-    const testContent = await generateSEOContent({
-      productName: 'Test Product',
-      platform: 'Twitch',
-      category: 'Live Viewers',
-      price: 10,
-      minOrder: 100,
-      maxOrder: 1000,
-      serviceType: 'viewer bot'
+    // Instead of generating full content, let's make a simple API call to test the connection
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-sonar-small-128k-online",
+        messages: [
+          {
+            role: "system",
+            content: "You are a helpful assistant."
+          },
+          {
+            role: "user",
+            content: "Hello, this is a test message to verify the API connection. Please respond with 'Connection successful'."
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 20,
+        stream: false
+      })
     });
     
-    if (testContent) {
-      return res.json({
-        success: true,
-        message: 'Perplexity API connection successful!',
-      });
-    } else {
-      return res.status(400).json({
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Perplexity API error:', errorText);
+      return res.status(response.status).json({
         success: false,
-        message: 'Failed to generate content. Please check your API key.'
+        message: `Failed to connect to Perplexity API: ${response.statusText}`
       });
     }
+    
+    const data = await response.json();
+    
+    return res.json({
+      success: true,
+      message: 'Perplexity API connection successful!'
+    });
   } catch (error: any) {
     console.error('Error testing Perplexity API:', error);
     return res.status(500).json({
