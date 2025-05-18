@@ -22,6 +22,29 @@ export async function getProductReviews(productId) {
 }
 
 /**
+ * Check if a user has already reviewed a product
+ * @param {number} productId - The ID of the product
+ * @param {number} userId - The ID of the user
+ * @returns {Promise<boolean>} - True if user has already reviewed this product
+ */
+export async function hasUserReviewedProduct(productId, userId) {
+  try {
+    if (!userId) return false; // Guest users don't have reviews
+    
+    const { rows } = await pool.query(
+      `SELECT COUNT(*) as review_count FROM product_reviews 
+       WHERE product_id = $1 AND user_id = $2`,
+      [productId, userId]
+    );
+    
+    return parseInt(rows[0].review_count) > 0;
+  } catch (error) {
+    console.error('Error checking if user has reviewed product:', error);
+    throw error;
+  }
+}
+
+/**
  * Create a new review
  */
 export async function createReview(reviewData) {
@@ -38,6 +61,14 @@ export async function createReview(reviewData) {
       platform,
       device_type
     } = reviewData;
+    
+    // Check if user has already reviewed this product
+    if (user_id) {
+      const hasReviewed = await hasUserReviewedProduct(product_id, user_id);
+      if (hasReviewed) {
+        throw new Error('You have already reviewed this product');
+      }
+    }
     
     const { rows } = await pool.query(
       `INSERT INTO product_reviews 

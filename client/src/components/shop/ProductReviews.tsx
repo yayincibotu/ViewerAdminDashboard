@@ -63,6 +63,7 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('all');
   const [showWriteReview, setShowWriteReview] = useState(false);
+  const [hasUserReviewed, setHasUserReviewed] = useState(false);
   const [newReview, setNewReview] = useState<NewReviewForm>({
     rating: 5,
     title: '',
