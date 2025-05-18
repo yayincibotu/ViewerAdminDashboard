@@ -491,6 +491,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Simple session timeout check to update session expiration
   app.use('/api', checkSessionTimeout);
   
+  // Register digital products router
+  app.use('/api/digital-products', digitalProductsRouter);
+  
   // ============== SECURITY FEATURE ROUTES ==============
   
   // Two-Factor Authentication (2FA) Routes

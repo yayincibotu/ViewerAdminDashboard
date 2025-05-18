@@ -1,453 +1,439 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { useRoute, Link, useLocation } from 'wouter';
-import NavBar from '@/components/NavBar';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FormSkeleton } from '@/components/skeletons/FormSkeleton';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, CheckCircle, Clock, ShieldCheck, Award, Star, Users, TrendingUp, Lightning } from 'lucide-react';
+import NavBar from '@/components/NavBar';
+import PricingCalculator from '@/components/shop/PricingCalculator';
+import ProductShowcase from '@/components/shop/ProductShowcase';
+import DeliveryEstimator from '@/components/shop/DeliveryEstimator';
+import ProductComparison from '@/components/shop/ProductComparison';
+import StickyBuyButton from '@/components/shop/StickyBuyButton';
 
-// Icons
-import { 
-  ShoppingCart, 
-  ShieldCheck, 
-  Clock, 
-  CheckCircle, 
-  TrendingUp, 
-  HelpCircle, 
-  ArrowLeft, 
-  Truck, 
-  ListChecks, 
-  ThumbsUp,
-  AlertCircle,
-  Activity
-} from 'lucide-react';
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  longDescription?: string;
+  price: number;
+  originalPrice?: number;
+  discountPercentage?: number;
+  platform: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  minOrder: number;
+  maxOrder: number;
+  deliveryTime?: string;
+  deliverySpeed?: string;
+  satisfactionRate?: number;
+  popularityScore?: number;
+  imageUrl?: string;
+}
 
 const ProductDetail = () => {
-  const [, params] = useRoute('/shop/product/:id');
-  const productId = params?.id;
-  const { toast } = useToast();
-  const [quantity, setQuantity] = useState(1);
   const [, setLocation] = useLocation();
-
+  const { productId } = useParams();
+  const { toast } = useToast();
+  const [quantity, setQuantity] = useState(100);
+  const [total, setTotal] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
   // Fetch product details
-  const { data: product, isLoading, error } = useQuery({
+  const { data: product, isLoading, error } = useQuery<Product>({
     queryKey: ['/api/digital-products', productId],
-    queryFn: () => apiRequest('GET', `/api/digital-products/${productId}`).then(res => res.json()),
-    enabled: !!productId
+    enabled: !!productId,
   });
   
-  // Show notifications on error
-  React.useEffect(() => {
-    if (error) {
-      toast({
-        title: 'Product Could Not Be Loaded',
-        description: 'There was a problem loading the product details. Please try again.',
-        variant: 'destructive',
-      });
+  useEffect(() => {
+    if (product && product.price) {
+      setQuantity(product.minOrder || 100);
     }
-  }, [error, toast]);
-
-  // Fetch related products (same category or platform)
-  const { data: relatedProducts = [], isLoading: isLoadingRelated } = useQuery({
-    queryKey: ['/api/digital-products/related', productId],
-    queryFn: () => apiRequest('GET', `/api/digital-products/related/${productId}`).then(res => res.json()),
-    enabled: !!product,
-  });
-
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
-    if (isNaN(value) || value < 1) {
-      setQuantity(1);
-    } else if (product && product.maxOrder && value > product.maxOrder) {
-      setQuantity(product.maxOrder);
-    } else {
-      setQuantity(value);
+  }, [product]);
+  
+  // Update total when quantity or price changes
+  useEffect(() => {
+    if (product && product.price) {
+      let basePrice = product.price * quantity;
+      
+      // Apply discount if available
+      if (product.discountPercentage && product.discountPercentage > 0) {
+        basePrice = basePrice * (1 - (product.discountPercentage / 100));
+      }
+      
+      setTotal(basePrice);
     }
-  };
-
+  }, [quantity, product]);
+  
   const handleBuyNow = () => {
-    if (!productId || !product) return;
+    if (!product) return;
     
-    // Redirect to payment page
-    setLocation(`/shop/checkout/${productId}?quantity=${quantity}`);
+    setIsProcessing(true);
+    
+    // Here you would typically make an API call to create an order
+    setTimeout(() => {
+      setIsProcessing(false);
+      
+      // Redirect to checkout page with product details
+      setLocation(`/shop/checkout?product=${product.id}&quantity=${quantity}&total=${total}`);
+    }, 800);
   };
-
-  const calculateTotalPrice = () => {
-    if (!product) return 0;
-    return (product.price * quantity).toFixed(2);
-  };
-
-  const platformColor = {
-    'twitch': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-    'youtube': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    'instagram': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
-    'tiktok': 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200',
-    'default': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-  };
-
-  const getColor = (platform: string) => {
-    return platformColor[platform.toLowerCase() as keyof typeof platformColor] || platformColor.default;
-  };
-
+  
   if (isLoading) {
     return (
-      <>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <NavBar />
         <div className="container mx-auto px-4 py-8">
-          <div className="mb-6">
-            <Button variant="ghost" className="mb-6">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Products
-            </Button>
+          <div className="h-96 flex items-center justify-center">
+            <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full"></div>
           </div>
-          <FormSkeleton />
         </div>
-      </>
+      </div>
     );
   }
-
+  
   if (error || !product) {
     return (
-      <>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <NavBar />
-        <div className="container mx-auto px-4 py-8 text-center">
-          <div className="mb-6">
-            <Link href="/shop">
-              <Button variant="ghost">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Products
-              </Button>
-            </Link>
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-16">
+            <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
+            <p className="text-gray-500 mb-8">The product you're looking for doesn't exist or has been removed.</p>
+            <Button asChild>
+              <Link href="/shop">Back to Shop</Link>
+            </Button>
           </div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Product Not Found</CardTitle>
-              <CardDescription>
-                The requested product was not found or an error occurred.
-              </CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <Link href="/shop">
-                <Button>Return to Shop</Button>
-              </Link>
-            </CardFooter>
-          </Card>
         </div>
-      </>
+      </div>
     );
   }
-
+  
   return (
-    <>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <NavBar />
+      
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <Link href="/shop">
-            <Button variant="ghost">
+        {/* Breadcrumb and back button */}
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" size="sm" asChild className="mr-2">
+            <Link href={`/shop/${product.platform.slug}`}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Products
-            </Button>
-          </Link>
+              Back to {product.platform.name}
+            </Link>
+          </Button>
+          
+          <div className="text-sm text-gray-500 flex items-center">
+            <Link href="/shop" className="hover:underline">Shop</Link>
+            <span className="mx-2">/</span>
+            <Link href={`/shop/${product.platform.slug}`} className="hover:underline">{product.platform.name}</Link>
+            <span className="mx-2">/</span>
+            <Link href={`/shop/${product.platform.slug}/${product.category.slug}`} className="hover:underline">{product.category.name}</Link>
+          </div>
         </div>
-
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Product Main Info */}
+          {/* Left column - Product images and details */}
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className={`${getColor(product.platform.slug)}`}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-2xl mb-2">{product.name}</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{product.platform.name}</Badge>
-                      <Badge variant="outline">{product.category.name}</Badge>
-                      {product.popularityScore > 80 && (
-                        <Badge className="bg-orange-500 hover:bg-orange-600">
-                          <TrendingUp className="h-3 w-3 mr-1" />
-                          Popular
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  {product.discountPercentage > 0 && (
-                    <Badge className="bg-red-500 hover:bg-red-600">
-                      {product.discountPercentage}% Discount
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+              {/* Product Showcase Component */}
+              <ProductShowcase 
+                name={product.name}
+                platform={product.platform.name}
+                category={product.category.name}
+                imageUrl={product.imageUrl}
+                discount={product.discountPercentage}
+              />
+              
+              <div className="p-6">
+                {/* Product badges */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {product.deliverySpeed && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+                      <Lightning className="h-3 w-3 mr-1" />
+                      {product.deliverySpeed}
+                    </Badge>
+                  )}
+                  
+                  {product.popularityScore && product.popularityScore > 80 && (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-700 dark:bg-amber-900 dark:text-amber-200">
+                      <TrendingUp className="h-3 w-3 mr-1" />
+                      Popular
+                    </Badge>
+                  )}
+                  
+                  {product.satisfactionRate && product.satisfactionRate > 90 && (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-200">
+                      <Star className="h-3 w-3 mr-1" />
+                      {product.satisfactionRate}% Satisfied
                     </Badge>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Product Description</h3>
-                    <p className="text-gray-700 dark:text-gray-300">{product.description}</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                      <h4 className="font-medium flex items-center mb-3">
-                        <ListChecks className="h-5 w-5 mr-2 text-blue-500" />
-                        Features
-                      </h4>
-                      <ul className="space-y-2">
-                        <li className="flex items-center text-sm">
-                          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                          <span>Order quantity: {product.minOrder} - {product.maxOrder}</span>
-                        </li>
-                        <li className="flex items-center text-sm">
-                          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                          <span>Instant start</span>
-                        </li>
-                        <li className="flex items-center text-sm">
-                          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                          <span>High-quality and permanent service</span>
-                        </li>
-                        <li className="flex items-center text-sm">
-                          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                          <span>24/7 Support</span>
-                        </li>
-                      </ul>
+                
+                {/* Description */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium mb-2">Description</h3>
+                  <p className="text-gray-600 dark:text-gray-300">{product.description}</p>
+                </div>
+                
+                {/* Features */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium mb-3">Service Features</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
+                      <div>
+                        <h4 className="font-medium">High Quality</h4>
+                        <p className="text-sm text-gray-500">Premium accounts with real behavior</p>
+                      </div>
                     </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                      <h4 className="font-medium flex items-center mb-3">
-                        <Truck className="h-5 w-5 mr-2 text-blue-500" />
-                        Delivery Information
-                      </h4>
-                      <ul className="space-y-2">
-                        <li className="flex items-center text-sm">
-                          <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                          <span>Delivery Time: {product.deliveryTime || "1-2 hours"}</span>
-                        </li>
-                        <li className="flex items-center text-sm">
-                          <Activity className="h-4 w-4 mr-2 text-purple-500" />
-                          <span>Delivery Speed: {product.deliverySpeed || "Normal"}</span>
-                        </li>
-                        <li className="flex items-center text-sm">
-                          <ThumbsUp className="h-4 w-4 mr-2 text-blue-500" />
-                          <span>Customer Satisfaction: {product.satisfactionRate || 98}%</span>
-                        </li>
-                      </ul>
+                    
+                    <div className="flex items-start">
+                      <Clock className="h-5 w-5 text-blue-500 mt-0.5 mr-2" />
+                      <div>
+                        <h4 className="font-medium">Fast Delivery</h4>
+                        <p className="text-sm text-gray-500">Starts within 30 minutes after order</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <ShieldCheck className="h-5 w-5 text-purple-500 mt-0.5 mr-2" />
+                      <div>
+                        <h4 className="font-medium">Safe & Secure</h4>
+                        <p className="text-sm text-gray-500">No password required, complies with platform ToS</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <Award className="h-5 w-5 text-amber-500 mt-0.5 mr-2" />
+                      <div>
+                        <h4 className="font-medium">Guaranteed Results</h4>
+                        <p className="text-sm text-gray-500">Refill guarantee if drops within 30 days</p>
+                      </div>
                     </div>
                   </div>
-
-                  <Tabs defaultValue="details" className="mt-6">
-                    <TabsList>
-                      <TabsTrigger value="details">Details</TabsTrigger>
-                      <TabsTrigger value="usage">Usage</TabsTrigger>
-                      <TabsTrigger value="faq">FAQs</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="details" className="space-y-4 mt-4">
-                      <div>
-                        <h4 className="font-medium mb-2">What does this product provide?</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {product.longDescription || 
-                            `This is a professional service designed to increase your ${product.category.name.toLowerCase()} count on the ${product.platform.name} platform. It works securely and in compliance with platform guidelines.`}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium mb-2">Service Quality</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          We provide high-quality engagement from real accounts. This service is completely safe for your accounts and complies with platform guidelines.
-                        </p>
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="usage" className="space-y-4 mt-4">
-                      <div>
-                        <h4 className="font-medium mb-2">How to Use?</h4>
-                        <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                          <li>Complete your purchase</li>
-                          <li>After order confirmation, you can view order details in your profile</li>
-                          <li>Enter the required connection information (profile URL, username, etc.)</li>
-                          <li>Service activation typically completes within 5-30 minutes</li>
-                          <li>You can track your order status from the "My Orders" page</li>
-                        </ol>
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="faq" className="space-y-4 mt-4">
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium flex items-center">
-                            <HelpCircle className="h-4 w-4 mr-2 text-blue-500" />
-                            Is my account safe?
-                          </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ml-6">
-                            Yes, all our services are provided in accordance with platform guidelines. Your password is never requested and your account security is 100% protected.
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-medium flex items-center">
-                            <HelpCircle className="h-4 w-4 mr-2 text-blue-500" />
-                            How long does it take to deliver an order?
-                          </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ml-6">
-                            Orders typically start within 1-2 hours, though this may take longer for larger orders. The exact delivery time is specified in the product description.
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-medium flex items-center">
-                            <HelpCircle className="h-4 w-4 mr-2 text-blue-500" />
-                            What payment methods are available?
-                          </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ml-6">
-                            We support credit cards, debit cards, and all popular payment methods. Your payments are securely processed through Stripe.
-                          </p>
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Order and Payment */}
-          <div>
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle className="text-xl">Order Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Unit Price:</span>
-                  {product.discountPercentage > 0 ? (
-                    <div className="text-right">
-                      <span className="text-sm line-through text-gray-500">₺{product.originalPrice}</span>
-                      <div className="text-lg font-bold text-green-600">₺{product.price}</div>
-                    </div>
-                  ) : (
-                    <span className="text-lg font-bold">₺{product.price}</span>
-                  )}
-                </div>
-
-                <div className="flex items-center">
-                  <span className="font-medium mr-4">Quantity:</span>
-                  <div className="flex items-center">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
-                    >
-                      -
-                    </Button>
-                    <Input
-                      type="number"
-                      value={quantity}
-                      onChange={handleQuantityChange}
-                      min={1}
-                      max={product.maxOrder}
-                      className="w-16 h-8 mx-2 text-center"
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setQuantity(Math.min(product.maxOrder || 10000, quantity + 1))}
-                      disabled={product.maxOrder && quantity >= product.maxOrder}
-                    >
-                      +
-                    </Button>
-                  </div>
-                </div>
-
-                {product.minOrder && quantity < product.minOrder && (
-                  <div className="flex items-start mt-1 text-sm text-amber-600 dark:text-amber-500">
-                    <AlertCircle className="h-4 w-4 mr-1 mt-0.5" />
-                    <span>Minimum order quantity is {product.minOrder}.</span>
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="flex justify-between items-center font-medium">
-                  <span>Total Price:</span>
-                  <span className="text-xl font-bold">₺{calculateTotalPrice()}</span>
-                </div>
-
-                <div className="space-y-4 mt-4">
-                  <Button 
-                    className="w-full" 
-                    onClick={handleBuyNow}
-                    disabled={product.minOrder && quantity < product.minOrder}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Buy Now
-                  </Button>
+                
+                {/* Tabs for more information */}
+                <Tabs defaultValue="details" className="mt-8">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="details">Details</TabsTrigger>
+                    <TabsTrigger value="how-it-works">How It Works</TabsTrigger>
+                    <TabsTrigger value="faq">FAQ</TabsTrigger>
+                  </TabsList>
                   
-                  <div className="flex items-center justify-center text-sm text-gray-500 mt-2">
-                    <ShieldCheck className="h-4 w-4 mr-2 text-green-500" />
-                    <span>Secure payment processed by Stripe</span>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg mt-4">
-                  <h4 className="font-medium text-sm mb-2">Why Choose Us?</h4>
-                  <ul className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                    <li className="flex items-center">
-                      <CheckCircle className="h-3 w-3 mr-1 flex-shrink-0 text-green-500" />
-                      <span>Quality service with real users</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-3 w-3 mr-1 flex-shrink-0 text-green-500" />
-                      <span>Fast delivery and reliable support</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-3 w-3 mr-1 flex-shrink-0 text-green-500" />
-                      <span>100% satisfaction guarantee</span>
-                    </li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Related Products */}
-        {relatedProducts && relatedProducts.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-6">Related Products</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.slice(0, 4).map((relatedProduct: any) => (
-                <Card key={relatedProduct.id} className="overflow-hidden transition-all duration-200 hover:shadow-lg">
-                  <CardHeader className={`${getColor(relatedProduct.platform.slug)}`}>
-                    <CardTitle className="text-lg">{relatedProduct.name}</CardTitle>
-                    <CardDescription className="text-black dark:text-white">
-                      {relatedProduct.platform.name}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{relatedProduct.description}</p>
-                  </CardContent>
-                  <CardFooter className="flex justify-between border-t pt-4">
-                    <span className="font-bold">₺{relatedProduct.price}</span>
-                    <Link href={`/shop/product/${relatedProduct.id}`}>
-                      <Button variant="outline" size="sm">Details</Button>
-                    </Link>
-                  </CardFooter>
-                </Card>
-              ))}
+                  <TabsContent value="details" className="mt-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium mb-2">Service Details</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              {product.longDescription || `Our ${product.category.name} service for ${product.platform.name} provides high-quality viewers from diverse geographic locations. This service helps increase your visibility and credibility on the platform.`}
+                            </p>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-500">Minimum Order:</span>
+                              <span className="ml-2 font-medium">{product.minOrder}</span>
+                            </div>
+                            
+                            <div>
+                              <span className="text-gray-500">Maximum Order:</span>
+                              <span className="ml-2 font-medium">{product.maxOrder}</span>
+                            </div>
+                            
+                            <div>
+                              <span className="text-gray-500">Average Delivery:</span>
+                              <span className="ml-2 font-medium">{product.deliveryTime || "1-2 days"}</span>
+                            </div>
+                            
+                            <div>
+                              <span className="text-gray-500">Delivery Speed:</span>
+                              <span className="ml-2 font-medium">{product.deliverySpeed || "Standard"}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                  
+                  <TabsContent value="how-it-works" className="mt-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <h4 className="font-medium mb-3">How Our Service Works</h4>
+                        <ol className="list-decimal pl-5 space-y-3">
+                          <li className="text-sm text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">Place Your Order</span> - Select the desired quantity and complete your purchase
+                          </li>
+                          <li className="text-sm text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">Provide Channel URL</span> - Enter your stream or channel URL during checkout
+                          </li>
+                          <li className="text-sm text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">Order Processing</span> - Our system will verify your details and prepare the delivery
+                          </li>
+                          <li className="text-sm text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">Delivery Begins</span> - Service starts within 30 minutes to 12 hours (depending on order size)
+                          </li>
+                          <li className="text-sm text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">Completion & Support</span> - Track progress in your dashboard and contact support if needed
+                          </li>
+                        </ol>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                  
+                  <TabsContent value="faq" className="mt-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium">Is this service safe?</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              Yes, our service is completely safe. We don't require any passwords or sensitive information, and our methods comply with platform guidelines.
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="font-medium">How long does delivery take?</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              Delivery typically begins within 30 minutes to 12 hours after order confirmation. The complete delivery time depends on the order size.
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="font-medium">Do you offer a guarantee?</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              Yes, we offer a 30-day guarantee. If you experience any drop in the delivered service, we'll refill it free of charge.
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="font-medium">Can I split my order between multiple streams?</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              No, each order is for a single stream or channel. For multiple destinations, please place separate orders.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
+            
+            {/* Similar Products Comparison */}
+            <div className="mt-8">
+              <h3 className="text-xl font-semibold mb-4">Compare Similar Services</h3>
+              <ProductComparison 
+                currentProductId={product.id} 
+                platformSlug={product.platform.slug} 
+                categorySlug={product.category.slug} 
+              />
             </div>
           </div>
-        )}
+          
+          {/* Right column - Pricing and purchase */}
+          <div className="lg:col-span-1">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 sticky top-4">
+              <h3 className="text-lg font-medium mb-4">Order Details</h3>
+              
+              {/* Price display with discount */}
+              <div className="mb-6">
+                {product.originalPrice && product.originalPrice > product.price ? (
+                  <div className="flex items-baseline">
+                    <span className="text-2xl font-bold">₺{product.price.toFixed(2)}</span>
+                    <span className="ml-2 text-gray-500 line-through text-sm">₺{product.originalPrice.toFixed(2)}</span>
+                    <Badge className="ml-2 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                      {product.discountPercentage}% OFF
+                    </Badge>
+                  </div>
+                ) : (
+                  <span className="text-2xl font-bold">₺{product.price.toFixed(2)}</span>
+                )}
+                <p className="text-sm text-gray-500 mt-1">Per {product.category.name.toLowerCase()}</p>
+              </div>
+              
+              {/* Pricing Calculator Component */}
+              <PricingCalculator
+                minQuantity={product.minOrder}
+                maxQuantity={product.maxOrder}
+                pricePerUnit={product.price}
+                discountPercentage={product.discountPercentage}
+                onChange={setQuantity}
+                defaultValue={product.minOrder}
+              />
+              
+              <Separator className="my-6" />
+              
+              {/* Delivery estimator */}
+              <div className="mb-6">
+                <h4 className="font-medium mb-3">Estimated Delivery</h4>
+                <DeliveryEstimator
+                  baseDeliveryTime={product.deliveryTime || "24-48 hours"}
+                  quantity={quantity}
+                  speedFactor={product.deliverySpeed === "Ultra Fast" ? 0.5 : 1}
+                />
+              </div>
+              
+              {/* Social proof */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
+                  <div className="flex items-center">
+                    <Users className="h-4 w-4 mr-1 text-blue-500" />
+                    <span>{Math.floor(Math.random() * 20) + 10} people viewing</span>
+                  </div>
+                  <div>
+                    <span className="text-green-500 font-medium">In Stock</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center text-sm text-gray-500">
+                  <Star className="h-4 w-4 mr-1 text-amber-500" />
+                  <span>{product.satisfactionRate || 98}% satisfaction rate</span>
+                </div>
+              </div>
+              
+              {/* Buy button */}
+              <Button
+                onClick={handleBuyNow}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                size="lg"
+                disabled={isProcessing}
+              >
+                {isProcessing ? 'Processing...' : 'Buy Now'}
+              </Button>
+              
+              <p className="text-xs text-center text-gray-500 mt-4">
+                Secure payment via Stripe. 30-day guarantee included.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-    </>
+      
+      {/* Sticky Buy Button */}
+      <StickyBuyButton
+        productId={product.id}
+        price={product.price}
+        quantity={quantity}
+        total={total}
+        onBuyNow={handleBuyNow}
+        disabled={isProcessing}
+      />
+    </div>
   );
 };
 
