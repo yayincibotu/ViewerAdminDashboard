@@ -21,18 +21,21 @@ router.get('/', async (req, res) => {
         id: platforms?.id,
         name: platforms?.name,
         slug: platforms?.slug,
+        icon_class: platforms?.icon_class,
+        bg_color: platforms?.bg_color
       },
       category: {
         id: null,
         name: digital_products.category,
         slug: digital_products.category?.toLowerCase().replace(/\s+/g, '-'),
       },
-      minOrder: digital_products.minQuantity,
-      maxOrder: digital_products.maxQuantity,
+      minOrder: digital_products.min_quantity,
+      maxOrder: digital_products.max_quantity,
       provider_name: digital_products.provider_name,
       service_type: digital_products.service_type,
       external_service_id: digital_products.external_service_id,
       external_product_id: digital_products.external_product_id,
+      is_active: digital_products.is_active,
     }));
     
     res.json(formattedProducts);
