@@ -327,7 +327,7 @@ const ProductDetail = () => {
               </div>
 
               <div className="flex items-center">
-                <span className="font-medium mr-4">Miktar:</span>
+                <span className="font-medium mr-4">Quantity:</span>
                 <div className="flex items-center">
                   <Button
                     variant="outline"
