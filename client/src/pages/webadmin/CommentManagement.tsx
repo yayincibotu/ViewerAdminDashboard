@@ -305,7 +305,7 @@ export default function CommentManagement() {
                       <span className="truncate">Puan</span>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tüm Puanlar</SelectItem>
+                      <SelectItem value="all">Tüm Puanlar</SelectItem>
                       <SelectItem value="5">5 Yıldız</SelectItem>
                       <SelectItem value="4">4 Yıldız</SelectItem>
                       <SelectItem value="3">3 Yıldız</SelectItem>
@@ -320,7 +320,7 @@ export default function CommentManagement() {
                       <span className="truncate">Kaynak</span>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tüm Kaynaklar</SelectItem>
+                      <SelectItem value="all">Tüm Kaynaklar</SelectItem>
                       <SelectItem value="user">Kullanıcı</SelectItem>
                       <SelectItem value="auto">Otomatik</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
@@ -333,7 +333,7 @@ export default function CommentManagement() {
                       <span className="truncate">Durum</span>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tüm Durumlar</SelectItem>
+                      <SelectItem value="all">Tüm Durumlar</SelectItem>
                       <SelectItem value="published">Yayında</SelectItem>
                       <SelectItem value="pending">Onay Bekliyor</SelectItem>
                       <SelectItem value="rejected">Reddedildi</SelectItem>
