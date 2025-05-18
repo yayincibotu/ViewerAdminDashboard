@@ -60,7 +60,7 @@ const ProductCard = ({ product }: any) => {
     <Card className="overflow-hidden transition-all duration-200 hover:shadow-lg relative h-full flex flex-col">
       {product.discountPercentage > 0 && (
         <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
-          %{product.discountPercentage} İndirim
+          {product.discountPercentage}% Off
         </Badge>
       )}
       <CardHeader className={`${getColor(product.platform.slug)}`}>
@@ -76,15 +76,15 @@ const ProductCard = ({ product }: any) => {
         
         <div className="mt-4 space-y-2">
           <div className="flex justify-between">
-            <span className="text-sm font-medium">Teslim Süresi:</span>
-            <span className="text-sm">{product.deliveryTime || "1-2 saat"}</span>
+            <span className="text-sm font-medium">Delivery Time:</span>
+            <span className="text-sm">{product.deliveryTime || "1-2 hours"}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm font-medium">Minimum Sipariş:</span>
+            <span className="text-sm font-medium">Minimum Order:</span>
             <span className="text-sm">{product.minOrder || 100}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm font-medium">Maksimum Sipariş:</span>
+            <span className="text-sm font-medium">Maximum Order:</span>
             <span className="text-sm">{product.maxOrder || 10000}</span>
           </div>
         </div>
@@ -92,7 +92,7 @@ const ProductCard = ({ product }: any) => {
         {product.popularityScore && product.popularityScore > 80 && (
           <div className="mt-4 flex items-center">
             <TrendingUp className="h-4 w-4 text-orange-500 mr-1" />
-            <span className="text-xs text-orange-500 font-medium">En çok satılan ürün</span>
+            <span className="text-xs text-orange-500 font-medium">Best Selling Product</span>
           </div>
         )}
       </CardContent>
@@ -109,12 +109,12 @@ const ProductCard = ({ product }: any) => {
           
           <Button size="sm" variant="outline">
             <ShoppingCart className="h-4 w-4 mr-2" />
-            Sepete Ekle
+            Add to Cart
           </Button>
         </div>
         <Link href={`/shop/product/${product.id}`}>
           <Button variant="link" className="w-full p-0 h-auto text-sm mt-1">
-            Ürün Detayları <ArrowRight className="h-3 w-3 ml-1" />
+            Product Details <ArrowRight className="h-3 w-3 ml-1" />
           </Button>
         </Link>
       </CardFooter>

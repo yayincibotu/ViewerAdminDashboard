@@ -52,8 +52,8 @@ const ProductDetail = () => {
   React.useEffect(() => {
     if (error) {
       toast({
-        title: 'Ürün Yüklenemedi',
-        description: 'Ürün detayları yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.',
+        title: 'Product Could Not Be Loaded',
+        description: 'There was a problem loading the product details. Please try again.',
         variant: 'destructive',
       });
     }
@@ -116,9 +116,9 @@ const ProductDetail = () => {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Ürün Bulunamadı</CardTitle>
+            <CardTitle className="text-xl">Product Not Found</CardTitle>
             <CardDescription>
-              İstediğiniz ürün bulunamadı veya bir hata oluştu.
+              The requested product was not found or an error occurred.
             </CardDescription>
           </CardHeader>
           <CardFooter>
