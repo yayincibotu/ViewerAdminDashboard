@@ -5080,6 +5080,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Product Review Routes
+  app.get("/api/product-reviews", getProductReviews);
+  app.post("/api/product-reviews", createProductReview);
+  app.post("/api/review-votes", voteOnReview);
+  app.post("/api/admin/generate-reviews", generateProductReviews);
+  
   app.get("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
