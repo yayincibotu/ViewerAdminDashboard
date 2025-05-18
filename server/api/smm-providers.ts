@@ -61,9 +61,9 @@ class SmmApiClient {
    * Make a request to the SMM API - Exact PHP cURL implementation
    */
   private async connect(params: Record<string, any>): Promise<any> {
-    // Use test data if requested
+    // Mock response support for testing
     if (this.useMockData) {
-      console.log("[SMM API] Using test data for connection");
+      console.log("[SMM API] Using mock data for connection");
       
       // Return appropriate response based on action
       switch (params.action) {
@@ -105,118 +105,103 @@ class SmmApiClient {
     }
 
     try {
-      // Format request exactly like PHP code
-      const postFields: string[] = [];
+      // HepsiSosyal expects these exact parameters
+      console.log("[SMM API] Connecting to HepsiSosyal API with:", params.action);
       
-      // Create raw post fields array just like PHP
+      // Create POST fields exactly like PHP code
+      const postData = new URLSearchParams();
+      
+      // Add all parameters to the post fields
       Object.keys(params).forEach(key => {
-        postFields.push(`${key}=${encodeURIComponent(params[key].toString())}`);
+        postData.append(key, params[key].toString());
       });
       
-      // Join with '&' exactly like PHP join('&', $_post)
-      const requestBody = postFields.join('&');
+      console.log("[SMM API] Full request URL:", this.apiUrl);
+      console.log("[SMM API] Request body:", postData.toString());
       
-      console.log("[SMM API] Sending request to:", this.apiUrl);
-      
-      // PHP curl_init($this->api_url) + curl_exec implementation
+      // Use exact PHP curl options for compatibility
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'User-Agent': 'Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)'
         },
-        body: requestBody,
-        redirect: 'follow'  // CURLOPT_FOLLOWLOCATION
+        body: postData.toString(),
+        redirect: 'follow'
       });
       
-      // Get raw text response first (just like PHP curl_exec returns)
-      const text = await response.text();
+      const responseText = await response.text();
       
+      // Log full API response for debugging
       console.log("[SMM API] Response status:", response.status);
-      console.log("[SMM API] Raw response preview:", text.substring(0, 100) + (text.length > 100 ? '...' : ''));
+      console.log("[SMM API] Response headers:", JSON.stringify(Object.fromEntries([...response.headers.entries()])));
+      console.log("[SMM API] Raw response:", responseText);
       
-      // Check if the response is empty (PHP returns false on empty result)
-      if (!text || text.trim() === '') {
-        console.error("[SMM API] Empty response from server");
-        throw new Error("Empty response from API server");
+      // Check if response is valid
+      if (!responseText) {
+        throw new Error("Empty response from API");
       }
       
-      // Check if it's HTML response (some APIs return HTML on error)
-      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-        console.error("[SMM API] Received HTML response instead of JSON");
-        throw new Error("Received HTML response from API");
+      // Check if it's HTML (error page)
+      if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
+        throw new Error("API returned HTML instead of JSON");
       }
       
-      // Try parsing the result as JSON (like PHP json_decode)
+      // Parse the JSON response
       try {
-        // First attempt - parse the whole response
-        const jsonResult = JSON.parse(text);
+        const jsonResult = JSON.parse(responseText);
+        
+        // Check for API error
+        if (jsonResult.error) {
+          throw new Error(jsonResult.error);
+        }
+        
         return jsonResult;
       } catch (parseError) {
         console.error("[SMM API] JSON parse error:", parseError);
-        
-        // Second attempt - try to extract JSON from malformed response
-        // (some APIs return JSON with extra text around it)
-        const jsonMatch = text.match(/\{.*\}/) || text.match(/\[.*\]/);
-        if (jsonMatch) {
-          try {
-            const extractedJson = JSON.parse(jsonMatch[0]);
-            console.log("[SMM API] Successfully extracted JSON from response");
-            return extractedJson;
-          } catch (extractError) {
-            console.error("[SMM API] Failed to extract JSON:", extractError);
-          }
-        }
-        
-        // If API endpoint contains "test" in URL or API key, return test data
-        if (this.apiUrl.includes('test') || this.apiKey.includes('test')) {
-          console.log("[SMM API] Using test data after parse error");
-          
-          switch (params.action) {
-            case 'services':
-              return MOCK_SMM_SERVICES;
-            case 'balance':
-              return { balance: "1000.00", currency: "TRY" };
-            case 'add':
-              return { order: Math.floor(Math.random() * 10000000) };
-            default:
-              return { success: true };
-          }
-        }
-        
-        throw new Error(`Failed to parse API response: ${parseError.message}`);
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
       }
     } catch (error: any) {
-      console.error("[SMM API] Connection error:", error);
-      
-      // If test mode is enabled, provide test data
-      if (this.apiUrl.includes('test') || this.apiKey.includes('test')) {
-        console.log("[SMM API] Using test data after connection error");
-        
-        switch (params.action) {
-          case 'services':
-            return MOCK_SMM_SERVICES;
-          case 'balance':
-            return { balance: "1000.00", currency: "TRY" };
-          case 'add':
-            return { order: Math.floor(Math.random() * 10000000) };
-          default:
-            return { success: true };
-        }
-      }
-      
+      console.error("[SMM API] Error making API request:", error.message);
       throw error;
     }
   }
 
   /**
    * Get list of services from the SMM provider
+   * Exact implementation of the PHP services() method
    */
   async getServices(): Promise<any> {
-    return this.connect({
-      key: this.apiKey,
-      action: 'services'
-    });
+    console.log("[SMM API] Getting services with API key:", this.apiKey.substring(0, 5) + '...');
+    
+    try {
+      // Direct implementation of PHP's:
+      // return json_decode(
+      //   $this->connect([
+      //     'key' => $this->api_key,
+      //     'action' => 'services',
+      //   ])
+      // );
+      const response = await this.connect({
+        key: this.apiKey,
+        action: 'services'
+      });
+      
+      console.log("[SMM API] Services response type:", typeof response);
+      
+      // Successfully retrieved services
+      return response;
+    } catch (error) {
+      console.error("[SMM API] Error getting services:", error);
+      
+      // Always provide test data when using test credentials
+      if (this.useMockData || this.apiUrl.includes('test') || this.apiKey.includes('test')) {
+        console.log("[SMM API] Falling back to test data for services");
+        return MOCK_SMM_SERVICES;
+      }
+      
+      throw error;
+    }
   }
 
   /**
