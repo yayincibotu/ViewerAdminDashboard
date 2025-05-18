@@ -62,7 +62,7 @@ router.post("/test", async (req: Request, res: Response) => {
       error: error.message
     });
   }
-}
+});
 
 /**
  * Generate SEO content for a product
@@ -119,7 +119,7 @@ router.post("/generate", async (req: Request, res: Response) => {
       error: error.message
     });
   }
-}
+});
 
 /**
  * Save SEO content to a product

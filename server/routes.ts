@@ -285,6 +285,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/platforms', platformsRouter);
   app.use('/api/product-categories', productCategoriesRouter);
   
+  // Perplexity SEO API routes - Admin only
+  app.use('/api/perplexity-seo', requireAdmin, perplexitySeoRouter);
+  
   // SMM PROVIDERS API
   // Get all SMM providers
   app.get("/api/admin/smm-providers", requireAdmin, async (req, res) => {
