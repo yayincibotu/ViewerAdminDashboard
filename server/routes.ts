@@ -5084,17 +5084,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product Review Routes
   app.get("/api/product-reviews", async (req, res) => {
     try {
-      const { getProductReviews } = await import("./api/simple-reviews");
-      return getProductReviews(req, res);
+      // Direct database approach for product reviews
+      const productId = Number(req.query.productId);
+      
+      if (isNaN(productId)) {
+        return res.status(400).json({ error: "Valid productId is required" });
+      }
+      
+      // Use a direct SQL query to bypass ORM issues
+      const { rows } = await pool.query(
+        `SELECT * FROM product_reviews 
+         WHERE product_id = $1 AND status = 'published' 
+         ORDER BY created_at DESC`,
+        [productId]
+      );
+      
+      console.log(`Successfully retrieved ${rows.length} reviews for product ${productId}`);
+      return res.json(rows);
     } catch (error) {
-      console.error("Error in product reviews route:", error);
-      return res.status(500).json({ error: "Internal server error" });
+      console.error("Error fetching product reviews:", error);
+      return res.status(500).json({ error: "Failed to fetch reviews" });
     }
   });
   
   app.post("/api/product-reviews", async (req, res) => {
     try {
-      const { createProductReview } = await import("./api/reviews");
+      const { createProductReview } = await import("./api/simple-reviews");
       return createProductReview(req, res);
     } catch (error) {
       console.error("Error in create review route:", error);
@@ -5104,7 +5119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/review-votes", async (req, res) => {
     try {
-      const { voteOnReview } = await import("./api/reviews");
+      const { voteOnReview } = await import("./api/simple-reviews");
       return voteOnReview(req, res);
     } catch (error) {
       console.error("Error in review vote route:", error);
@@ -5114,7 +5129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/admin/generate-reviews", async (req, res) => {
     try {
-      const { generateProductReviews } = await import("./api/reviews");
+      const { generateProductReviews } = await import("./api/simple-reviews");
       return generateProductReviews(req, res);
     } catch (error) {
       console.error("Error in generate reviews route:", error);

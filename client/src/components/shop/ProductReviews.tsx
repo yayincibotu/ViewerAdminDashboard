@@ -460,10 +460,10 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
                         </div>
                         <div className="flex flex-col items-end">
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(review.createdAt).toLocaleDateString()}
+                            {new Date(review.created_at).toLocaleDateString()}
                           </div>
                           <div className="flex items-center mt-1">
-                            {review.verifiedPurchase && (
+                            {review.verified_purchase && (
                               <Badge variant="outline" className="flex items-center gap-1">
                                 <CheckCircle2 className="w-3 h-3" />
                                 <span className="text-xs">Verified Purchase</span>
@@ -510,9 +510,9 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
                         <span className="text-sm font-medium">
                           {review.user?.username || 'Anonymous'}
                         </span>
-                        {review.countryCode && (
+                        {review.country_code && (
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {review.countryCode}
+                            {review.country_code}
                           </span>
                         )}
                       </div>
@@ -525,7 +525,7 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
                           onClick={() => handleVote(review.id, true)}
                         >
                           <ThumbsUp className="w-4 h-4" />
-                          <span>{review.helpfulCount || 0}</span>
+                          <span>{review.helpful_count || 0}</span>
                         </Button>
                         
                         <Button
