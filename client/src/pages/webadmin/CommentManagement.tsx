@@ -124,7 +124,7 @@ export default function CommentManagement() {
     mutationFn: async (reviewId: number) => {
       const response = await apiRequest('DELETE', `/api/admin/reviews/${reviewId}`);
       if (!response.ok) {
-        throw new Error('Yorum silinirken bir hata oluştu');
+        throw new Error('An error occurred while deleting the review');
       }
       return response.json();
     },
@@ -133,14 +133,14 @@ export default function CommentManagement() {
       setIsDeleteDialogOpen(false);
       setDeletingReviewId(null);
       toast({
-        title: "Yorum silindi",
-        description: "Yorum başarıyla silindi.",
+        title: "Review Deleted",
+        description: "Review has been deleted successfully.",
       });
     },
     onError: (error) => {
       toast({
-        title: "Hata",
-        description: `Yorum silinirken bir hata oluştu: ${error.message}`,
+        title: "Error",
+        description: `An error occurred while deleting the review: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -151,23 +151,23 @@ export default function CommentManagement() {
     mutationFn: async ({ reviewId, status }: { reviewId: number, status: string }) => {
       const response = await apiRequest('PATCH', `/api/admin/reviews/${reviewId}`, { status });
       if (!response.ok) {
-        throw new Error(`${status === 'published' ? 'Onaylama' : 'Reddetme'} işlemi sırasında bir hata oluştu`);
+        throw new Error(`An error occurred during the ${status === 'published' ? 'approval' : 'rejection'} process`);
       }
       return response.json();
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/reviews'] });
       toast({
-        title: variables.status === 'published' ? "Yorum onaylandı" : "Yorum reddedildi",
+        title: variables.status === 'published' ? "Review Approved" : "Review Rejected",
         description: variables.status === 'published' 
-          ? "Yorum başarıyla onaylandı ve yayında." 
-          : "Yorum reddedildi.",
+          ? "Review has been approved and is now published." 
+          : "Review has been rejected.",
       });
     },
     onError: (error, variables) => {
       toast({
-        title: "Hata",
-        description: `Yorum ${variables.status === 'published' ? 'onaylanırken' : 'reddedilirken'} bir hata oluştu: ${error.message}`,
+        title: "Error",
+        description: `An error occurred while ${variables.status === 'published' ? 'approving' : 'rejecting'} the review: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -412,7 +412,7 @@ export default function CommentManagement() {
                                     {getStatusBadge(review.status)}
                                   </TableCell>
                                   <TableCell>
-                                    {new Date(review.createdAt || review.created_at).toLocaleDateString('tr-TR')}
+                                    {new Date(review.createdAt || review.created_at).toLocaleDateString('en-US')}
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center gap-1.5">
