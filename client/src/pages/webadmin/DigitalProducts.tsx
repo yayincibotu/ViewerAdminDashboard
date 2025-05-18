@@ -10,7 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Save } from 'lucide-react';
+import SeoContentGeneratorDialog from '@/components/admin/SeoContentGeneratorDialog';
 import {
   Table,
   TableBody,
@@ -95,9 +96,11 @@ type DigitalProductFormValues = z.infer<typeof digitalProductSchema>;
 
 const DigitalProducts: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSeoGeneratorOpen, setIsSeoGeneratorOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [seoProductData, setSeoProductData] = useState<any>(null);
   const perPage = 10;
 
   const { toast } = useToast();
@@ -692,31 +695,23 @@ ${platformName} streamer growth guide`;
                                 onClick={() => {
                                   // Create data for SEO content generation
                                   const product = form.getValues();
-                                  const platformName = platforms.find(p => p.id === parseInt(product.platformId))?.name || 'Unknown Platform';
+                                  const platformName = platforms.find(p => p.id === Number(product.platformId))?.name || 'Unknown Platform';
                                   const categoryName = product.category || 'Unknown Category';
                                   
-                                  // Open in a new window to avoid dialog issues
-                                  const newWindow = window.open('/webadmin/seo-generator', '_blank');
+                                  // Set data for SEO content generation in the modal
+                                  setSeoProductData({
+                                    productId: selectedProduct.id,
+                                    productName: product.name,
+                                    platform: platformName,
+                                    category: categoryName,
+                                    price: parseFloat(product.price) || 0,
+                                    minOrder: Number(product.minQuantity) || 1,
+                                    maxOrder: Number(product.maxQuantity) || 100,
+                                    serviceType: product.serviceType || 'viewer service'
+                                  });
                                   
-                                  if (newWindow) {
-                                    // Pass data via sessionStorage
-                                    sessionStorage.setItem('seoProductData', JSON.stringify({
-                                      productId: selectedProduct.id,
-                                      productName: product.name,
-                                      platform: platformName,
-                                      category: categoryName,
-                                      price: parseFloat(product.price) || 0,
-                                      minOrder: parseInt(product.minQuantity) || 1,
-                                      maxOrder: parseInt(product.maxQuantity) || 100,
-                                      serviceType: product.serviceType || 'viewer service'
-                                    }));
-                                  } else {
-                                    toast({
-                                      title: "Error",
-                                      description: "Pop-up blocked. Please enable pop-ups for this site to use the SEO generator.",
-                                      variant: "destructive"
-                                    });
-                                  }
+                                  // Open the SEO generator dialog
+                                  setIsSeoGeneratorOpen(true);
                                 }}
                               >
                                 <Sparkles className="w-4 h-4" />
