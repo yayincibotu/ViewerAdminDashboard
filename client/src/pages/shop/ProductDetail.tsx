@@ -340,12 +340,95 @@ const ProductDetail = () => {
     );
   }
   
+  // SEO için meta bilgileri
+  useEffect(() => {
+    if (product) {
+      // Sayfa başlığını güncelle - Her sayfaya özel
+      document.title = `${product.name} - ${product.platform.name} ${product.category.name} | ViewerApps`;
+      
+      // Meta açıklamasını güncelle
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute('content', 
+          `Buy ${product.name} - ${product.platform.name} ${product.category.name}. ` +
+          `${product.description.substring(0, 120)}... Starting from ${product.price.toFixed(2)}₺. ` +
+          `Fast delivery in ${product.deliveryTime || '24-48 hours'}.`
+        );
+      } else {
+        const meta = document.createElement('meta');
+        meta.name = 'description';
+        meta.content = `Buy ${product.name} - ${product.platform.name} ${product.category.name}. ` +
+          `${product.description.substring(0, 120)}... Starting from ${product.price.toFixed(2)}₺.`;
+        document.head.appendChild(meta);
+      }
+      
+      // Açık grafik meta etiketleri - sosyal paylaşım için
+      const ogTags = [
+        { property: 'og:title', content: `${product.name} - ${product.platform.name} Services` },
+        { property: 'og:description', content: product.description.substring(0, 200) },
+        { property: 'og:type', content: 'product' },
+        { property: 'og:url', content: window.location.href },
+        { property: 'og:price:amount', content: product.price.toString() },
+        { property: 'og:price:currency', content: 'TRY' },
+        { property: 'og:availability', content: 'in stock' }
+      ];
+      
+      ogTags.forEach(tag => {
+        const existingTag = document.querySelector(`meta[property="${tag.property}"]`);
+        if (existingTag) {
+          existingTag.setAttribute('content', tag.content);
+        } else {
+          const meta = document.createElement('meta');
+          meta.setAttribute('property', tag.property);
+          meta.setAttribute('content', tag.content);
+          document.head.appendChild(meta);
+        }
+      });
+      
+      // Ürün şemalarını ekle - Google için yapılandırılmış veri
+      const jsonLd = {
+        '@context': 'https://schema.org/',
+        '@type': 'Product',
+        name: product.name,
+        description: product.description,
+        sku: `VAPP-${product.id}`,
+        brand: {
+          '@type': 'Brand',
+          name: 'ViewerApps'
+        },
+        offers: {
+          '@type': 'Offer',
+          url: window.location.href,
+          priceCurrency: 'TRY',
+          price: product.price,
+          priceValidUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+          availability: 'https://schema.org/InStock',
+          seller: {
+            '@type': 'Organization',
+            name: 'ViewerApps'
+          }
+        }
+      };
+      
+      // Mevcut JSON-LD etiketini güncelle veya yeni oluştur
+      let scriptElement = document.querySelector('script[type="application/ld+json"]');
+      if (scriptElement) {
+        scriptElement.textContent = JSON.stringify(jsonLd);
+      } else {
+        scriptElement = document.createElement('script');
+        scriptElement.type = 'application/ld+json';
+        scriptElement.textContent = JSON.stringify(jsonLd);
+        document.head.appendChild(scriptElement);
+      }
+    }
+  }, [product]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <NavBar />
       
       <div className="container mx-auto px-4 py-8">
-        {/* Breadcrumb and back button */}
+        {/* Breadcrumb and back button - SEO için yapılandırılmış */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
           <Button variant="ghost" size="sm" asChild className="mb-2 sm:mb-0">
             <Link href={`/shop`}>
@@ -354,13 +437,29 @@ const ProductDetail = () => {
             </Link>
           </Button>
           
-          <div className="text-sm text-gray-500 flex flex-wrap items-center">
-            <Link href="/shop" className="hover:underline">Shop</Link>
-            <span className="mx-2">/</span>
-            <Link href={`/shop/${product.platform.slug}`} className="hover:underline">{product.platform.name}</Link>
-            <span className="mx-2">/</span>
-            <span className="text-gray-700 dark:text-gray-300 truncate max-w-[200px]">{product.name}</span>
-          </div>
+          {/* Semantik ve SEO için yapılandırılmış breadcrumb */}
+          <nav aria-label="Breadcrumb" className="text-sm text-gray-500">
+            <ol itemScope itemType="https://schema.org/BreadcrumbList" className="flex flex-wrap items-center">
+              <li itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem" className="flex items-center">
+                <Link href="/shop" className="hover:underline" itemProp="item">
+                  <span itemProp="name">Shop</span>
+                </Link>
+                <meta itemProp="position" content="1" />
+                <span className="mx-2">/</span>
+              </li>
+              <li itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem" className="flex items-center">
+                <Link href={`/shop/${product.platform.slug}`} className="hover:underline" itemProp="item">
+                  <span itemProp="name">{product.platform.name}</span>
+                </Link>
+                <meta itemProp="position" content="2" />
+                <span className="mx-2">/</span>
+              </li>
+              <li itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem" className="truncate max-w-[200px]">
+                <span className="text-gray-700 dark:text-gray-300" itemProp="name">{product.name}</span>
+                <meta itemProp="position" content="3" />
+              </li>
+            </ol>
+          </nav>
         </div>
         
         {/* Main content */}
