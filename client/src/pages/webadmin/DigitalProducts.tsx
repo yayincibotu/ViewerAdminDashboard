@@ -673,10 +673,10 @@ ${platformName} streamer growth guide`;
                     
                     <TabsContent value="seo" className="space-y-4">
                       <div className="rounded-lg border p-4 mb-4">
-                        <h3 className="text-lg font-medium mb-2">Semantik İçerik Optimizasyonu</h3>
+                        <h3 className="text-lg font-medium mb-2">Semantic Content Optimization</h3>
                         <p className="text-sm text-gray-500 mb-4">
-                          Google, kullanıcı niyetini anlamak için semantik ilişkileri kullanır. Aşağıdaki alanlar,
-                          arama motoru sonuçlarında daha iyi sıralanmanıza yardımcı olacaktır.
+                          Google uses semantic relationships to understand user intent. The fields below
+                          will help you rank better in search engine results.
                         </p>
                       </div>
                       
@@ -686,12 +686,12 @@ ${platformName} streamer growth guide`;
                           name="seoTitle"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>SEO Başlığı</FormLabel>
+                              <FormLabel>SEO Title</FormLabel>
                               <FormControl>
-                                <Input placeholder="En İyi Twitch İzleyici Botları | Güvenli ve Hızlı Teslimat" {...field} />
+                                <Input placeholder="Best Twitch Viewer Bots | Safe and Fast Delivery" {...field} />
                               </FormControl>
                               <FormDescription>
-                                Arama sonuçlarında görünecek başlık (50-60 karakter ideal)
+                                Title displayed in search results (50-60 characters ideal)
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -703,15 +703,15 @@ ${platformName} streamer growth guide`;
                           name="seoDescription"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Meta Açıklama</FormLabel>
+                              <FormLabel>Meta Description</FormLabel>
                               <FormControl>
                                 <Textarea 
-                                  placeholder="Twitch kanalınız için güvenilir ve organik izleyici botları. 24 saat içinde teslimat, %100 güvenli. 30 gün garanti ile Twitch izleyici sayınızı arttırın." 
+                                  placeholder="Reliable and organic viewer bots for your Twitch channel. Delivery within 24 hours, 100% safe. Increase your Twitch viewers with 30-day guarantee." 
                                   {...field} 
                                 />
                               </FormControl>
                               <FormDescription>
-                                Arama sonuçlarında görünecek açıklama (150-160 karakter ideal)
+                                Description displayed in search results (150-160 characters ideal)
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -723,15 +723,15 @@ ${platformName} streamer growth guide`;
                           name="seoKeywords"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Meta Anahtar Kelimeler</FormLabel>
+                              <FormLabel>Meta Keywords</FormLabel>
                               <FormControl>
                                 <Input 
-                                  placeholder="twitch izleyici, twitch bot, izleyici arttırma, twitch kanal büyütme" 
+                                  placeholder="twitch viewer, twitch bot, viewer increase, grow twitch channel" 
                                   {...field} 
                                 />
                               </FormControl>
                               <FormDescription>
-                                Virgülle ayrılmış anahtar kelimeler
+                                Comma-separated keywords
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -743,19 +743,19 @@ ${platformName} streamer growth guide`;
                           name="semanticHeadings"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Başlık Hiyerarşisi</FormLabel>
+                              <FormLabel>Heading Hierarchy</FormLabel>
                               <FormControl>
                                 <Textarea 
-                                  placeholder="H1: Twitch İzleyici Hizmeti ve Özellikleri 
-H2: Neden Twitch Kanalınıza İzleyici Eklemek Önemlidir?
-H2: İzleyici Hizmetimizin Avantajları
-H3: Güvenli ve Kesintisiz Teslimat
-H3: Organik Görünümlü İzleyiciler" 
+                                  placeholder="H1: Twitch Viewer Service and Features 
+H2: Why Adding Viewers to Your Twitch Channel is Important
+H2: Advantages of Our Viewer Service
+H3: Safe and Uninterrupted Delivery
+H3: Organic-Looking Viewers" 
                                   {...field} 
                                 />
                               </FormControl>
                               <FormDescription>
-                                Ürün içeriğinde kullanılacak başlık yapısı (H1, H2, H3)
+                                Heading structure to be used in product content (H1, H2, H3)
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -767,15 +767,15 @@ H3: Organik Görünümlü İzleyiciler"
                           name="lsiKeywords"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>LSI Anahtar Kelimeler</FormLabel>
+                              <FormLabel>LSI Keywords</FormLabel>
                               <FormControl>
                                 <Textarea 
-                                  placeholder="Twitch izleyici sayısı arttırma, Twitch canlı yayın izleyici, yayın izlenme oranı, Twitch kanal popülaritesi, Twitch keşfet, Twitch yayıncı büyütme teknikleri" 
+                                  placeholder="Twitch viewer count increase, Twitch live stream viewers, broadcast viewing rate, Twitch channel popularity, Twitch discover, Twitch streamer growth techniques" 
                                   {...field} 
                                 />
                               </FormControl>
                               <FormDescription>
-                                Latent Semantic Indexing (Gizli Anlam Dizinleme) anahtar kelimeleri
+                                Latent Semantic Indexing keywords for improved search ranking
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
