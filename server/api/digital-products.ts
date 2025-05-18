@@ -10,10 +10,9 @@ router.get('/', async (req, res) => {
   try {
     const products = await db.select()
       .from(digitalProducts)
-      .leftJoin(platforms, eq(digitalProducts.platformId, platforms.id))
-      .leftJoin(productCategories, eq(digitalProducts.categoryId, productCategories.id));
+      .leftJoin(platforms, eq(digitalProducts.platform_id, platforms.id));
     
-    const formattedProducts = products.map(({ digital_products, platforms, product_categories }) => ({
+    const formattedProducts = products.map(({ digital_products, platforms }) => ({
       id: digital_products.id,
       name: digital_products.name,
       description: digital_products.description,
@@ -24,15 +23,16 @@ router.get('/', async (req, res) => {
         slug: platforms?.slug,
       },
       category: {
-        id: product_categories?.id,
-        name: product_categories?.name,
-        slug: product_categories?.slug,
+        id: null,
+        name: digital_products.category,
+        slug: digital_products.category?.toLowerCase().replace(/\s+/g, '-'),
       },
       minOrder: digital_products.minQuantity,
       maxOrder: digital_products.maxQuantity,
-      discountPercentage: digital_products.discountPercentage,
-      popularityScore: digital_products.popularityScore,
-      imageUrl: digital_products.imageUrl,
+      provider_name: digital_products.provider_name,
+      service_type: digital_products.service_type,
+      external_service_id: digital_products.external_service_id,
+      external_product_id: digital_products.external_product_id,
     }));
     
     res.json(formattedProducts);
@@ -54,8 +54,7 @@ router.get('/:id', async (req, res) => {
     
     const productData = await db.select()
       .from(digitalProducts)
-      .leftJoin(platforms, eq(digitalProducts.platformId, platforms.id))
-      .leftJoin(productCategories, eq(digitalProducts.categoryId, productCategories.id))
+      .leftJoin(platforms, eq(digitalProducts.platform_id, platforms.id))
       .where(eq(digitalProducts.id, productId))
       .limit(1);
     
