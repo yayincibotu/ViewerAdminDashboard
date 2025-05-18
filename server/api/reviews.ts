@@ -18,13 +18,13 @@ export async function getProductReviews(req: Request, res: Response) {
       return res.status(400).json({ error: "Valid productId is required" });
     }
     
-    // Get reviews without relation to users for now
-    const reviews = await db.select().from(productReviews)
-      .where(and(
-        eq(productReviews.productId, productId),
-        eq(productReviews.status, "published")
-      ))
-      .orderBy(desc(productReviews.createdAt));
+    // Use a direct SQL query to fetch reviews from the database with a regular query
+    const result = await db.$queryRaw`
+      SELECT * FROM product_reviews 
+      WHERE product_id = ${productId} AND status = 'published' 
+      ORDER BY created_at DESC
+    `;
+    const reviews = result as any[];
     
     return res.json(reviews);
   } catch (error) {

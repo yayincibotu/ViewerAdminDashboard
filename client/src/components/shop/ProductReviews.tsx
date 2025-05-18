@@ -23,26 +23,26 @@ interface ProductReviewsProps {
 // Types for our interface
 interface Review {
   id: number;
-  productId: number;
-  userId: number | null;
+  product_id: number;
+  user_id: number | null;
   rating: number;
   title: string;
   content: string;
   pros: string[];
   cons: string[];
-  verifiedPurchase: boolean;
-  helpfulCount: number;
-  reportCount: number;
+  verified_purchase: boolean;
+  helpful_count: number;
+  report_count: number;
   status: string;
   source: 'user' | 'auto';
-  authorInfo: string | null;
+  author_info: string | null;
   platform: string | null;
-  countryCode: string | null;
-  deviceType: string | null;
-  socialProof: string | null;
+  country_code: string | null;
+  device_type: string | null;
+  social_proof: string | null;
   metadata: string | null;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
   // Resolved from relations
   user?: {
     username: string;
@@ -223,7 +223,7 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
   // Filter reviews based on active tab
   const filteredReviews = reviews?.filter(review => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'verified') return review.verifiedPurchase;
+    if (activeTab === 'verified') return review.verified_purchase;
     if (activeTab === '5star') return review.rating === 5;
     if (activeTab === 'critical') return review.rating < 4;
     return true;
