@@ -1,5 +1,14 @@
+/**
+ * Admin Review Management API
+ * Handles CRUD operations for reviews in the admin panel
+ */
 import { Request, Response } from "express";
 import { pool } from "../../db";
+import { and, asc, desc, eq, ilike, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
+
+// Define types
+type ReviewStatus = "pending" | "published" | "rejected";
 
 /**
  * Admin endpoint to get all product reviews with filtering and pagination
@@ -9,73 +18,80 @@ export const getAdminReviews = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
-    const status = req.query.status as string;
-    const search = req.query.search as string;
-    const productId = req.query.productId as string;
     
+    const productId = req.query.productId ? parseInt(req.query.productId as string) : null;
+    const status = req.query.status as ReviewStatus | undefined;
+    const search = req.query.search as string | undefined;
+    const sortBy = req.query.sortBy as string || "created_at";
+    const sortOrder = (req.query.sortOrder as string || "desc").toLowerCase();
+    
+    // Start building the query
     let queryParams: any[] = [];
-    let whereConditions = [];
+    let countQueryParams: any[] = [];
     
-    // Build WHERE clause based on filters
-    if (status && status !== "all") {
-      whereConditions.push(`pr.status = $${queryParams.length + 1}`);
-      queryParams.push(status);
+    // Base query
+    let query = `
+      SELECT r.*, p.name as product_name
+      FROM product_reviews r
+      LEFT JOIN digital_products p ON r.product_id = p.id
+      WHERE 1=1
+    `;
+    
+    let countQuery = `
+      SELECT COUNT(*) 
+      FROM product_reviews r
+      WHERE 1=1
+    `;
+    
+    // Apply filters
+    if (productId) {
+      query += ` AND r.product_id = $${queryParams.length + 1}`;
+      countQuery += ` AND r.product_id = $${countQueryParams.length + 1}`;
+      queryParams.push(productId);
+      countQueryParams.push(productId);
     }
     
-    if (productId && productId !== "all") {
-      whereConditions.push(`pr.product_id = $${queryParams.length + 1}`);
-      queryParams.push(parseInt(productId));
+    if (status) {
+      query += ` AND r.status = $${queryParams.length + 1}`;
+      countQuery += ` AND r.status = $${countQueryParams.length + 1}`;
+      queryParams.push(status);
+      countQueryParams.push(status);
     }
     
     if (search) {
-      whereConditions.push(`(pr.title ILIKE $${queryParams.length + 1} OR pr.content ILIKE $${queryParams.length + 1} OR pr.username ILIKE $${queryParams.length + 1})`);
-      queryParams.push(`%${search}%`);
+      const searchTerm = `%${search}%`;
+      query += ` AND (r.title ILIKE $${queryParams.length + 1} OR r.content ILIKE $${queryParams.length + 2} OR p.name ILIKE $${queryParams.length + 3})`;
+      countQuery += ` AND (r.title ILIKE $${countQueryParams.length + 1} OR r.content ILIKE $${countQueryParams.length + 2})`;
+      queryParams.push(searchTerm, searchTerm, searchTerm);
+      countQueryParams.push(searchTerm, searchTerm);
     }
     
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
+    // Add sorting
+    query += ` ORDER BY r.${sortBy} ${sortOrder === "asc" ? "ASC" : "DESC"}`;
     
-    // Get total count for pagination
-    const countQuery = `
-      SELECT COUNT(*) 
-      FROM product_reviews pr
-      ${whereClause}
-    `;
-    
-    const { rows: countResult } = await pool.query(countQuery, queryParams);
-    const total = parseInt(countResult[0].count);
-    
-    // Get reviews with product information
-    const reviewsQuery = `
-      SELECT pr.*, dp.name as product_name
-      FROM product_reviews pr
-      LEFT JOIN digital_products dp ON pr.product_id = dp.id
-      ${whereClause}
-      ORDER BY pr.created_at DESC
-      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
-    `;
-    
+    // Add pagination
+    query += ` LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
     queryParams.push(limit, offset);
     
-    const { rows: reviews } = await pool.query(reviewsQuery, queryParams);
+    // Execute both queries
+    const result = await pool.query(query, queryParams);
+    const countResult = await pool.query(countQuery, countQueryParams);
     
-    // Transform rows to include product information
-    const transformedReviews = reviews.map(review => ({
-      ...review,
-      product: {
-        name: review.product_name
-      }
-    }));
+    const totalCount = parseInt(countResult.rows[0].count);
+    const totalPages = Math.ceil(totalCount / limit);
     
     return res.json({
-      reviews: transformedReviews,
-      total,
-      page,
-      limit,
-      hasMore: offset + reviews.length < total
+      reviews: result.rows,
+      pagination: {
+        currentPage: page,
+        limit,
+        totalCount,
+        totalPages
+      }
     });
   } catch (error) {
     console.error("Error fetching admin reviews:", error);
-    return res.status(500).json({ error: "İnceleme listesi yüklenirken bir hata oluştu." });
+    return res.status(500).json({ error: "Failed to fetch reviews" });
   }
 };
 
@@ -84,35 +100,28 @@ export const getAdminReviews = async (req: Request, res: Response) => {
  */
 export const getAdminReviewById = async (req: Request, res: Response) => {
   try {
-    const reviewId = parseInt(req.params.id);
+    const id = parseInt(req.params.id);
     
-    if (isNaN(reviewId)) {
-      return res.status(400).json({ error: "Geçersiz inceleme ID'si" });
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Valid review ID is required" });
     }
     
     const { rows } = await pool.query(
-      `SELECT pr.*, dp.name as product_name
-       FROM product_reviews pr
-       LEFT JOIN digital_products dp ON pr.product_id = dp.id
-       WHERE pr.id = $1`,
-      [reviewId]
+      `SELECT r.*, p.name as product_name
+       FROM product_reviews r
+       LEFT JOIN digital_products p ON r.product_id = p.id
+       WHERE r.id = $1`,
+      [id]
     );
     
     if (rows.length === 0) {
-      return res.status(404).json({ error: "İnceleme bulunamadı" });
+      return res.status(404).json({ error: "Review not found" });
     }
     
-    const review = {
-      ...rows[0],
-      product: {
-        name: rows[0].product_name
-      }
-    };
-    
-    return res.json(review);
+    return res.json(rows[0]);
   } catch (error) {
     console.error("Error fetching admin review by ID:", error);
-    return res.status(500).json({ error: "İnceleme detayları yüklenirken bir hata oluştu." });
+    return res.status(500).json({ error: "Failed to fetch review" });
   }
 };
 
@@ -121,87 +130,76 @@ export const getAdminReviewById = async (req: Request, res: Response) => {
  */
 export const updateAdminReview = async (req: Request, res: Response) => {
   try {
-    const reviewId = parseInt(req.params.id);
+    const id = parseInt(req.params.id);
     
-    if (isNaN(reviewId)) {
-      return res.status(400).json({ error: "Geçersiz inceleme ID'si" });
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Valid review ID is required" });
     }
     
-    const { title, content, rating, pros, cons, status } = req.body;
+    // Validate the request body
+    const reviewSchema = z.object({
+      title: z.string().min(1),
+      content: z.string().min(1),
+      rating: z.number().min(1).max(5),
+      pros: z.array(z.string()).optional(),
+      cons: z.array(z.string()).optional(),
+      status: z.enum(["pending", "published", "rejected"]),
+      username: z.string().optional().nullable(),
+      country_code: z.string().optional().nullable(),
+      platform: z.string().optional().nullable(),
+      device_type: z.string().optional().nullable(),
+      verified_purchase: z.boolean().optional(),
+    });
     
-    // Check if review exists
-    const { rows: existingReview } = await pool.query(
-      "SELECT * FROM product_reviews WHERE id = $1",
-      [reviewId]
-    );
+    const parsedBody = reviewSchema.safeParse(req.body);
     
-    if (existingReview.length === 0) {
-      return res.status(404).json({ error: "İnceleme bulunamadı" });
+    if (!parsedBody.success) {
+      return res.status(400).json({ 
+        error: "Invalid review data", 
+        details: parsedBody.error.errors 
+      });
     }
     
-    // Prepare update fields
-    const updateFields = [];
-    const queryParams = [];
-    let paramCounter = 1;
+    const reviewData = parsedBody.data;
     
-    if (title !== undefined) {
-      updateFields.push(`title = $${paramCounter}`);
-      queryParams.push(title);
-      paramCounter++;
+    // Build the query dynamically
+    const setClauses = [];
+    const queryParams = [id]; // First param is the ID
+    let paramIndex = 2;
+    
+    for (const [key, value] of Object.entries(reviewData)) {
+      if (key === 'pros' || key === 'cons') {
+        if (value) {
+          setClauses.push(`${key} = $${paramIndex++}`);
+          queryParams.push(JSON.stringify(value));
+        }
+      } else {
+        setClauses.push(`${key} = $${paramIndex++}`);
+        queryParams.push(value);
+      }
     }
     
-    if (content !== undefined) {
-      updateFields.push(`content = $${paramCounter}`);
-      queryParams.push(content);
-      paramCounter++;
+    // Add updated_at timestamp
+    setClauses.push(`updated_at = $${paramIndex++}`);
+    queryParams.push(new Date());
+    
+    const query = `
+      UPDATE product_reviews
+      SET ${setClauses.join(', ')}
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const { rows } = await pool.query(query, queryParams);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Review not found" });
     }
     
-    if (rating !== undefined) {
-      updateFields.push(`rating = $${paramCounter}`);
-      queryParams.push(rating);
-      paramCounter++;
-    }
-    
-    if (pros !== undefined) {
-      updateFields.push(`pros = $${paramCounter}`);
-      queryParams.push(pros);
-      paramCounter++;
-    }
-    
-    if (cons !== undefined) {
-      updateFields.push(`cons = $${paramCounter}`);
-      queryParams.push(cons);
-      paramCounter++;
-    }
-    
-    if (status !== undefined) {
-      updateFields.push(`status = $${paramCounter}`);
-      queryParams.push(status);
-      paramCounter++;
-    }
-    
-    // Always update the updated_at timestamp
-    updateFields.push(`updated_at = NOW()`);
-    
-    if (updateFields.length === 0) {
-      return res.status(400).json({ error: "Güncellenecek hiçbir alan belirtilmedi" });
-    }
-    
-    // Add review ID as the last parameter
-    queryParams.push(reviewId);
-    
-    const { rows: updatedReview } = await pool.query(
-      `UPDATE product_reviews 
-       SET ${updateFields.join(", ")} 
-       WHERE id = $${paramCounter} 
-       RETURNING *`,
-      queryParams
-    );
-    
-    return res.json(updatedReview[0]);
+    return res.json(rows[0]);
   } catch (error) {
     console.error("Error updating admin review:", error);
-    return res.status(500).json({ error: "İnceleme güncellenirken bir hata oluştu." });
+    return res.status(500).json({ error: "Failed to update review" });
   }
 };
 
@@ -210,34 +208,44 @@ export const updateAdminReview = async (req: Request, res: Response) => {
  */
 export const updateAdminReviewStatus = async (req: Request, res: Response) => {
   try {
-    const reviewId = parseInt(req.params.id);
+    const id = parseInt(req.params.id);
     
-    if (isNaN(reviewId)) {
-      return res.status(400).json({ error: "Geçersiz inceleme ID'si" });
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Valid review ID is required" });
     }
     
-    const { status } = req.body;
+    // Validate the request body
+    const statusSchema = z.object({
+      status: z.enum(["pending", "published", "rejected"])
+    });
     
-    if (!status || !["published", "pending", "rejected"].includes(status)) {
-      return res.status(400).json({ error: "Geçersiz durum değeri" });
+    const parsedBody = statusSchema.safeParse(req.body);
+    
+    if (!parsedBody.success) {
+      return res.status(400).json({ 
+        error: "Invalid status", 
+        details: parsedBody.error.errors 
+      });
     }
+    
+    const { status } = parsedBody.data;
     
     const { rows } = await pool.query(
-      `UPDATE product_reviews 
-       SET status = $1, updated_at = NOW() 
-       WHERE id = $2 
+      `UPDATE product_reviews
+       SET status = $1, updated_at = $2
+       WHERE id = $3
        RETURNING *`,
-      [status, reviewId]
+      [status, new Date(), id]
     );
     
     if (rows.length === 0) {
-      return res.status(404).json({ error: "İnceleme bulunamadı" });
+      return res.status(404).json({ error: "Review not found" });
     }
     
     return res.json(rows[0]);
   } catch (error) {
     console.error("Error updating admin review status:", error);
-    return res.status(500).json({ error: "İnceleme durumu güncellenirken bir hata oluştu." });
+    return res.status(500).json({ error: "Failed to update review status" });
   }
 };
 
@@ -246,31 +254,24 @@ export const updateAdminReviewStatus = async (req: Request, res: Response) => {
  */
 export const deleteAdminReview = async (req: Request, res: Response) => {
   try {
-    const reviewId = parseInt(req.params.id);
+    const id = parseInt(req.params.id);
     
-    if (isNaN(reviewId)) {
-      return res.status(400).json({ error: "Geçersiz inceleme ID'si" });
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Valid review ID is required" });
     }
     
-    // First delete related votes
-    await pool.query(
-      "DELETE FROM review_votes WHERE review_id = $1",
-      [reviewId]
-    );
-    
-    // Then delete the review
     const { rowCount } = await pool.query(
-      "DELETE FROM product_reviews WHERE id = $1",
-      [reviewId]
+      `DELETE FROM product_reviews WHERE id = $1`,
+      [id]
     );
     
     if (rowCount === 0) {
-      return res.status(404).json({ error: "İnceleme bulunamadı" });
+      return res.status(404).json({ error: "Review not found" });
     }
     
-    return res.json({ success: true, message: "İnceleme başarıyla silindi" });
+    return res.json({ success: true, message: "Review deleted successfully" });
   } catch (error) {
     console.error("Error deleting admin review:", error);
-    return res.status(500).json({ error: "İnceleme silinirken bir hata oluştu." });
+    return res.status(500).json({ error: "Failed to delete review" });
   }
 };

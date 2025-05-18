@@ -5127,6 +5127,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin Review Management Routes
+  app.get("/api/admin/reviews", requireAdmin, async (req, res) => {
+    try {
+      const { getAdminReviews } = await import("./api/admin/reviews");
+      return getAdminReviews(req, res);
+    } catch (error) {
+      console.error("Error in admin reviews route:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/admin/reviews/:id", requireAdmin, async (req, res) => {
+    try {
+      const { getAdminReviewById } = await import("./api/admin/reviews");
+      return getAdminReviewById(req, res);
+    } catch (error) {
+      console.error("Error in admin review by id route:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  app.patch("/api/admin/reviews/:id", requireAdmin, async (req, res) => {
+    try {
+      const { updateAdminReview } = await import("./api/admin/reviews");
+      return updateAdminReview(req, res);
+    } catch (error) {
+      console.error("Error in admin update review route:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  app.patch("/api/admin/reviews/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const { updateAdminReviewStatus } = await import("./api/admin/reviews");
+      return updateAdminReviewStatus(req, res);
+    } catch (error) {
+      console.error("Error in admin update review status route:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/admin/reviews/:id", requireAdmin, async (req, res) => {
+    try {
+      const { deleteAdminReview } = await import("./api/admin/reviews");
+      return deleteAdminReview(req, res);
+    } catch (error) {
+      console.error("Error in admin delete review route:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
   app.post("/api/admin/generate-reviews", async (req, res) => {
     try {
       const { generateProductReviews } = await import("./api/simple-reviews");
