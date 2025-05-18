@@ -37,6 +37,14 @@ import ProductShowcase from '@/components/shop/ProductShowcase';
 import DeliveryEstimator from '@/components/shop/DeliveryEstimator';
 import ProductComparison from '@/components/shop/ProductComparison';
 import StickyBuyButton from '@/components/shop/StickyBuyButton';
+import Head from '@/components/shared/Head';
+import { 
+  optimizeDynamicPage,
+  generateProductStructuredData,
+  addStructuredData,
+  markDynamicContent,
+  makeContentIndexable
+} from '@/lib/seo-helper';
 
 interface Platform {
   id: number;
