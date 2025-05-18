@@ -6,9 +6,17 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 
 // Middleware for admin authorization
 const requireAdmin = (req: any, res: any, next: any) => {
-  if (!req.isAuthenticated || !req.isAuthenticated() || req.user?.role !== 'admin') {
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
+    console.log('User not authenticated in admin-reviews middleware');
     return res.status(401).json({ message: 'Unauthorized' });
   }
+  
+  if (req.user?.role !== 'admin') {
+    console.log('User authenticated but not admin:', req.user?.username, 'Role:', req.user?.role);
+    return res.status(403).json({ message: 'Forbidden - Admin access required' });
+  }
+  
+  console.log('Admin authorization successful for user:', req.user?.username);
   next();
 };
 
