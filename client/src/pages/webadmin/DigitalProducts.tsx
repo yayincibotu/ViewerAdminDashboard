@@ -369,15 +369,16 @@ ${platformName} streamer growth guide`;
   return (
     <AdminLayout>
       {/* SEO Content Generator Dialog */}
-      {isSeoGeneratorOpen && seoProductData && (
-        <Dialog open={isSeoGeneratorOpen} onOpenChange={setIsSeoGeneratorOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>SEO Content Generator</DialogTitle>
-              <DialogDescription>
-                Generate optimized content for your product
-              </DialogDescription>
-            </DialogHeader>
+      <Dialog open={isSeoGeneratorOpen} onOpenChange={setIsSeoGeneratorOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>SEO Content Generator</DialogTitle>
+            <DialogDescription>
+              Generate optimized content for your product
+            </DialogDescription>
+          </DialogHeader>
+          
+          {seoProductData && (
             <SeoContentGeneratorDialog
               productData={seoProductData}
               onClose={() => setIsSeoGeneratorOpen(false)}
@@ -385,7 +386,7 @@ ${platformName} streamer growth guide`;
                 // Update the form with the generated SEO content
                 form.setValue('seoTitle', seoData.seoTitle);
                 form.setValue('seoDescription', seoData.seoDescription);
-                form.setValue('productDescription', seoData.productDescription);
+                form.setValue('description', seoData.productDescription);
                 
                 // Handle FAQ Questions and Answers
                 form.setValue('faqQuestions', seoData.faqQuestions.join('\n'));
@@ -403,9 +404,9 @@ ${platformName} streamer growth guide`;
                 });
               }}
             />
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
       
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
