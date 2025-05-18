@@ -31,7 +31,6 @@ import SmmProviders from "@/pages/webadmin/SmmProviders";
 import Platforms from "@/pages/webadmin/Platforms";
 import ProductCategories from "@/pages/webadmin/ProductCategories";
 import CommentManagement from "@/pages/webadmin/CommentManagement";
-import SeoGenerator from "@/pages/webadmin/SeoGenerator";
 import Checkout from "@/pages/payment/Checkout";
 import Subscribe from "@/pages/payment/Subscribe";
 import { useAuth } from "@/hooks/use-auth";
@@ -107,7 +106,6 @@ function Router() {
       <ProtectedRoute path="/webadmin/contact-messages" component={ContactMessages} />
       <ProtectedRoute path="/webadmin/settings" component={Settings} />
       <ProtectedRoute path="/webadmin/analytics" component={Analytics} />
-      <ProtectedRoute path="/webadmin/seo-generator" component={SeoGenerator} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />

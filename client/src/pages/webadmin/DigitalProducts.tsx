@@ -10,8 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Sparkles, Save } from 'lucide-react';
-import SeoContentGeneratorDialog from '@/components/admin/SeoContentGeneratorDialog';
 import {
   Table,
   TableBody,
@@ -96,11 +94,9 @@ type DigitalProductFormValues = z.infer<typeof digitalProductSchema>;
 
 const DigitalProducts: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isSeoGeneratorOpen, setIsSeoGeneratorOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [seoProductData, setSeoProductData] = useState<any>(null);
   const perPage = 10;
 
   const { toast } = useToast();
@@ -368,46 +364,6 @@ ${platformName} streamer growth guide`;
 
   return (
     <AdminLayout>
-      {/* SEO Content Generator Dialog */}
-      <Dialog open={isSeoGeneratorOpen} onOpenChange={setIsSeoGeneratorOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>SEO Content Generator</DialogTitle>
-            <DialogDescription>
-              Generate optimized content for your product
-            </DialogDescription>
-          </DialogHeader>
-          
-          {seoProductData && (
-            <SeoContentGeneratorDialog
-              productData={seoProductData}
-              onClose={() => setIsSeoGeneratorOpen(false)}
-              onSave={(seoData) => {
-                // Update the form with the generated SEO content
-                form.setValue('seoTitle', seoData.seoTitle);
-                form.setValue('seoDescription', seoData.seoDescription);
-                form.setValue('description', seoData.productDescription);
-                
-                // Handle FAQ Questions and Answers
-                form.setValue('faqQuestions', seoData.faqQuestions.join('\n'));
-                form.setValue('faqAnswers', seoData.faqAnswers.join('\n'));
-                
-                // Handle LSI Keywords
-                form.setValue('lsiKeywords', seoData.lsiKeywords.join(', '));
-                
-                // Close the dialog
-                setIsSeoGeneratorOpen(false);
-                
-                toast({
-                  title: "Success",
-                  description: "SEO content has been applied to the product form",
-                });
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-      
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Digital Products Management</h1>
@@ -717,49 +673,11 @@ ${platformName} streamer growth guide`;
                     
                     <TabsContent value="seo" className="space-y-4">
                       <div className="rounded-lg border p-4 mb-4">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                          <div>
-                            <h3 className="text-lg font-medium mb-2">Semantic Content Optimization</h3>
-                            <p className="text-sm text-gray-500 mb-0">
-                              Google uses semantic relationships to understand user intent. The fields below
-                              will help you rank better in search engine results.
-                            </p>
-                          </div>
-                          
-                          {/* Add SEO Content Generator Dialog */}
-                          {selectedProduct && (
-                            <div className="flex-shrink-0">
-                              <Button
-                                variant="outline"
-                                className="flex items-center gap-1"
-                                onClick={() => {
-                                  // Create data for SEO content generation
-                                  const product = form.getValues();
-                                  const platformName = platforms.find(p => p.id === Number(product.platformId))?.name || 'Unknown Platform';
-                                  const categoryName = product.category || 'Unknown Category';
-                                  
-                                  // Set data for SEO content generation in the modal
-                                  setSeoProductData({
-                                    productId: selectedProduct.id,
-                                    productName: product.name,
-                                    platform: platformName,
-                                    category: categoryName,
-                                    price: parseFloat(product.price) || 0,
-                                    minOrder: Number(product.minQuantity) || 1,
-                                    maxOrder: Number(product.maxQuantity) || 100,
-                                    serviceType: product.serviceType || 'viewer service'
-                                  });
-                                  
-                                  // Open the SEO generator dialog
-                                  setIsSeoGeneratorOpen(true);
-                                }}
-                              >
-                                <Sparkles className="w-4 h-4" />
-                                Generate SEO Content
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                        <h3 className="text-lg font-medium mb-2">Semantic Content Optimization</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                          Google uses semantic relationships to understand user intent. The fields below
+                          will help you rank better in search engine results.
+                        </p>
                       </div>
                       
                       <div className="grid grid-cols-1 gap-4">

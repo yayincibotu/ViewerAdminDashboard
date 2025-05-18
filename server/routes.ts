@@ -9,8 +9,6 @@ import crypto from "crypto";
 import { db, pool } from "./db";
 import { eq, desc } from "drizzle-orm";
 import { getStripe, syncSubscriptionPlansWithStripe, isStripeConfigured, createPaymentIntentForPlan } from "./stripe-helper";
-// Import the Perplexity SEO API router
-import perplexitySeoRouter from './api/perplexity-seo';
 import { 
   users, userSubscriptions, payments, platforms,
   invoices, paymentMethods, securityQuestions, userSecurityQuestions,
@@ -284,9 +282,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/admin/smm-providers', smmProvidersRouter);
   app.use('/api/platforms', platformsRouter);
   app.use('/api/product-categories', productCategoriesRouter);
-  
-  // Perplexity SEO API routes - Admin only
-  app.use('/api/perplexity-seo', requireAdmin, perplexitySeoRouter);
   
   // SMM PROVIDERS API
   // Get all SMM providers
@@ -6086,9 +6081,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.json({ received: true });
   });
-
-  // We already have a Perplexity API route registered above with the admin middleware
-  // app.use('/api/perplexity', perplexitySeoRouter);
 
   const httpServer = createServer(app);
 
