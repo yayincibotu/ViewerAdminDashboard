@@ -426,12 +426,11 @@ const ProductDetail = () => {
       
       {/* Sticky Buy Button */}
       <StickyBuyButton
-        productId={product.id}
         price={product.price}
         quantity={quantity}
-        total={total}
+        discount={product.discountPercentage}
+        isProcessing={isProcessing}
         onBuyNow={handleBuyNow}
-        disabled={isProcessing}
       />
     </div>
   );
