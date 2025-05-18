@@ -70,9 +70,9 @@ export default function CommentManagement() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterRating, setFilterRating] = useState<string>("");
-  const [filterSource, setFilterSource] = useState<string>("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterRating, setFilterRating] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -188,13 +188,13 @@ export default function CommentManagement() {
           (activeTab === "rejected" && review.status === "rejected");
         
         // Filter by rating
-        const matchesRating = filterRating === "" || (review.rating && review.rating.toString() === filterRating);
+        const matchesRating = filterRating === "all" || (review.rating && review.rating.toString() === filterRating);
         
         // Filter by source
-        const matchesSource = filterSource === "" || review.source === filterSource;
+        const matchesSource = filterSource === "all" || review.source === filterSource;
         
         // Filter by status
-        const matchesStatus = filterStatus === "" || review.status === filterStatus;
+        const matchesStatus = filterStatus === "all" || review.status === filterStatus;
         
         return matchesSearch && matchesTab && matchesRating && matchesSource && matchesStatus;
       })
