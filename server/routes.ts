@@ -18,6 +18,7 @@ import {
   insertSecuritySessionSchema, insertLoginAttemptSchema,
   digitalProducts, smmProviders, digitalProductOrders
 } from "@shared/schema";
+import { productReviews, reviewVotes } from "./schema/reviews";
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 
@@ -5081,10 +5082,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Product Review Routes
-  app.get("/api/product-reviews", getProductReviews);
-  app.post("/api/product-reviews", createProductReview);
-  app.post("/api/review-votes", voteOnReview);
-  app.post("/api/admin/generate-reviews", generateProductReviews);
+  app.get("/api/product-reviews", async (req, res) => {
+    try {
+      const { getProductReviews } = await import("./api/reviews");
+      return getProductReviews(req, res);
+    } catch (error) {
+      console.error("Error in product reviews route:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/product-reviews", async (req, res) => {
+    try {
+      const { createProductReview } = await import("./api/reviews");
+      return createProductReview(req, res);
+    } catch (error) {
+      console.error("Error in create review route:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/review-votes", async (req, res) => {
+    try {
+      const { voteOnReview } = await import("./api/reviews");
+      return voteOnReview(req, res);
+    } catch (error) {
+      console.error("Error in review vote route:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/admin/generate-reviews", async (req, res) => {
+    try {
+      const { generateProductReviews } = await import("./api/reviews");
+      return generateProductReviews(req, res);
+    } catch (error) {
+      console.error("Error in generate reviews route:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
   
   app.get("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
     try {

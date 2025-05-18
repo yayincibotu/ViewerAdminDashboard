@@ -865,8 +865,8 @@ const ProductDetail = () => {
               <h2 className="text-xl font-bold mb-4">Customer Reviews</h2>
               <ProductReviews 
                 productId={product.id} 
-                platform={platformData?.name || ''} 
-                category={product.category} 
+                platform={product.platform?.name || ""} 
+                category={product.category?.name || ""} 
               />
             </section>
             
