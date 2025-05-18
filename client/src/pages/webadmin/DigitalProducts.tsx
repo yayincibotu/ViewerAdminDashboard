@@ -77,6 +77,17 @@ const digitalProductSchema = z.object({
   maxQuantity: z.coerce.number().min(1, { message: 'Maksimum miktar en az 1 olmalıdır' }),
   isActive: z.boolean().default(true),
   sortOrder: z.coerce.number().default(0),
+  
+  // SEO ayarları
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
+  seoKeywords: z.string().optional(),
+  semanticHeadings: z.string().optional(),
+  lsiKeywords: z.string().optional(),
+  faqQuestions: z.string().optional(),
+  faqAnswers: z.string().optional(),
+  semanticLinkText: z.string().optional(),
+  semanticLinkUrls: z.string().optional(),
 });
 
 type DigitalProductFormValues = z.infer<typeof digitalProductSchema>;
@@ -274,6 +285,7 @@ const DigitalProducts: React.FC = () => {
                       <TabsTrigger value="basic">Temel Bilgiler</TabsTrigger>
                       <TabsTrigger value="integration">Entegrasyon</TabsTrigger>
                       <TabsTrigger value="advanced">Gelişmiş</TabsTrigger>
+                      <TabsTrigger value="seo">SEO Ayarları</TabsTrigger>
                     </TabsList>
                     
                     <TabsContent value="basic" className="space-y-4">

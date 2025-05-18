@@ -915,12 +915,14 @@ const ProductDetail = () => {
                           <Info className="h-4 w-4 mr-2 text-primary" />
                           Do you offer bulk discounts?
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm ml-6">
-                          Yes, the more you order, the lower the price per unit. Try different quantities 
-                          in the calculator to see your personalized discount.
-                        </p>
+                        <div itemScope itemType="https://schema.org/Answer" itemProp="acceptedAnswer">
+                          <p itemProp="text" className="text-gray-600 dark:text-gray-300 text-sm ml-6">
+                            Yes, the more you order, the lower the price per unit. Try different quantities 
+                            in the calculator to see your personalized discount.
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    </section>
                   </TabsContent>
                 </Tabs>
               </div>
