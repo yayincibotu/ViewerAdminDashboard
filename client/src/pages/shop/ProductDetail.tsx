@@ -292,6 +292,122 @@ const ProductDetail = () => {
         document.head.appendChild(link);
       }
       
+      // Genişletilmiş Schema.org yapılandırması için JSON-LD ekleme
+      let existingSchema = document.querySelector('#product-schema');
+      if (existingSchema) {
+        document.head.removeChild(existingSchema);
+      }
+      
+      // Genişletilmiş JSON-LD şeması oluştur
+      const schemaScript = document.createElement('script');
+      schemaScript.type = 'application/ld+json';
+      schemaScript.id = 'product-schema';
+      
+      // Ürün kullanım adımlarını oluştur (HowTo şeması)
+      const howToSteps = [
+        {
+          "@type": "HowToStep",
+          "name": "Select quantity",
+          "text": `Choose your desired quantity (between ${product.minOrder} and ${product.maxOrder})`,
+          "image": window.location.origin + (product.imageUrl || "/images/default-product.jpg"),
+          "url": window.location.href + "#quantity-selector"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Complete payment",
+          "text": "Proceed to checkout and complete your payment",
+          "image": window.location.origin + "/images/checkout.jpg",
+          "url": window.location.href + "#checkout"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Service activation",
+          "text": `Your ${product.platform.name} ${product.category.name} service will be activated within ${product.deliveryTime || "24 hours"}`,
+          "image": window.location.origin + "/images/service-activation.jpg",
+          "url": window.location.href + "#delivery"
+        }
+      ];
+      
+      // Breadcrumb verilerini oluştur
+      const breadcrumbItems = [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Shop",
+          "item": window.location.origin + "/shop"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": product.platform.name,
+          "item": window.location.origin + "/shop/" + product.platform.slug
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": product.name,
+          "item": window.location.href
+        }
+      ];
+      
+      // Şema verilerini oluştur
+      const schemaData = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Product",
+            "name": product.name,
+            "description": product.description,
+            "sku": `SMM-${product.platform.slug}-${product.category.slug}-${product.id}`,
+            "mpn": `VIEWERAPPS-${product.id}`,
+            "brand": {
+              "@type": "Brand",
+              "name": "ViewerApps"
+            },
+            "image": {
+              "@type": "ImageObject",
+              "url": window.location.origin + (product.imageUrl || "/images/default-product.jpg"),
+              "width": "800",
+              "height": "600",
+              "caption": `${product.platform.name} ${product.category.name} service`
+            },
+            "offers": {
+              "@type": "Offer",
+              "url": window.location.href,
+              "priceCurrency": "USD",
+              "price": product.price.toString(),
+              "priceValidUntil": new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString().split('T')[0],
+              "availability": "https://schema.org/InStock",
+              "itemCondition": "https://schema.org/NewCondition",
+              "seller": {
+                "@type": "Organization",
+                "name": "ViewerApps"
+              },
+              "hasMerchantReturnPolicy": {
+                "@type": "MerchantReturnPolicy",
+                "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+                "returnWindow": "14 days",
+                "restockingFee": "0 USD"
+              }
+            }
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": breadcrumbItems
+          },
+          {
+            "@type": "HowTo",
+            "name": `How to use ${product.platform.name} ${product.category.name} service`,
+            "description": `Step by step guide to set up and use your ${product.platform.name} ${product.category.name} service`,
+            "totalTime": "PT10M",
+            "step": howToSteps
+          }
+        ]
+      };
+      
+      schemaScript.textContent = JSON.stringify(schemaData);
+      document.head.appendChild(schemaScript);
+      
       // Open Graph meta etiketleri
       Object.entries(seoMetadata.openGraph).forEach(([property, content]) => {
         let existingTag = document.querySelector(`meta[property="${property}"]`);
