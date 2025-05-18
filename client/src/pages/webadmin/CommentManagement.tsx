@@ -42,12 +42,15 @@ import { Star, Search, Edit, Trash2, CheckCircle, XCircle, AlertTriangle, Filter
 
 type Review = {
   id: number;
-  product_id: number;
-  user_id: number | null;
+  productId: number;
+  product_id?: number; // For backward compatibility
+  userId: number | null;
+  user_id?: number | null; // For backward compatibility
   username: string | null;
   rating: number;
   title: string;
   content: string;
+  productName: string;
   pros: string[] | null;
   cons: string[] | null;
   verified_purchase: boolean;
@@ -389,7 +392,7 @@ export default function CommentManagement() {
                               filteredReviews.map((review: Review) => (
                                 <TableRow key={review.id}>
                                   <TableCell className="max-w-[180px] truncate">
-                                    {review.product ? review.product.name : `Ürün #${review.product_id}`}
+                                    {review.productName || `Ürün #${review.productId || review.product_id}`}
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center">
@@ -409,7 +412,7 @@ export default function CommentManagement() {
                                     {getStatusBadge(review.status)}
                                   </TableCell>
                                   <TableCell>
-                                    {new Date(review.created_at).toLocaleDateString('tr-TR')}
+                                    {new Date(review.createdAt || review.created_at).toLocaleDateString('tr-TR')}
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center gap-1.5">
@@ -485,7 +488,7 @@ export default function CommentManagement() {
                 <label htmlFor="product" className="text-sm font-medium">Ürün:</label>
                 <Input 
                   id="product" 
-                  value={editingReview.product ? editingReview.product.name : `Ürün #${editingReview.product_id}`} 
+                  value={editingReview.productName || `Ürün #${editingReview.productId || editingReview.product_id}`} 
                   disabled 
                 />
               </div>
