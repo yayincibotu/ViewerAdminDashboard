@@ -269,7 +269,7 @@ const DigitalProducts: React.FC = () => {
                 <Plus className="mr-2 h-4 w-4" /> Dijital Ürün Ekle
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px]">
+            <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {selectedProduct ? 'Dijital Ürün Düzenle' : 'Yeni Dijital Ürün Ekle'}
