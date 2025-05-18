@@ -87,7 +87,7 @@ export default function CommentManagement() {
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/reviews');
       if (!response.ok) {
-        throw new Error('Yorumlar yüklenirken bir hata oluştu');
+        throw new Error('An error occurred while loading reviews');
       }
       return response.json();
     }
@@ -98,7 +98,7 @@ export default function CommentManagement() {
     mutationFn: async (reviewData: Partial<Review> & { id: number }) => {
       const response = await apiRequest('PATCH', `/api/admin/reviews/${reviewData.id}`, reviewData);
       if (!response.ok) {
-        throw new Error('Yorum güncellenirken bir hata oluştu');
+        throw new Error('An error occurred while updating the review');
       }
       return response.json();
     },
@@ -106,14 +106,14 @@ export default function CommentManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/reviews'] });
       setIsEditDialogOpen(false);
       toast({
-        title: "Yorum güncellendi",
-        description: "Yorum başarıyla güncellendi.",
+        title: "Review Updated",
+        description: "Review has been updated successfully.",
       });
     },
     onError: (error) => {
       toast({
-        title: "Hata",
-        description: `Yorum güncellenirken bir hata oluştu: ${error.message}`,
+        title: "Error",
+        description: `An error occurred while updating the review: ${error.message}`,
         variant: "destructive",
       });
     }

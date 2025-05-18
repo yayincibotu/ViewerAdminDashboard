@@ -384,16 +384,16 @@ ${platformName} streamer growth guide`;
                   sortOrder: 0,
                 });
               }}>
-                <Plus className="mr-2 h-4 w-4" /> Dijital Ürün Ekle
+                <Plus className="mr-2 h-4 w-4" /> Add Digital Product
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {selectedProduct ? 'Dijital Ürün Düzenle' : 'Yeni Dijital Ürün Ekle'}
+                  {selectedProduct ? 'Edit Digital Product' : 'Add New Digital Product'}
                 </DialogTitle>
                 <DialogDescription>
-                  Müşterilerinize satmak için dijital ürün bilgilerini girin
+                  Enter digital product information to sell to your customers
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
