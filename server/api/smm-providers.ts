@@ -247,7 +247,13 @@ async function testSmmApiConnection(apiUrl: string, apiKey: string, useMockData:
 }
 
 async function getSmmServiceList(provider: any, useMockData: boolean = false) {
-  return testSmmApiConnection(provider.apiUrl, provider.apiKey, useMockData);
+  try {
+    const client = new SmmApiClient(provider.apiUrl, provider.apiKey, useMockData);
+    return await client.getServices();
+  } catch (error: any) {
+    console.error("[SMM API] Error in getSmmServiceList:", error);
+    throw error;
+  }
 }
 
 // Get all SMM providers
