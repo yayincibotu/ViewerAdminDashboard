@@ -62,7 +62,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
     
-    const { digital_products, platforms, product_categories } = productData[0];
+    const { digital_products, platforms } = productData[0];
     
     const product = {
       id: digital_products.id,
