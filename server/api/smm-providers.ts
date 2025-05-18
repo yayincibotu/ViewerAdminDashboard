@@ -42,37 +42,200 @@ const MOCK_SMM_SERVICES = [
   { service: 20, name: "VK Play İzleyiciler | Max: 200 | Kaliteli", category: "VKPlay", type: "Default", rate: "40.00", min: 10, max: 200 }
 ];
 
-// Helper functions for SMM API integration
-async function testSmmApiConnection(apiUrl: string, apiKey: string, useMockData: boolean = false) {
-  try {
-    if (useMockData || apiUrl.includes('testing') || apiKey.includes('test')) {
+/**
+ * SMM API Client - Inspired by PHP API client
+ * This class handles all interactions with SMM provider APIs
+ */
+class SmmApiClient {
+  private apiUrl: string;
+  private apiKey: string;
+  private useMockData: boolean;
+
+  constructor(apiUrl: string, apiKey: string, useMockData: boolean = false) {
+    this.apiUrl = apiUrl.replace(/\/$/, '');
+    this.apiKey = apiKey;
+    this.useMockData = useMockData || apiUrl.includes('testing') || apiKey.includes('test');
+  }
+
+  /**
+   * Make a request to the SMM API
+   */
+  private async connect(params: Record<string, any>): Promise<any> {
+    // Use mock data if requested or if using test credentials
+    if (this.useMockData) {
       console.log("[SMM API] Using mock data for testing");
-      // Return mock data for testing purposes
-      return MOCK_SMM_SERVICES;
+      
+      // Return appropriate mock data based on action
+      switch (params.action) {
+        case 'services':
+          return MOCK_SMM_SERVICES;
+        case 'balance':
+          return { balance: "1000.00", currency: "TRY" };
+        case 'add':
+          return { order: Math.floor(Math.random() * 10000000) };
+        case 'status':
+          if (params.order) {
+            return {
+              status: "Completed",
+              charge: "10.80",
+              start_count: 0,
+              remains: 0,
+              currency: "TRY"
+            };
+          } else if (params.orders) {
+            const orders = params.orders.split(',');
+            const result: Record<string, any> = {};
+            
+            orders.forEach((id: string) => {
+              result[id] = {
+                status: "Completed",
+                charge: "10.80",
+                start_count: 0,
+                remains: 0,
+                currency: "TRY"
+              };
+            });
+            
+            return result;
+          }
+          break;
+        default:
+          return { success: true, message: "Mock API response" };
+      }
     }
-    
-    // API endpoint for service list (most SMM providers have this endpoint)
-    const endpoint = `${apiUrl.replace(/\/$/, '')}/services`;
-    
-    // Common parameters for SMM panel APIs
-    const params = new URLSearchParams({
-      key: apiKey,
+
+    try {
+      // Create URL parameters
+      const urlParams = new URLSearchParams();
+      
+      // Add API key and other parameters
+      Object.keys(params).forEach(key => {
+        urlParams.append(key, params[key].toString());
+      });
+      
+      // API request
+      const response = await fetch(`${this.apiUrl}?${urlParams.toString()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API returned status ${response.status}`);
+      }
+      
+      // Parse response
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
+        return data;
+      } else {
+        const text = await response.text();
+        try {
+          // Try to parse as JSON anyway (some APIs return JSON with wrong content-type)
+          return JSON.parse(text);
+        } catch (e) {
+          throw new Error(`Invalid response format: ${text}`);
+        }
+      }
+    } catch (error: any) {
+      console.error("[SMM API] Connection error:", error);
+      
+      // If we're allowed to use mock data, return it as fallback
+      if (this.useMockData) {
+        console.log("[SMM API] Error encountered but providing mock data");
+        
+        // Return mock data based on requested action
+        if (params.action === 'services') {
+          return MOCK_SMM_SERVICES;
+        } else if (params.action === 'balance') {
+          return { balance: "1000.00", currency: "TRY" };
+        } else if (params.action === 'add') {
+          return { order: Math.floor(Math.random() * 10000000) };
+        }
+      }
+      
+      throw new Error(`SMM API connection failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get list of services from the SMM provider
+   */
+  async getServices(): Promise<any> {
+    return this.connect({
+      key: this.apiKey,
       action: 'services'
     });
-    
-    const response = await fetch(`${endpoint}?${params}`);
-    
-    if (!response.ok) {
-      throw new Error(`API returned status ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (data.error) {
-      throw new Error(data.error);
-    }
-    
-    return data;
+  }
+
+  /**
+   * Get account balance from the SMM provider
+   */
+  async getBalance(): Promise<any> {
+    return this.connect({
+      key: this.apiKey,
+      action: 'balance'
+    });
+  }
+
+  /**
+   * Place a new order with the SMM provider
+   */
+  async createOrder(orderData: Record<string, any>): Promise<any> {
+    return this.connect({
+      key: this.apiKey,
+      action: 'add',
+      ...orderData
+    });
+  }
+
+  /**
+   * Get status of a specific order
+   */
+  async getOrderStatus(orderId: number): Promise<any> {
+    return this.connect({
+      key: this.apiKey,
+      action: 'status',
+      order: orderId
+    });
+  }
+
+  /**
+   * Get status of multiple orders
+   */
+  async getMultipleOrderStatus(orderIds: number[]): Promise<any> {
+    return this.connect({
+      key: this.apiKey,
+      action: 'status',
+      orders: orderIds.join(',')
+    });
+  }
+  
+  /**
+   * Request a refill for an order
+   */
+  async refillOrder(orderId: number): Promise<any> {
+    return this.connect({
+      key: this.apiKey,
+      action: 'refill',
+      order: orderId
+    });
+  }
+}
+
+// Helper function to test SMM API connection and get services
+async function testSmmApiConnection(apiUrl: string, apiKey: string, useMockData: boolean = false) {
+  try {
+    const client = new SmmApiClient(apiUrl, apiKey, useMockData);
+    return await client.getServices();
   } catch (error: any) {
     // If there's an error but useMockData is true or test keys are being used, provide mock data
     if (useMockData || apiUrl.includes('testing') || apiKey.includes('test')) {
@@ -234,11 +397,11 @@ router.get("/:id/services", requireAdmin, async (req: Request, res: Response) =>
       }
       
       // Get available platforms
-      const platforms = await db.select().from(platforms);
+      const platformData = await db.select().from(platforms);
       
       return res.json({ 
         services: groupedServices,
-        platforms
+        platforms: platformData
       });
     } catch (serviceError: any) {
       console.error("[SMM API] Error fetching services:", serviceError);
@@ -270,11 +433,11 @@ router.get("/:id/services", requireAdmin, async (req: Request, res: Response) =>
         }
         
         // Get available platforms
-        const platforms = await db.select().from(platforms);
+        const platformData = await db.select().from(platforms);
         
         return res.json({ 
           services: groupedMockServices,
-          platforms
+          platforms: platformData
         });
       }
       
@@ -447,6 +610,191 @@ router.post("/:id/import-services", requireAdmin, async (req: Request, res: Resp
       results: importResults
     });
   } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get balance from SMM provider
+router.get("/:id/balance", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const providerId = parseInt(req.params.id);
+    const useMockData = req.query.mock === 'true';
+    
+    // Get the provider
+    const [provider] = await db.select().from(smmProviders)
+      .where(eq(smmProviders.id, providerId));
+    
+    if (!provider) {
+      return res.status(404).json({ message: "SMM provider not found" });
+    }
+    
+    try {
+      // Create API client
+      const apiClient = new SmmApiClient(provider.apiUrl, provider.apiKey, useMockData);
+      
+      // Get balance
+      const balance = await apiClient.getBalance();
+      
+      return res.json(balance);
+    } catch (error: any) {
+      console.error("[SMM API] Error fetching balance:", error);
+      res.status(400).json({ message: error.message });
+    }
+  } catch (error: any) {
+    console.error("[SMM API] Handler error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create order with SMM provider
+router.post("/:id/order", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const providerId = parseInt(req.params.id);
+    const { serviceId, link, quantity, ...otherParams } = req.body;
+    const useMockData = req.query.mock === 'true';
+    
+    // Validate input
+    if (!serviceId || !link) {
+      return res.status(400).json({ message: "Service ID and link are required" });
+    }
+    
+    // Get the provider
+    const [provider] = await db.select().from(smmProviders)
+      .where(eq(smmProviders.id, providerId));
+    
+    if (!provider) {
+      return res.status(404).json({ message: "SMM provider not found" });
+    }
+    
+    try {
+      // Create API client
+      const apiClient = new SmmApiClient(provider.apiUrl, provider.apiKey, useMockData);
+      
+      // Prepare order data
+      const orderData: Record<string, any> = {
+        service: serviceId,
+        link: link,
+        ...otherParams
+      };
+      
+      if (quantity) {
+        orderData.quantity = quantity;
+      }
+      
+      // Create order
+      const orderResult = await apiClient.createOrder(orderData);
+      
+      return res.json(orderResult);
+    } catch (error: any) {
+      console.error("[SMM API] Error creating order:", error);
+      res.status(400).json({ message: error.message });
+    }
+  } catch (error: any) {
+    console.error("[SMM API] Handler error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get order status from SMM provider
+router.get("/:id/order/:orderId", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const providerId = parseInt(req.params.id);
+    const orderId = parseInt(req.params.orderId);
+    const useMockData = req.query.mock === 'true';
+    
+    // Get the provider
+    const [provider] = await db.select().from(smmProviders)
+      .where(eq(smmProviders.id, providerId));
+    
+    if (!provider) {
+      return res.status(404).json({ message: "SMM provider not found" });
+    }
+    
+    try {
+      // Create API client
+      const apiClient = new SmmApiClient(provider.apiUrl, provider.apiKey, useMockData);
+      
+      // Get order status
+      const orderStatus = await apiClient.getOrderStatus(orderId);
+      
+      return res.json(orderStatus);
+    } catch (error: any) {
+      console.error("[SMM API] Error fetching order status:", error);
+      res.status(400).json({ message: error.message });
+    }
+  } catch (error: any) {
+    console.error("[SMM API] Handler error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get multiple order statuses from SMM provider
+router.post("/:id/orders/status", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const providerId = parseInt(req.params.id);
+    const { orderIds } = req.body;
+    const useMockData = req.query.mock === 'true';
+    
+    // Validate input
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: "Order IDs are required" });
+    }
+    
+    // Get the provider
+    const [provider] = await db.select().from(smmProviders)
+      .where(eq(smmProviders.id, providerId));
+    
+    if (!provider) {
+      return res.status(404).json({ message: "SMM provider not found" });
+    }
+    
+    try {
+      // Create API client
+      const apiClient = new SmmApiClient(provider.apiUrl, provider.apiKey, useMockData);
+      
+      // Get multiple order statuses
+      const orderStatuses = await apiClient.getMultipleOrderStatus(orderIds);
+      
+      return res.json(orderStatuses);
+    } catch (error: any) {
+      console.error("[SMM API] Error fetching order statuses:", error);
+      res.status(400).json({ message: error.message });
+    }
+  } catch (error: any) {
+    console.error("[SMM API] Handler error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Request refill for an order
+router.post("/:id/order/:orderId/refill", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const providerId = parseInt(req.params.id);
+    const orderId = parseInt(req.params.orderId);
+    const useMockData = req.query.mock === 'true';
+    
+    // Get the provider
+    const [provider] = await db.select().from(smmProviders)
+      .where(eq(smmProviders.id, providerId));
+    
+    if (!provider) {
+      return res.status(404).json({ message: "SMM provider not found" });
+    }
+    
+    try {
+      // Create API client
+      const apiClient = new SmmApiClient(provider.apiUrl, provider.apiKey, useMockData);
+      
+      // Request refill
+      const refillResult = await apiClient.refillOrder(orderId);
+      
+      return res.json(refillResult);
+    } catch (error: any) {
+      console.error("[SMM API] Error requesting refill:", error);
+      res.status(400).json({ message: error.message });
+    }
+  } catch (error: any) {
+    console.error("[SMM API] Handler error:", error);
     res.status(500).json({ message: error.message });
   }
 });
