@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle, Clock, ShieldCheck, Award, Star, Users, TrendingUp, Lightning } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, ShieldCheck, Award, Star, Users, TrendingUp, Zap } from 'lucide-react';
 import NavBar from '@/components/NavBar';
 import PricingCalculator from '@/components/shop/PricingCalculator';
 import ProductShowcase from '@/components/shop/ProductShowcase';
@@ -161,7 +161,7 @@ const ProductDetail = () => {
                 <div className="flex flex-wrap gap-2 mb-4">
                   {product.deliverySpeed && (
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-                      <Lightning className="h-3 w-3 mr-1" />
+                      <Zap className="h-3 w-3 mr-1" />
                       {product.deliverySpeed}
                     </Badge>
                   )}
@@ -370,7 +370,7 @@ const ProductDetail = () => {
               <PricingCalculator
                 minQuantity={product.minOrder}
                 maxQuantity={product.maxOrder}
-                pricePerUnit={product.price}
+                price={product.price}
                 discountPercentage={product.discountPercentage}
                 onChange={setQuantity}
                 defaultValue={product.minOrder}

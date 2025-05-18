@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Rocket, AlertTriangle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { HelpCircle, Rocket, CheckCircle2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DeliveryEstimatorProps {
   baseDeliveryTime: string;
@@ -9,136 +9,154 @@ interface DeliveryEstimatorProps {
   speedFactor?: number; // 1 = normal, < 1 = faster, > 1 = slower
 }
 
+// Parse time string like "1-2 hours" or "24 hours" to minutes
+const parseTimeToMinutes = (timeString: string): { min: number; max: number } => {
+  // Handle ranges like "1-2 hours"
+  if (timeString.includes('-')) {
+    const [minStr, maxPart] = timeString.split('-');
+    const [maxStr, unit] = maxPart.trim().split(' ');
+    
+    const min = parseInt(minStr.trim());
+    const max = parseInt(maxStr.trim());
+    
+    // Convert to minutes based on unit
+    if (unit.toLowerCase().includes('minute')) {
+      return { min, max };
+    } else if (unit.toLowerCase().includes('hour')) {
+      return { min: min * 60, max: max * 60 };
+    } else if (unit.toLowerCase().includes('day')) {
+      return { min: min * 24 * 60, max: max * 24 * 60 };
+    }
+  } 
+  // Handle single values like "24 hours"
+  else {
+    const [valueStr, unit] = timeString.trim().split(' ');
+    const value = parseInt(valueStr);
+    
+    // Convert to minutes based on unit
+    if (unit.toLowerCase().includes('minute')) {
+      return { min: value, max: value };
+    } else if (unit.toLowerCase().includes('hour')) {
+      return { min: value * 60, max: value * 60 };
+    } else if (unit.toLowerCase().includes('day')) {
+      return { min: value * 24 * 60, max: value * 24 * 60 };
+    }
+  }
+  
+  // Default
+  return { min: 60, max: 120 };
+};
+
+// Format minutes to human-readable time
+const formatMinutes = (minutes: number): string => {
+  if (minutes < 60) {
+    return `${minutes} minutes`;
+  } else if (minutes < 1440) { // less than a day
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours} hours ${mins} minutes` : `${hours} hours`;
+  } else {
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
+    return hours > 0 ? `${days} days ${hours} hours` : `${days} days`;
+  }
+};
+
 const DeliveryEstimator: React.FC<DeliveryEstimatorProps> = ({
   baseDeliveryTime,
   quantity,
   speedFactor = 1
 }) => {
-  const [estimatedTime, setEstimatedTime] = useState('');
-  const [timeInMinutes, setTimeInMinutes] = useState(0);
-  const [deliveryStatus, setDeliveryStatus] = useState<'normal' | 'express' | 'delayed'>('normal');
+  const [estimatedTime, setEstimatedTime] = useState('Calculating...');
+  const [deliveryStatus, setDeliveryStatus] = useState('normal');
+  const [completionPercentage, setCompletionPercentage] = useState(50);
   
+  // Calculate adjusted delivery time based on quantity and speed factor
   useEffect(() => {
-    // Parse base delivery time (e.g., "30 minutes", "1-2 hours", "24 hours")
-    let baseMinutes = 30; // Default
+    // Parse the base delivery time to minutes
+    const { min, max } = parseTimeToMinutes(baseDeliveryTime);
     
-    if (baseDeliveryTime) {
-      if (baseDeliveryTime.includes('minute')) {
-        const minutes = parseInt(baseDeliveryTime);
-        if (!isNaN(minutes)) baseMinutes = minutes;
-      } else if (baseDeliveryTime.includes('hour')) {
-        const hoursText = baseDeliveryTime.split(' ')[0];
-        if (hoursText.includes('-')) {
-          // Range like "1-2 hours"
-          const [minHours, maxHours] = hoursText.split('-').map(h => parseInt(h));
-          if (!isNaN(minHours) && !isNaN(maxHours)) {
-            // Use average for estimation
-            baseMinutes = ((minHours + maxHours) / 2) * 60;
-          }
-        } else {
-          // Single value like "2 hours"
-          const hours = parseInt(hoursText);
-          if (!isNaN(hours)) baseMinutes = hours * 60;
-        }
-      }
-    }
+    // Apply quantity scaling - larger quantities take more time
+    const quantityFactor = Math.log10(quantity) / Math.log10(1000);
+    const quantityAdjustment = 1 + (quantityFactor > 1 ? quantityFactor - 1 : 0);
     
-    // Calculate estimated time based on quantity
-    // Formula: base time + (quantity factor * base time)
-    const quantityFactor = Math.log10(Math.max(quantity, 10)) / 2; // Logarithmic scaling
-    const calculatedMinutes = baseMinutes * (1 + quantityFactor) * speedFactor;
-    setTimeInMinutes(Math.round(calculatedMinutes));
+    // Apply speed factor (from props)
+    const adjustedMin = Math.ceil(min * quantityAdjustment * speedFactor);
+    const adjustedMax = Math.ceil(max * quantityAdjustment * speedFactor);
     
-    // Format the display time
-    let timeDisplay = '';
-    if (calculatedMinutes < 60) {
-      timeDisplay = `${Math.round(calculatedMinutes)} minutes`;
-    } else if (calculatedMinutes < 120) {
-      timeDisplay = `1 hour ${Math.round(calculatedMinutes - 60)} minutes`;
+    // Format the result
+    let result = '';
+    if (adjustedMin === adjustedMax) {
+      result = formatMinutes(adjustedMin);
     } else {
-      const hours = Math.floor(calculatedMinutes / 60);
-      const minutes = Math.round(calculatedMinutes % 60);
-      timeDisplay = `${hours} hours${minutes > 0 ? ` ${minutes} minutes` : ''}`;
+      result = `${formatMinutes(adjustedMin)} - ${formatMinutes(adjustedMax)}`;
     }
-    setEstimatedTime(timeDisplay);
     
-    // Set delivery status based on calculated time
-    if (calculatedMinutes < baseMinutes * 0.8) {
-      setDeliveryStatus('express');
-    } else if (calculatedMinutes > baseMinutes * 1.5) {
-      setDeliveryStatus('delayed');
+    setEstimatedTime(result);
+    
+    // Set delivery status based on time
+    if (adjustedMax < 30) { // less than 30 minutes
+      setDeliveryStatus('fast');
+      setCompletionPercentage(90);
+    } else if (adjustedMax > 1440) { // more than a day
+      setDeliveryStatus('slow');
+      setCompletionPercentage(30);
     } else {
       setDeliveryStatus('normal');
+      setCompletionPercentage(60);
     }
+    
   }, [baseDeliveryTime, quantity, speedFactor]);
   
-  // Delivery status colors and labels
-  const statusConfig = {
-    express: {
-      color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      progressColor: 'bg-green-500',
-      label: 'Express Delivery'
-    },
-    normal: {
-      color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      progressColor: 'bg-blue-500',
-      label: 'Standard Delivery'
-    },
-    delayed: {
-      color: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-      progressColor: 'bg-amber-500',
-      label: 'Extended Delivery'
-    }
-  };
-  
-  // Calculate estimated completion percentage (max delivery time arbitrarily set to 24 hours)
-  const maxDeliveryMinutes = 24 * 60;
-  const completionPercentage = Math.min(100, Math.max(5, 100 - (timeInMinutes / maxDeliveryMinutes * 100)));
-
   return (
-    <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Clock className="w-5 h-5 text-blue-500" />
-          <h3 className="font-medium">Delivery Time Estimate</h3>
-        </div>
-        <Badge
-          variant="outline"
-          className={statusConfig[deliveryStatus].color}
-        >
-          {statusConfig[deliveryStatus].label}
-        </Badge>
+    <div className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-medium flex items-center">
+          Delivery Estimate
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="ml-1 text-gray-400 hover:text-gray-600">
+                  <HelpCircle className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-xs text-xs">
+                  This is an estimated time for your order to be completed based on current platform traffic and order size.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </h3>
+        <span className={`text-sm font-medium`}>
+          {deliveryStatus === 'fast' ? 'Express' : deliveryStatus === 'slow' ? 'Standard' : 'Priority'}
+        </span>
       </div>
       
-      <div className="space-y-3">
-        <div className="flex justify-between items-end text-sm">
-          <span>Estimated completion time:</span>
-          <span className="font-semibold text-base">{estimatedTime}</span>
+      <div className="mb-2 flex justify-between text-sm">
+        <span>Estimated completion time:</span>
+        <span className="font-semibold text-base">{estimatedTime}</span>
+      </div>
+      
+      <Progress 
+        value={completionPercentage} 
+        className="h-2"
+      />
+      
+      <div className="flex justify-between text-xs text-gray-500 mt-2">
+        <div className="flex items-center">
+          <Rocket className="w-3 h-3 mr-1" />
+          <span>Order Processing</span>
         </div>
-        
-        <Progress 
-          value={completionPercentage} 
-          className={`h-2 ${statusConfig[deliveryStatus].progressColor}`}
-        />
-        
-        <div className="flex justify-between text-xs text-gray-500">
-          <div className="flex items-center">
-            <Rocket className="w-3 h-3 mr-1" />
-            <span>Starts immediately</span>
-          </div>
-          <div className="flex items-center">
-            <Clock className="w-3 h-3 mr-1" />
-            <span>Completes in {estimatedTime}</span>
-          </div>
+        <div className="flex items-center">
+          <CheckCircle2 className="w-3 h-3 mr-1" />
+          <span>Completion</span>
         </div>
       </div>
       
-      {deliveryStatus === 'delayed' && (
-        <div className="flex items-start mt-2 text-sm text-amber-600 dark:text-amber-400">
-          <AlertTriangle className="h-4 w-4 mr-1 mt-0.5 flex-shrink-0" />
-          <span>Larger orders take more time to process. Consider breaking into smaller orders for faster delivery.</span>
-        </div>
-      )}
+      <div className="mt-4 text-xs text-gray-500">
+        <p>* Actual delivery times may vary based on platform conditions and order volume.</p>
+      </div>
     </div>
   );
 };
