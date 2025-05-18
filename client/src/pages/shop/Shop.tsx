@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { Link, useLocation } from 'wouter';
@@ -27,7 +27,7 @@ import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { CardSkeleton } from '@/components/skeletons/CardSkeleton';
 import { useToast } from '@/hooks/use-toast';
 
-// İkonlar
+// Icons
 import { Filter, Search, ShoppingCart, Star, ArrowRight, Tag, TrendingUp } from 'lucide-react';
 
 const ProductCard = ({ product }: any) => {
@@ -131,25 +131,25 @@ const ShopPage = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('popularity');
 
-  // Platformları çek
+  // Fetch platforms
   const { data: platforms = [], isLoading: isLoadingPlatforms } = useQuery({
     queryKey: ['/api/platforms'],
     queryFn: () => apiRequest('GET', '/api/platforms').then(res => res.json()),
   });
 
-  // Kategorileri çek
+  // Fetch categories
   const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
     queryKey: ['/api/product-categories'],
     queryFn: () => apiRequest('GET', '/api/product-categories').then(res => res.json()),
   });
 
-  // Ürünleri çek
+  // Fetch products
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ['/api/digital-products'],
     queryFn: () => apiRequest('GET', '/api/digital-products').then(res => res.json()),
   });
 
-  // Ürünleri filtrele ve sırala
+  // Filter and sort products
   const filteredProducts = React.useMemo(() => {
     if (!Array.isArray(products)) return [];
     
@@ -182,12 +182,12 @@ const ShopPage = () => {
       });
   }, [products, searchQuery, platformFilter, categoryFilter, sortBy]);
 
-  // Gruplanmış ürünler
+  // Grouped products
   const featuredProducts = filteredProducts.filter(p => p.isFeatured);
   const discountedProducts = filteredProducts.filter(p => p.discountPercentage > 0);
 
   return (
-    <>
+    <div>
       <NavBar />
       <div className="container mx-auto px-4 py-8">
         <header className="mb-8">
@@ -197,148 +197,149 @@ const ShopPage = () => {
           </p>
         </header>
 
-      {/* Filtreler ve Arama */}
-      <div className="mb-8 flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-            <Input
-              type="search"
-              placeholder="Search products..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        {/* Filters and Search */}
+        <div className="mb-8 flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+              <Input
+                type="search"
+                placeholder="Search products..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            <Select value={platformFilter} onValueChange={setPlatformFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Platforms</SelectItem>
+                {Array.isArray(platforms) && platforms.map(platform => (
+                  <SelectItem key={platform.id} value={platform.slug}>
+                    {platform.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {Array.isArray(categories) && categories.map(category => (
+                  <SelectItem key={category.id} value={category.slug}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="popularity">Popularity</SelectItem>
+                <SelectItem value="price-low">Price (Low to High)</SelectItem>
+                <SelectItem value="price-high">Price (High to Low)</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Platform" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Platforms</SelectItem>
-              {Array.isArray(platforms) && platforms.map(platform => (
-                <SelectItem key={platform.id} value={platform.slug}>
-                  {platform.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {Array.isArray(categories) && categories.map(category => (
-                <SelectItem key={category.id} value={category.slug}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="popularity">Popularity</SelectItem>
-              <SelectItem value="price-low">Price (Low to High)</SelectItem>
-              <SelectItem value="price-high">Price (High to Low)</SelectItem>
-              <SelectItem value="newest">Newest</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      {/* İçerik */}
-      <Tabs defaultValue="all" className="mb-8">
-        <TabsList>
-          <TabsTrigger value="all">All Products</TabsTrigger>
-          <TabsTrigger value="featured">Featured</TabsTrigger>
-          <TabsTrigger value="discounted">Discounted</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="all" className="mt-6">
-          {isLoadingProducts ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <CardSkeleton key={i} />
-              ))}
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                No products match your search criteria. Please try different filters.
-              </p>
-              <Button onClick={() => {
-                setSearchQuery('');
-                setPlatformFilter('all');
-                setCategoryFilter('all');
-              }}>
-                Reset Filters
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="featured" className="mt-6">
-          {isLoadingProducts ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <CardSkeleton key={i} />
-              ))}
-            </div>
-          ) : featuredProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-semibold mb-2">Öne Çıkan Ürün Bulunamadı</h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Şu anda öne çıkan ürün bulunmuyor.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {featuredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="discounted" className="mt-6">
-          {isLoadingProducts ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <CardSkeleton key={i} />
-              ))}
-            </div>
-          ) : discountedProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-semibold mb-2">İndirimli Ürün Bulunamadı</h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Şu anda indirimli ürün bulunmuyor.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {discountedProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+        {/* Content */}
+        <Tabs defaultValue="all" className="mb-8">
+          <TabsList>
+            <TabsTrigger value="all">All Products</TabsTrigger>
+            <TabsTrigger value="featured">Featured</TabsTrigger>
+            <TabsTrigger value="discounted">Discounted</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="all" className="mt-6">
+            {isLoadingProducts ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <CardSkeleton key={i} />
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  No products match your search criteria. Please try different filters.
+                </p>
+                <Button onClick={() => {
+                  setSearchQuery('');
+                  setPlatformFilter('all');
+                  setCategoryFilter('all');
+                }}>
+                  Reset Filters
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProducts.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="featured" className="mt-6">
+            {isLoadingProducts ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <CardSkeleton key={i} />
+                ))}
+              </div>
+            ) : featuredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <h3 className="text-lg font-semibold mb-2">No Featured Products</h3>
+                <p className="text-gray-500 dark:text-gray-400">
+                  There are currently no featured products.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {featuredProducts.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="discounted" className="mt-6">
+            {isLoadingProducts ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <CardSkeleton key={i} />
+                ))}
+              </div>
+            ) : discountedProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <h3 className="text-lg font-semibold mb-2">No Discounted Products</h3>
+                <p className="text-gray-500 dark:text-gray-400">
+                  There are currently no discounted products.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {discountedProducts.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
