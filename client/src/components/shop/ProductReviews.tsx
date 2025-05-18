@@ -59,7 +59,7 @@ interface NewReviewForm {
 
 export function ProductReviews({ productId, platform, category }: ProductReviewsProps) {
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('all');
   const [showWriteReview, setShowWriteReview] = useState(false);
@@ -133,6 +133,15 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
   const handleAddReview = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please login to submit a review",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Filter out empty pros and cons
     const filteredPros = newReview.pros.filter(pro => pro.trim() !== '');
     const filteredCons = newReview.cons.filter(con => con.trim() !== '');
@@ -151,7 +160,7 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
 
   // Handle marking a review as helpful or not
   const handleVote = (reviewId: number, isHelpful: boolean) => {
-    if (!isAuthenticated) {
+    if (!user) {
       toast({
         title: "Login required",
         description: "Please login to vote on reviews",
