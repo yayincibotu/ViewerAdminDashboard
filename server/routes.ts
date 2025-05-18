@@ -105,6 +105,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { hashPassword, comparePasswords } = await import('./auth');
   const digitalProductsRouter = await import('./api/digital-products').then(m => m.default);
   const smmProvidersRouter = await import('./api/smm-providers').then(m => m.default);
+  
+  // Register the public digital products API route
+  app.use('/api', digitalProductsRouter);
   const platformsRouter = await import('./api/platforms').then(m => m.default);
   const productCategoriesRouter = await import('./api/product-categories').then(m => m.default);
   
