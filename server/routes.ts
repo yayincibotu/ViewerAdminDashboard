@@ -107,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const smmProvidersRouter = await import('./api/smm-providers').then(m => m.default);
   
   // Register the public digital products API route
-  app.use('/api', digitalProductsRouter);
+  // app.use('/api', digitalProductsRouter); // Commented out to avoid route conflicts
   const platformsRouter = await import('./api/platforms').then(m => m.default);
   const productCategoriesRouter = await import('./api/product-categories').then(m => m.default);
   
