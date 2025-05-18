@@ -82,6 +82,18 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
     },
     enabled: !!productId,
   });
+  
+  // Check if the current user has already submitted a review
+  useEffect(() => {
+    if (reviews && user) {
+      const userReview = reviews.find(review => 
+        review.user_id === user.id || 
+        (review.user && review.user.username === user.username)
+      );
+      
+      setHasUserReviewed(!!userReview);
+    }
+  }, [reviews, user]);
 
   // Mutation for adding a new review
   const addReviewMutation = useMutation({
@@ -252,7 +264,13 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
         <CardTitle className="flex items-center justify-between">
           <span>Customer Reviews</span>
           {!showWriteReview && user && (
-            <Button onClick={() => setShowWriteReview(true)}>Write a Review</Button>
+            <Button 
+              onClick={() => setShowWriteReview(true)} 
+              disabled={hasUserReviewed}
+              title={hasUserReviewed ? "You have already reviewed this product" : "Share your experience"}
+            >
+              {hasUserReviewed ? "Already Reviewed" : "Write a Review"}
+            </Button>
           )}
         </CardTitle>
         <CardDescription>
