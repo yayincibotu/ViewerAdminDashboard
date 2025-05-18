@@ -53,6 +53,12 @@ const ProductDetail = () => {
   // Fetch product details
   const { data: product, isLoading, error } = useQuery<Product>({
     queryKey: ['/api/digital-products', productId],
+    queryFn: () => fetch(`/api/digital-products/${productId}`).then(res => {
+      if (!res.ok) {
+        throw new Error('Failed to fetch product');
+      }
+      return res.json();
+    }),
     enabled: !!productId,
   });
   
