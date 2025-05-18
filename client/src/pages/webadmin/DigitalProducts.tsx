@@ -231,6 +231,91 @@ const DigitalProducts: React.FC = () => {
     }
   };
 
+  // SEO alanları için platform ve kategoriye göre içerik oluşturma
+  const generateSeoContent = (product: any) => {
+    const platformName = product.platform?.name || 'Platform';
+    const categoryName = product.category?.name || product.category || 'Servis';
+    
+    // Her platformu küçük harflerle ifade edelim
+    const platformLower = platformName.toLowerCase();
+    const categoryLower = (typeof categoryName === 'string' ? categoryName : '').toLowerCase();
+    
+    // Başlık ve açıklama için temel şablonlar oluşturalım
+    let seoTitle = `En İyi ${platformName} ${getCategoryDisplayName(categoryLower)} Servisi | Güvenli ve Hızlı Teslimat`;
+    let seoDescription = `${platformName} kanalınız için güvenilir ve organik ${getCategoryDisplayName(categoryLower)}. 24 saat içinde teslimat, %100 güvenli. 30 gün garanti ile ${platformName} ${getCategoryDisplayName(categoryLower)} sayınızı arttırın.`;
+    
+    // Platform ve kategoriye göre özelleştirilmiş anahtar kelimeler
+    let seoKeywords = `${platformLower} ${getCategoryDisplayName(categoryLower).toLowerCase()}, ${platformLower} bot, ${getCategoryDisplayName(categoryLower).toLowerCase()} arttırma, ${platformLower} kanal büyütme`;
+    
+    // Başlık hiyerarşisi
+    let semanticHeadings = `H1: ${platformName} ${getCategoryDisplayName(categoryLower)} Hizmeti ve Özellikleri
+H2: Neden ${platformName} Kanalınıza ${getCategoryDisplayName(categoryLower)} Eklemek Önemlidir?
+H2: ${getCategoryDisplayName(categoryLower)} Hizmetimizin Avantajları
+H3: Güvenli ve Kesintisiz Teslimat
+H3: Organik Görünümlü ${getCategoryDisplayName(categoryLower)}`;
+    
+    // LSI anahtar kelimeleri
+    let lsiKeywords = `${platformLower} ${getCategoryDisplayName(categoryLower).toLowerCase()} sayısı arttırma, ${platformLower} canlı yayın ${getCategoryDisplayName(categoryLower).toLowerCase()}, ${platformLower} yayın ${getCategoryDisplayName(categoryLower).toLowerCase()} oranı, ${platformLower} kanal popülaritesi, ${platformLower} keşfet, ${platformLower} yayıncı büyütme teknikleri`;
+    
+    // SSS Soruları
+    let faqQuestions = `${getCategoryDisplayName(categoryLower)} servisiyle ${platformName} kanalım güvende olur mu?
+${getCategoryDisplayName(categoryLower)} ne kadar süre kalır?
+${getCategoryDisplayName(categoryLower)} sayısı neden önemlidir?
+Ödeme sonrası ne kadar sürede teslimat yapılır?
+Servis sırasında hesabım ban riski taşır mı?
+Gerçek kullanıcılar mı yoksa bot mu alacağım?
+Siparişim için garanti süresi var mı?
+Siparişimde sorun olursa ne yapmalıyım?
+Tekrarlayan sipariş için indirim var mı?
+Bu servisi aldıktan sonra kanalımdaki etkileşim artar mı?`;
+    
+    // SSS Cevapları
+    let faqAnswers = `Evet, hizmetimiz %100 güvenlidir ve TOS uyumludur.
+${getCategoryDisplayName(categoryLower)} genellikle kalıcıdır ve düşüş çok nadir görülür.
+Yüksek ${getCategoryDisplayName(categoryLower).toLowerCase()} sayısı, kanalınızın keşfette görünürlüğünü artırır.
+Genellikle siparişiniz 0-1 saat içinde başlatılır.
+Hayır, kullandığımız yöntemler hesabınızın güvenliğini tehlikeye atmaz.
+Servisimiz organik görünümlü, kaliteli hesaplardan oluşur.
+Evet, tüm siparişlerimiz 30 gün garantilidir.
+7/24 müşteri desteğimizle iletişime geçebilirsiniz.
+Evet, düzenli müşterilerimize özel indirim paketlerimiz mevcuttur.
+Evet, daha yüksek ${getCategoryDisplayName(categoryLower).toLowerCase()} sayısı daha fazla organik etkileşim getirir.`;
+
+    // Semantik Link Metinleri
+    let semanticLinkText = `${platformName} ${getCategoryDisplayName(categoryLower)} paketleri
+${platformName} ${categoryLower=='followers' ? 'İzleyici' : 'Takipçi'} hizmeti
+${platformName} yayıncı büyütme rehberi`;
+
+    // Semantik Link URL'leri
+    let semanticLinkUrls = `/shop/${platformLower}
+/shop/${platformLower}/${categoryLower=='followers' ? 'viewers' : 'followers'}
+/blog/streamer-guide`;
+    
+    return {
+      seoTitle,
+      seoDescription,
+      seoKeywords,
+      semanticHeadings,
+      lsiKeywords,
+      faqQuestions,
+      faqAnswers,
+      semanticLinkText,
+      semanticLinkUrls
+    };
+  };
+  
+  // Kategori isimlerini görüntüleme için dönüştürme
+  const getCategoryDisplayName = (category: string) => {
+    switch(category) {
+      case 'followers': return 'Takipçi';
+      case 'likes': return 'Beğeni';
+      case 'views': return 'İzleyici';
+      case 'comments': return 'Yorum';
+      case 'subscribers': return 'Abone';
+      default: return 'Hizmet';
+    }
+  };
+
   // Open dialog for editing
   const handleEditProduct = (product: any) => {
     // Convert price from cents to dollars for display
@@ -239,8 +324,25 @@ const DigitalProducts: React.FC = () => {
       price: product.price / 100,
     };
     
+    // SEO içeriklerini oluştur
+    const seoContent = generateSeoContent(product);
+    
+    // Üründe SEO alanları yoksa otomatik oluşturulanları ekle
+    const enhancedProduct = {
+      ...productForForm,
+      seoTitle: product.seoTitle || seoContent.seoTitle,
+      seoDescription: product.seoDescription || seoContent.seoDescription,
+      seoKeywords: product.seoKeywords || seoContent.seoKeywords,
+      semanticHeadings: product.semanticHeadings || seoContent.semanticHeadings,
+      lsiKeywords: product.lsiKeywords || seoContent.lsiKeywords,
+      faqQuestions: product.faqQuestions || seoContent.faqQuestions,
+      faqAnswers: product.faqAnswers || seoContent.faqAnswers,
+      semanticLinkText: product.semanticLinkText || seoContent.semanticLinkText,
+      semanticLinkUrls: product.semanticLinkUrls || seoContent.semanticLinkUrls
+    };
+    
     setSelectedProduct(product);
-    form.reset(productForForm);
+    form.reset(enhancedProduct);
     setIsAddDialogOpen(true);
   };
 
