@@ -188,9 +188,9 @@ const ShopPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Dijital Ürün Mağazası</h1>
+        <h1 className="text-3xl font-bold mb-2">Digital Product Store</h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Sosyal medya hizmetleri ve dijital ürünler için tek durak noktanız
+          Your one-stop shop for social media services and digital products
         </p>
       </header>
 

@@ -95,7 +95,7 @@ const ProductDetail = () => {
         <div className="mb-6">
           <Button variant="ghost" className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Ürünlere Dön
+            Back to Products
           </Button>
         </div>
         <FormSkeleton />
@@ -110,7 +110,7 @@ const ProductDetail = () => {
           <Link href="/shop">
             <Button variant="ghost">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Ürünlere Dön
+              Back to Products
             </Button>
           </Link>
         </div>
@@ -149,7 +149,7 @@ const ProductDetail = () => {
         <Link href="/shop">
           <Button variant="ghost">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Ürünlere Dön
+            Back to Products
           </Button>
         </Link>
       </div>
@@ -368,8 +368,8 @@ const ProductDetail = () => {
               <Separator />
 
               <div className="flex justify-between items-center font-medium">
-                <span>Toplam Tutar:</span>
-                <span className="text-xl font-bold">₺{calculateTotalPrice()}</span>
+                <span>Total Price:</span>
+                <span className="text-xl font-bold">${calculateTotalPrice()}</span>
               </div>
 
               <div className="mt-4">
