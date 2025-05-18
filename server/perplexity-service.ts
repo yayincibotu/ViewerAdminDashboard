@@ -138,15 +138,7 @@ Format the response as valid JSON with these keys: title, metaDescription, mainC
         ],
         temperature: 0.2,
         max_tokens: 2000,
-        top_p: 0.9,
-        search_domain_filter: ["smm", "social-media", "viewer-bot", "social-media-marketing"],
-        return_images: false,
-        return_related_questions: false,
-        search_recency_filter: "month",
-        top_k: 0,
-        stream: false,
-        presence_penalty: 0,
-        frequency_penalty: 1
+        stream: false
       })
     });
     
@@ -159,7 +151,17 @@ Format the response as valid JSON with these keys: title, metaDescription, mainC
     // Parse the content as JSON
     try {
       const content = data.choices[0].message.content;
-      const parsedContent = JSON.parse(content);
+      console.log('Perplexity response content:', content);
+      
+      // Check if content is wrapped in markdown code blocks and extract it
+      let jsonContent = content;
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        jsonContent = jsonMatch[1].trim();
+        console.log('Extracted JSON content from code blocks:', jsonContent);
+      }
+      
+      const parsedContent = JSON.parse(jsonContent);
       
       // Add citations from the Perplexity response
       return {
@@ -171,16 +173,46 @@ Format the response as valid JSON with these keys: title, metaDescription, mainC
       
       // Try to extract structured data even if not properly formatted as JSON
       const content = data.choices[0].message.content;
-      const titleMatch = content.match(/\"title\":\s*\"([^\"]+)\"/);
-      const metaDescriptionMatch = content.match(/\"metaDescription\":\s*\"([^\"]+)\"/);
-      const mainContentMatch = content.match(/\"mainContent\":\s*\"([^\"]+)\"/);
       
+      // Create a fallback response that ensures we return something useful
       return {
-        title: titleMatch?.[1] || "Generated Title",
-        metaDescription: metaDescriptionMatch?.[1] || "Generated meta description for the service.",
-        mainContent: mainContentMatch?.[1] || content,
-        faq: [],
-        lsiKeywords: [],
+        title: options.productName || "Generated SEO Title",
+        metaDescription: `${options.productName} for ${options.platform} - Best ${options.category} service with fast delivery. Starting at $${options.price}`,
+        mainContent: `# ${options.productName}\n\n${content}`,
+        faq: [
+          { 
+            question: `What is ${options.productName}?`, 
+            answer: `${options.productName} is a ${options.serviceType} for ${options.platform} that provides ${options.category} services.` 
+          },
+          { 
+            question: `How much does ${options.productName} cost?`, 
+            answer: `The price for ${options.productName} starts at $${options.price}.` 
+          },
+          {
+            question: `What is the minimum order quantity for ${options.productName}?`,
+            answer: `The minimum order quantity for ${options.productName} is ${options.minOrder}.`
+          },
+          {
+            question: `What is the maximum order quantity for ${options.productName}?`,
+            answer: `The maximum order quantity for ${options.productName} is ${options.maxOrder}.`
+          },
+          {
+            question: `Is ${options.productName} safe to use?`,
+            answer: `Yes, ${options.productName} is completely safe to use and follows all ${options.platform} guidelines.`
+          }
+        ],
+        lsiKeywords: [
+          options.platform, 
+          options.category, 
+          "social media", 
+          "marketing", 
+          "services",
+          `${options.platform} ${options.category}`,
+          `buy ${options.platform} ${options.category}`,
+          `increase ${options.platform} presence`,
+          `${options.platform} growth`,
+          `${options.platform} marketing`
+        ],
         citations: data.citations || []
       };
     }
