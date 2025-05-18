@@ -124,7 +124,7 @@ router.post("/generate", async (req: Request, res: Response) => {
 /**
  * Save SEO content to a product
  */
-export async function saveSEOContentToProduct(req: Request, res: Response) {
+router.patch("/product/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const {
@@ -161,4 +161,6 @@ export async function saveSEOContentToProduct(req: Request, res: Response) {
       error: error.message
     });
   }
-}
+});
+
+export default router;

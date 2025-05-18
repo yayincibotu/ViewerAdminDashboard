@@ -9,6 +9,7 @@ import crypto from "crypto";
 import { db, pool } from "./db";
 import { eq, desc } from "drizzle-orm";
 import { getStripe, syncSubscriptionPlansWithStripe, isStripeConfigured, createPaymentIntentForPlan } from "./stripe-helper";
+// Import the Perplexity SEO API router
 import perplexitySeoRouter from './api/perplexity-seo';
 import { 
   users, userSubscriptions, payments, platforms,
