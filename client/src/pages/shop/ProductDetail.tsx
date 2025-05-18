@@ -835,15 +835,27 @@ const ProductDetail = () => {
             <section className="mt-8 prose prose-sm dark:prose-invert max-w-none">
               <h2 className="text-xl font-bold mb-4">About {product.platform.name} {product.category.name} Services</h2>
               <div className="text-gray-700 dark:text-gray-300">
-                {optimizeProductDescription(
-                  product.longDescription || product.description,
-                  generateSeoKeywords(
-                    product.name,
-                    product.platform.name,
-                    product.category.name,
-                    product.description
-                  )
-                )}
+                {(() => {
+                  // SEO anahtar kelimeleri oluştur
+                  const keywords = {
+                    primary: `${product.platform.name} ${product.category.name}`.toLowerCase(),
+                    secondary: [
+                      `buy ${product.platform.name} ${product.category.name}`,
+                      `${product.platform.name} marketing`,
+                      `${product.category.name} for ${product.platform.name}`,
+                    ],
+                    longTail: [
+                      `best ${product.platform.name} ${product.category.name} service`,
+                      `how to get more ${product.platform.name} ${product.category.name}`,
+                    ]
+                  };
+                  
+                  // Açıklamayı optimize et
+                  return optimizeProductDescription(
+                    product.longDescription || product.description,
+                    keywords
+                  );
+                })()}
               </div>
             </section>
             
