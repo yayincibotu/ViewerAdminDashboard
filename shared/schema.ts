@@ -103,8 +103,27 @@ export const platforms = pgTable("platforms", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Ürün kategorileri
+export const productCategories = pgTable("product_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertPlatformSchema = createInsertSchema(platforms).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductCategorySchema = createInsertSchema(productCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Services
@@ -240,6 +259,8 @@ export type InsertUserSubscription = z.infer<typeof insertSubscriptionSchema>;
 
 export type Platform = typeof platforms.$inferSelect;
 export type InsertPlatform = z.infer<typeof insertPlatformSchema>;
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type InsertProductCategory = z.infer<typeof insertProductCategorySchema>;
 
 export type Service = typeof services.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
