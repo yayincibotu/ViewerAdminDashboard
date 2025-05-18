@@ -458,11 +458,11 @@ ${platformName} streamer growth guide`;
                               <FormLabel>Platform</FormLabel>
                               <Select 
                                 onValueChange={(value) => field.onChange(parseInt(value))}
-                                defaultValue={field.value ? field.value.toString() : ""}
+                                value={field.value ? field.value.toString() : ""}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Platform seçin" />
+                                    <SelectValue placeholder="Select a platform" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -485,19 +485,19 @@ ${platformName} streamer growth guide`;
                           name="category"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Kategori</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                              <FormLabel>Category</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Kategori seçin" />
+                                    <SelectValue placeholder="Select a category" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="followers">Takipçiler</SelectItem>
-                                  <SelectItem value="likes">Beğeniler</SelectItem>
-                                  <SelectItem value="views">İzlenmeler</SelectItem>
-                                  <SelectItem value="comments">Yorumlar</SelectItem>
-                                  <SelectItem value="subscribers">Aboneler</SelectItem>
+                                  <SelectItem value="followers">Followers</SelectItem>
+                                  <SelectItem value="likes">Likes</SelectItem>
+                                  <SelectItem value="views">Views</SelectItem>
+                                  <SelectItem value="comments">Comments</SelectItem>
+                                  <SelectItem value="subscribers">Subscribers</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -510,17 +510,17 @@ ${platformName} streamer growth guide`;
                           name="serviceType"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Servis Tipi</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                              <FormLabel>Service Type</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Servis tipi seçin" />
+                                    <SelectValue placeholder="Select service type" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="instant">Anlık</SelectItem>
-                                  <SelectItem value="gradual">Kademeli</SelectItem>
-                                  <SelectItem value="drip">Damla</SelectItem>
+                                  <SelectItem value="instant">Instant</SelectItem>
+                                  <SelectItem value="gradual">Gradual</SelectItem>
+                                  <SelectItem value="drip">Drip-feed</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -602,10 +602,13 @@ ${platformName} streamer growth guide`;
                           name="minQuantity"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Minimum Miktar</FormLabel>
+                              <FormLabel>Minimum Quantity</FormLabel>
                               <FormControl>
-                                <Input type="number" min="1" {...field} />
+                                <Input type="number" min="1" {...field} value={field.value || "1"} />
                               </FormControl>
+                              <FormDescription>
+                                The minimum quantity a customer can order
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -616,10 +619,13 @@ ${platformName} streamer growth guide`;
                           name="maxQuantity"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Maksimum Miktar</FormLabel>
+                              <FormLabel>Maximum Quantity</FormLabel>
                               <FormControl>
-                                <Input type="number" min="1" {...field} />
+                                <Input type="number" min="1" {...field} value={field.value || "1000"} />
                               </FormControl>
+                              <FormDescription>
+                                The maximum quantity a customer can order
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -631,10 +637,13 @@ ${platformName} streamer growth guide`;
                         name="sortOrder"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Sıralama</FormLabel>
+                            <FormLabel>Sort Order</FormLabel>
                             <FormControl>
-                              <Input type="number" min="0" {...field} />
+                              <Input type="number" min="0" {...field} value={field.value || "0"} />
                             </FormControl>
+                            <FormDescription>
+                              Products with lower numbers will appear first
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -646,9 +655,9 @@ ${platformName} streamer growth guide`;
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                             <div className="space-y-0.5">
-                              <FormLabel className="text-base">Aktif</FormLabel>
+                              <FormLabel className="text-base">Active Status</FormLabel>
                               <FormDescription>
-                                Bu ürünü müşterilere göster
+                                Show this product to customers
                               </FormDescription>
                             </div>
                             <FormControl>
