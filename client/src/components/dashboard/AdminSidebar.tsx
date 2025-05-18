@@ -60,12 +60,30 @@ const AdminSidebar: React.FC = () => {
             </div>
           </Link>
           
-          <Link href="/webadmin/digital-products">
-            <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/digital-products')}`}>
-              <i className="fas fa-shopping-cart mr-3"></i>
-              Dijital Ürünler
+          <div>
+            <Link href="/webadmin/digital-products">
+              <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
+                location.startsWith('/webadmin/digital-products') ? 'bg-sidebar-accent text-white' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+              }`}>
+                <i className="fas fa-shopping-cart mr-3"></i>
+                Dijital Ürünler
+              </div>
+            </Link>
+            <div className="ml-8 space-y-1 mt-1">
+              <Link href="/webadmin/platforms">
+                <div className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-md ${isActivePath('/webadmin/platforms')}`}>
+                  <i className="fas fa-desktop mr-2"></i>
+                  Platformlar
+                </div>
+              </Link>
+              <Link href="/webadmin/product-categories">
+                <div className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-md ${isActivePath('/webadmin/product-categories')}`}>
+                  <i className="fas fa-tags mr-2"></i>
+                  Kategoriler
+                </div>
+              </Link>
             </div>
-          </Link>
+          </div>
           
           <Link href="/webadmin/smm-providers">
             <div className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${isActivePath('/webadmin/smm-providers')}`}>
