@@ -377,12 +377,13 @@ const ProductDetail = () => {
                 </div>
               </div>
               
-              {/* Premium Product Showcase */}
+              {/* Dynamic Product Visual */}
               <div className="relative">
-                <ProductShowcase 
-                  imageUrl={product.imageUrl || `/images/products/product-${product.id}.jpg`}
-                  platformName={product.platform.name}
-                  categoryName={product.category.name}
+                <ProductVisual 
+                  platform={product.platform.slug || 'default'}
+                  category={product.category.slug || 'default'}
+                  name={product.name}
+                  className="w-full"
                 />
                 
                 {/* Floating Badges */}
