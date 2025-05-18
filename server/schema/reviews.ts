@@ -1,9 +1,7 @@
-import { pgTable, text, serial, integer, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { relations } from "drizzle-orm";
-import { users, digitalProducts } from "../../shared/schema";
 
-// Review Source Enum (user generated or auto-generated)
+// Define review source enum
 export const reviewSourceEnum = pgEnum('review_source', ['user', 'auto']);
 
 // Product Reviews Table
@@ -39,12 +37,15 @@ export const insertProductReviewSchema = createInsertSchema(productReviews).omit
   reportCount: true,
 });
 
-// Review Votes - for tracking helpful/not helpful votes
+export type InsertProductReview = typeof productReviews.$inferInsert;
+export type ProductReview = typeof productReviews.$inferSelect;
+
+// Review Votes Table
 export const reviewVotes = pgTable("review_votes", {
   id: serial("id").primaryKey(),
   reviewId: integer("review_id").notNull(),
   userId: integer("user_id").notNull(),
-  isHelpful: boolean("is_helpful").notNull(), // true for helpful, false for not helpful
+  isHelpful: boolean("is_helpful").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -53,15 +54,18 @@ export const insertReviewVoteSchema = createInsertSchema(reviewVotes).omit({
   createdAt: true,
 });
 
-// Review Templates - for auto-generated reviews
+export type InsertReviewVote = typeof reviewVotes.$inferInsert;
+export type ReviewVote = typeof reviewVotes.$inferSelect;
+
+// Review Templates Table
 export const reviewTemplates = pgTable("review_templates", {
   id: serial("id").primaryKey(),
-  category: text("category").notNull(), // Category type (e.g., followers, views)
-  platformId: integer("platform_id").notNull(), // Platform (e.g., Twitch, YouTube)
-  sentenceTemplates: text("sentence_templates").array().notNull(), // Templates for generating reviews
-  positiveAdjectives: text("positive_adjectives").array().notNull(), // Positive words to use
-  negativeAdjectives: text("negative_adjectives").array().notNull(), // Negative words to use
-  featurePoints: text("feature_points").array().notNull(), // Key features to mention
+  category: text("category").notNull(),
+  platformId: integer("platform_id").notNull(),
+  sentenceTemplates: text("sentence_templates").array().notNull(),
+  positiveAdjectives: text("positive_adjectives").array().notNull(),
+  negativeAdjectives: text("negative_adjectives").array().notNull(),
+  featurePoints: text("feature_points").array().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -72,7 +76,10 @@ export const insertReviewTemplateSchema = createInsertSchema(reviewTemplates).om
   updatedAt: true,
 });
 
-// Review Generation Settings
+export type InsertReviewTemplate = typeof reviewTemplates.$inferInsert;
+export type ReviewTemplate = typeof reviewTemplates.$inferSelect;
+
+// Review Generation Settings Table
 export const reviewGenerationSettings = pgTable("review_generation_settings", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").notNull(),
@@ -87,3 +94,12 @@ export const reviewGenerationSettings = pgTable("review_generation_settings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const insertReviewGenerationSettingsSchema = createInsertSchema(reviewGenerationSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertReviewGenerationSettings = typeof reviewGenerationSettings.$inferInsert;
+export type ReviewGenerationSettings = typeof reviewGenerationSettings.$inferSelect;
