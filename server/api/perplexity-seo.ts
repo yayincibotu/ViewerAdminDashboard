@@ -3,7 +3,7 @@
  * This API endpoint handles requests for generating SEO content using Perplexity AI
  */
 import express, { Request, Response } from 'express';
-import { generateSEOContent } from '../perplexity-service';
+import { generateSEOContent, getPerplexityApiKey } from '../perplexity-service';
 import { db } from '../db';
 import { digitalProducts } from '../schema/digital-products';
 import { eq } from 'drizzle-orm';
@@ -15,7 +15,22 @@ const router = express.Router();
  */
 router.post("/test", async (req: Request, res: Response) => {
   try {
-    const { apiKey } = req.body;
+    // Get the API key from the request body or from the settings
+    let apiKey = req.body.apiKey;
+    
+    // If no API key provided in the request, try to get it from settings
+    if (!apiKey) {
+      apiKey = await getPerplexityApiKey();
+      
+      if (!apiKey) {
+        return res.status(400).json({
+          success: false,
+          message: 'No Perplexity API key found. Please provide an API key in the request or set it in the settings.'
+        });
+      }
+    }
+    
+    console.log('Testing Perplexity API connection with key:', apiKey ? `${apiKey.substring(0, 4)}...` : 'No key provided');
     
     // Test connection to Perplexity API
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
