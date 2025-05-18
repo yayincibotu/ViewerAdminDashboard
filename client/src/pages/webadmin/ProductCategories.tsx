@@ -44,6 +44,7 @@ import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Pencil, Plus, Trash } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 
 // Form schema for product categories
 const categorySchema = z.object({
@@ -322,8 +323,8 @@ const ProductCategories: React.FC = () => {
           </CardHeader>
           <CardContent>
             {isLoadingCategories ? (
-              <div className="flex justify-center items-center h-40">
-                <div className="animate-spin text-3xl">⟳</div>
+              <div className="animate-in fade-in-50 duration-300">
+                <TableSkeleton columns={5} rows={3} />
               </div>
             ) : categories.length === 0 ? (
               <div className="text-center py-10">
