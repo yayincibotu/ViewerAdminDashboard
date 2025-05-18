@@ -372,13 +372,14 @@ const ProductDetail = () => {
                 <span className="text-xl font-bold">₺{calculateTotalPrice()}</span>
               </div>
 
-              <div className="space-y-3 mt-4">
-                <Button className="w-full" size="lg" onClick={handleAddToCart} disabled={product.minOrder && quantity < product.minOrder}>
+              <div className="mt-4">
+                <Button 
+                  className="w-full" 
+                  size="lg" 
+                  onClick={handleBuyNow} 
+                  disabled={product.minOrder && quantity < product.minOrder}
+                >
                   <ShoppingCart className="h-5 w-5 mr-2" />
-                  Sepete Ekle
-                </Button>
-                
-                <Button variant="outline" className="w-full">
                   Hemen Satın Al
                 </Button>
               </div>
