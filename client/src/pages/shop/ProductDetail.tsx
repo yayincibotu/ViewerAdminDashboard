@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useRoute, Link, useLocation } from 'wouter';
+import NavBar from '@/components/NavBar';
 import { 
   Card, 
   CardContent, 
@@ -91,7 +92,9 @@ const ProductDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div>
+        <NavBar />
+        <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <Button variant="ghost" className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" />
