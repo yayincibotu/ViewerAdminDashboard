@@ -273,30 +273,30 @@ const ProductDetail = () => {
                       <div>
                         <h4 className="font-medium flex items-center">
                           <HelpCircle className="h-4 w-4 mr-2 text-blue-500" />
-                          Hesabım güvende mi?
+                          Is my account safe?
                         </h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ml-6">
-                          Evet, tüm hizmetlerimiz platform kurallarına uygun şekilde sağlanmaktadır. Şifreniz istenmez ve hesap güvenliğiniz %100 korunur.
+                          Yes, all our services are provided in accordance with platform guidelines. Your password is never requested and your account security is 100% protected.
                         </p>
                       </div>
                       
                       <div>
                         <h4 className="font-medium flex items-center">
                           <HelpCircle className="h-4 w-4 mr-2 text-blue-500" />
-                          Sipariş ne kadar sürede teslim edilir?
+                          How long does it take to deliver an order?
                         </h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ml-6">
-                          Siparişler genellikle 1-2 saat içinde başlar, büyük siparişlerde bu süre uzayabilir. Tam teslimat süresi ürün açıklamasında belirtilmiştir.
+                          Orders typically start within 1-2 hours, though this may take longer for larger orders. The exact delivery time is specified in the product description.
                         </p>
                       </div>
                       
                       <div>
                         <h4 className="font-medium flex items-center">
                           <HelpCircle className="h-4 w-4 mr-2 text-blue-500" />
-                          Ödeme yöntemleri nelerdir?
+                          What payment methods are available?
                         </h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ml-6">
-                          Kredi kartı, banka kartı ve diğer tüm popüler ödeme yöntemlerini destekliyoruz. Ödemeleriniz Stripe üzerinden güvenle işlenir.
+                          We support credit cards, debit cards, and all popular payment methods. Your payments are securely processed through Stripe.
                         </p>
                       </div>
                     </div>
@@ -307,15 +307,15 @@ const ProductDetail = () => {
           </Card>
         </div>
 
-        {/* Sağ Kolon - Sipariş ve Ödeme */}
+        {/* Right Column - Order and Payment */}
         <div>
           <Card className="sticky top-4">
             <CardHeader>
-              <CardTitle className="text-xl">Sipariş Detayları</CardTitle>
+              <CardTitle className="text-xl">Order Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="font-medium">Birim Fiyat:</span>
+                <span className="font-medium">Unit Price:</span>
                 {product.discountPercentage > 0 ? (
                   <div className="text-right">
                     <span className="text-sm line-through text-gray-500">₺{product.originalPrice}</span>
