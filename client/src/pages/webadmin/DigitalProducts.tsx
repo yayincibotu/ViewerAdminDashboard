@@ -534,6 +534,215 @@ const DigitalProducts: React.FC = () => {
                         )}
                       />
                     </TabsContent>
+                    
+                    <TabsContent value="seo" className="space-y-4">
+                      <div className="rounded-lg border p-4 mb-4">
+                        <h3 className="text-lg font-medium mb-2">Semantik İçerik Optimizasyonu</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                          Google, kullanıcı niyetini anlamak için semantik ilişkileri kullanır. Aşağıdaki alanlar,
+                          arama motoru sonuçlarında daha iyi sıralanmanıza yardımcı olacaktır.
+                        </p>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="seoTitle"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>SEO Başlığı</FormLabel>
+                              <FormControl>
+                                <Input placeholder="En İyi Twitch İzleyici Botları | Güvenli ve Hızlı Teslimat" {...field} />
+                              </FormControl>
+                              <FormDescription>
+                                Arama sonuçlarında görünecek başlık (50-60 karakter ideal)
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="seoDescription"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Meta Açıklama</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Twitch kanalınız için güvenilir ve organik izleyici botları. 24 saat içinde teslimat, %100 güvenli. 30 gün garanti ile Twitch izleyici sayınızı arttırın." 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Arama sonuçlarında görünecek açıklama (150-160 karakter ideal)
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="seoKeywords"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Meta Anahtar Kelimeler</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="twitch izleyici, twitch bot, izleyici arttırma, twitch kanal büyütme" 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Virgülle ayrılmış anahtar kelimeler
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="semanticHeadings"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Başlık Hiyerarşisi</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="H1: Twitch İzleyici Hizmeti ve Özellikleri 
+H2: Neden Twitch Kanalınıza İzleyici Eklemek Önemlidir?
+H2: İzleyici Hizmetimizin Avantajları
+H3: Güvenli ve Kesintisiz Teslimat
+H3: Organik Görünümlü İzleyiciler" 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Ürün içeriğinde kullanılacak başlık yapısı (H1, H2, H3)
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="lsiKeywords"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>LSI Anahtar Kelimeler</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Twitch izleyici sayısı arttırma, Twitch canlı yayın izleyici, yayın izlenme oranı, Twitch kanal popülaritesi, Twitch keşfet, Twitch yayıncı büyütme teknikleri" 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Latent Semantic Indexing (Gizli Anlam Dizinleme) anahtar kelimeleri
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="faqQuestions"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>SSS Soruları</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="İzleyici botuyla Twitch kanalım güvende olur mu?
+İzleyiciler ne kadar süre kalır?
+İzleyici sayısı neden önemlidir?
+Ödeme sonrası ne kadar sürede teslimat yapılır?" 
+                                    {...field} 
+                                    className="min-h-[120px]"
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Her satıra bir soru ekleyin (10+ ideal)
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="faqAnswers"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>SSS Cevapları</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="Evet, hizmetimiz %100 güvenlidir ve TOS uyumludur.
+İzleyiciler 30-60 dakika izleme süresine sahiptir.
+Yüksek izleyici sayısı, kanalınızın keşfette görünürlüğünü artırır.
+Genellikle siparişiniz 0-1 saat içinde başlatılır." 
+                                    {...field} 
+                                    className="min-h-[120px]"
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Sorulara karşılık gelen cevaplar (aynı sırada)
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="semanticLinkText"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Semantik Link Metinleri</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="Twitch izleyici paketleri
+Twitch takipçi hizmeti
+Twitch yayıncı büyütme rehberi" 
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Her satıra bir link metni ekleyin
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="semanticLinkUrls"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Semantik Link URL'leri</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="/shop/twitch
+/shop/twitch/followers
+/blog/streamer-guide" 
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Link metinlerine karşılık gelen URL'ler (aynı sırada)
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
                   </Tabs>
                   
                   <DialogFooter>
