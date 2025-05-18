@@ -1,5 +1,6 @@
 import { pgTable, serial, integer, text, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
 
 // Define review source enum
 export const reviewSourceEnum = pgEnum('review_source', ['user', 'auto']);
@@ -103,3 +104,20 @@ export const insertReviewGenerationSettingsSchema = createInsertSchema(reviewGen
 
 export type InsertReviewGenerationSettings = typeof reviewGenerationSettings.$inferInsert;
 export type ReviewGenerationSettings = typeof reviewGenerationSettings.$inferSelect;
+
+// Define relations
+export const productReviewsRelations = relations(productReviews, ({ one }) => ({
+  // We don't need to reference users table directly since some reviews are auto-generated
+  // and don't have a valid user reference
+}));
+
+export const reviewVotesRelations = relations(reviewVotes, ({ one }) => ({
+  review: one(productReviews, {
+    fields: [reviewVotes.reviewId],
+    references: [productReviews.id],
+  }),
+}));
+
+export const reviewGenerationSettingsRelations = relations(reviewGenerationSettings, ({ one }) => ({
+  // No direct relation needed for auto-generation
+}));

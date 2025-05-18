@@ -81,18 +81,16 @@ export async function createProductReview(req: Request, res: Response) {
     
     // Create the review
     const [review] = await db.insert(productReviews).values({
-      productId,
-      userId: req.user.id,
+      product_id: productId,
+      user_id: req.user.id,
       rating,
       title,
       content,
       pros: pros || [],
       cons: cons || [],
-      verifiedPurchase: userPurchases.length > 0,
+      verified_purchase: userPurchases.length > 0,
       platform,
-      category,
-      countryCode: req.user.countryCode || null,
-      deviceType: getDeviceType(req.headers['user-agent'] || ''),
+      device_type: getDeviceType(req.headers['user-agent'] || ''),
       status: "published",
       source: "user",
     }).returning();
