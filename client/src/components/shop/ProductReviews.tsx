@@ -535,11 +535,6 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              {review.source === 'auto' && (
-                                <Badge variant="outline" className="text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900/30">
-                                  Auto-generated
-                                </Badge>
-                              )}
                               {review.platform && (
                                 <Badge variant="outline">
                                   {review.platform}
