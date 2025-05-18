@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ProductVisual, getPlatformIcon, getCategoryIcon } from '@/utils/productImageHelper';
+import { 
+  generateSeoMetadata, 
+  generateProductFaq, 
+  optimizeProductDescription 
+} from '@/utils/seoOptimizer';
+import { ProductFaq } from '@/components/shop/ProductFaq';
 import { useParams, useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -237,85 +243,101 @@ const ProductDetail = () => {
     }
   }, [quantity, product]);
   
-  // SEO için meta bilgileri
+  // Gelişmiş SEO optimizasyonu
   useEffect(() => {
     if (product) {
-      // Sayfa başlığını güncelle - Her sayfaya özel
-      document.title = `${product.name} - ${product.platform.name} ${product.category.name} | ViewerApps`;
+      // URL'den baz URL'yi al
+      const baseUrl = window.location.origin;
       
-      // Meta açıklamasını güncelle
+      // Otomatik SEO meta verilerini oluştur
+      const seoMetadata = generateSeoMetadata(product, baseUrl);
+      
+      // Otomatik ürün SSS'lerini oluştur
+      const productFaq = generateProductFaq(product);
+      
+      // Sayfa başlığını güncelle
+      document.title = seoMetadata.title;
+      
+      // Meta description güncelle
       const metaDescription = document.querySelector('meta[name="description"]');
       if (metaDescription) {
-        metaDescription.setAttribute('content', 
-          `Buy ${product.name} - ${product.platform.name} ${product.category.name}. ` +
-          `${product.description.substring(0, 120)}... Starting from ${product.price.toFixed(2)}₺. ` +
-          `Fast delivery in ${product.deliveryTime || '24-48 hours'}.`
-        );
+        metaDescription.setAttribute('content', seoMetadata.description);
       } else {
         const meta = document.createElement('meta');
         meta.name = 'description';
-        meta.content = `Buy ${product.name} - ${product.platform.name} ${product.category.name}. ` +
-          `${product.description.substring(0, 120)}... Starting from ${product.price.toFixed(2)}₺.`;
+        meta.content = seoMetadata.description;
         document.head.appendChild(meta);
       }
       
-      // Açık grafik meta etiketleri - sosyal paylaşım için
-      const ogTags = [
-        { property: 'og:title', content: `${product.name} - ${product.platform.name} Services` },
-        { property: 'og:description', content: product.description.substring(0, 200) },
-        { property: 'og:type', content: 'product' },
-        { property: 'og:url', content: window.location.href },
-        { property: 'og:price:amount', content: product.price.toString() },
-        { property: 'og:price:currency', content: 'TRY' },
-        { property: 'og:availability', content: 'in stock' }
-      ];
+      // Meta keywords ekle
+      const metaKeywords = document.querySelector('meta[name="keywords"]');
+      if (metaKeywords) {
+        metaKeywords.setAttribute('content', seoMetadata.keywords);
+      } else {
+        const meta = document.createElement('meta');
+        meta.name = 'keywords';
+        meta.content = seoMetadata.keywords;
+        document.head.appendChild(meta);
+      }
       
-      ogTags.forEach(tag => {
-        let existingTag = document.querySelector(`meta[property="${tag.property}"]`);
+      // Canonical link ekle
+      const canonicalLink = document.querySelector('link[rel="canonical"]');
+      if (canonicalLink) {
+        canonicalLink.setAttribute('href', window.location.href);
+      } else {
+        const link = document.createElement('link');
+        link.rel = 'canonical';
+        link.href = window.location.href;
+        document.head.appendChild(link);
+      }
+      
+      // Open Graph meta etiketleri
+      Object.entries(seoMetadata.openGraph).forEach(([property, content]) => {
+        let existingTag = document.querySelector(`meta[property="${property}"]`);
         if (existingTag) {
-          existingTag.setAttribute('content', tag.content);
+          existingTag.setAttribute('content', content);
         } else {
           const meta = document.createElement('meta');
-          meta.setAttribute('property', tag.property);
-          meta.setAttribute('content', tag.content);
+          meta.setAttribute('property', property);
+          meta.setAttribute('content', content);
           document.head.appendChild(meta);
         }
       });
       
-      // Ürün şemalarını ekle - Google için yapılandırılmış veri
-      const jsonLd = {
-        '@context': 'https://schema.org/',
-        '@type': 'Product',
-        name: product.name,
-        description: product.description,
-        sku: `VAPP-${product.id}`,
-        brand: {
-          '@type': 'Brand',
-          name: 'ViewerApps'
-        },
-        offers: {
-          '@type': 'Offer',
-          url: window.location.href,
-          priceCurrency: 'TRY',
-          price: product.price,
-          priceValidUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-          availability: 'https://schema.org/InStock',
-          seller: {
-            '@type': 'Organization',
-            name: 'ViewerApps'
-          }
+      // Twitter Card meta etiketleri
+      Object.entries(seoMetadata.twitterCard).forEach(([name, content]) => {
+        let existingTag = document.querySelector(`meta[name="${name}"]`);
+        if (existingTag) {
+          existingTag.setAttribute('content', content);
+        } else {
+          const meta = document.createElement('meta');
+          meta.setAttribute('name', name);
+          meta.setAttribute('content', content);
+          document.head.appendChild(meta);
         }
-      };
+      });
       
-      // Mevcut JSON-LD etiketini güncelle veya yeni oluştur
+      // Ürün için JSON-LD yapılandırılmış veri şeması
       let scriptElement = document.querySelector('script[type="application/ld+json"]');
       if (scriptElement) {
-        scriptElement.textContent = JSON.stringify(jsonLd);
+        scriptElement.textContent = JSON.stringify(seoMetadata.structuredData);
       } else {
         scriptElement = document.createElement('script');
         scriptElement.setAttribute('type', 'application/ld+json');
-        scriptElement.textContent = JSON.stringify(jsonLd);
+        scriptElement.textContent = JSON.stringify(seoMetadata.structuredData);
         document.head.appendChild(scriptElement);
+      }
+      
+      // FAQ için ikinci bir JSON-LD şema ekle
+      let faqScriptElement = document.querySelector('script[type="application/ld+json"][data-faq="true"]');
+      if (faqScriptElement) {
+        faqScriptElement.textContent = JSON.stringify(productFaq.structuredData);
+      } else {
+        faqScriptElement = document.createElement('script');
+        faqScriptElement.setAttribute('type', 'application/ld+json');
+        faqScriptElement.setAttribute('data-faq', 'true');
+        faqScriptElement.textContent = JSON.stringify(productFaq.structuredData);
+        document.head.appendChild(faqScriptElement);
       }
     }
   }, [product]);
@@ -798,6 +820,32 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
+            
+            {/* FAQ Section - Important for SEO */}
+            <div className="mt-8">
+              <h2 className="text-xl font-bold mb-4">Frequently Asked Questions</h2>
+              <ProductFaq 
+                platform={product.platform} 
+                category={product.category} 
+                deliveryTime={product.deliveryTime} 
+              />
+            </div>
+            
+            {/* SEO Content Section */}
+            <section className="mt-8 prose prose-sm dark:prose-invert max-w-none">
+              <h2 className="text-xl font-bold mb-4">About {product.platform.name} {product.category.name} Services</h2>
+              <div className="text-gray-700 dark:text-gray-300">
+                {optimizeProductDescription(
+                  product.longDescription || product.description,
+                  generateSeoKeywords(
+                    product.name,
+                    product.platform.name,
+                    product.category.name,
+                    product.description
+                  )
+                )}
+              </div>
+            </section>
             
             {/* Product Comparison - Hidden on small screens */}
             <div className="mt-8 hidden md:block">
