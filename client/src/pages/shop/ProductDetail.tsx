@@ -5,6 +5,7 @@ import {
   generateProductFaq, 
   optimizeProductDescription 
 } from '@/utils/seoOptimizer';
+import { ProductReviews } from '@/components/shop/ProductReviews';
 import { ProductFaq } from '@/components/shop/ProductFaq';
 import { useParams, useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
@@ -857,6 +858,16 @@ const ProductDetail = () => {
                   );
                 })()}
               </div>
+            </section>
+            
+            {/* Customer Reviews Section */}
+            <section className="mt-8">
+              <h2 className="text-xl font-bold mb-4">Customer Reviews</h2>
+              <ProductReviews 
+                productId={product.id} 
+                platform={platformData?.name || ''} 
+                category={product.category} 
+              />
             </section>
             
             {/* Product Comparison - Hidden on small screens */}

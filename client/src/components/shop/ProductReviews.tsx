@@ -250,7 +250,7 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Customer Reviews</span>
-          {!showWriteReview && isAuthenticated && (
+          {!showWriteReview && user && (
             <Button onClick={() => setShowWriteReview(true)}>Write a Review</Button>
           )}
         </CardTitle>
