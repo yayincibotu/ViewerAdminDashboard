@@ -9,6 +9,7 @@ import crypto from "crypto";
 import { db, pool } from "./db";
 import { eq, desc } from "drizzle-orm";
 import { getStripe, syncSubscriptionPlansWithStripe, isStripeConfigured, createPaymentIntentForPlan } from "./stripe-helper";
+import perplexitySeoRouter from './api/perplexity-seo';
 import { 
   users, userSubscriptions, payments, platforms,
   invoices, paymentMethods, securityQuestions, userSecurityQuestions,
@@ -6083,7 +6084,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Perplexity SEO content generation API
-  import perplexitySeoRouter from './api/perplexity-seo';
   app.use('/api/perplexity', perplexitySeoRouter);
 
   const httpServer = createServer(app);

@@ -579,6 +579,64 @@ const SettingsPage: React.FC = () => {
                 <Separator className="my-6" />
                 
                 <div>
+                  <h3 className="text-lg font-medium mb-4">Perplexity AI Integration</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Use Perplexity AI for advanced SEO content generation. Automatically create optimized product descriptions, meta tags, and more.
+                  </p>
+                  
+                  <div className="space-y-4 mb-6">
+                    {/* Perplexity API Key */}
+                    <div className="w-full p-4 border rounded-md bg-secondary/10">
+                      {systemConfigs
+                        .filter(config => config.key === 'perplexity_api_key')
+                        .map(config => (
+                          <ConfigItem 
+                            key={config.id} 
+                            config={config} 
+                            onSave={handleSaveConfig}
+                          />
+                        ))}
+                    </div>
+                    
+                    {/* Test Perplexity API*/}
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      onClick={async () => {
+                        try {
+                          const res = await apiRequest('GET', '/api/perplexity/test');
+                          const data = await res.json();
+                          
+                          if (data.success) {
+                            toast({
+                              title: 'Success',
+                              description: 'Perplexity API connection successful!',
+                            });
+                          } else {
+                            toast({
+                              title: 'Error',
+                              description: data.message || 'Failed to connect to Perplexity API',
+                              variant: 'destructive',
+                            });
+                          }
+                        } catch (error: any) {
+                          toast({
+                            title: 'Error',
+                            description: error.message || 'Failed to test Perplexity API connection',
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                    >
+                      <RefreshCw size={16} />
+                      Test Perplexity API Connection
+                    </Button>
+                  </div>
+                </div>
+                
+                <Separator className="my-6" />
+                
+                <div>
                   <h3 className="text-lg font-medium mb-4">Twitch Integration</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {systemConfigs
