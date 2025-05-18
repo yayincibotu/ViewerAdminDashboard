@@ -221,15 +221,15 @@ const ProductDetail = () => {
                     <ul className="space-y-2">
                       <li className="flex items-center text-sm">
                         <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                        <span>Teslimat Süresi: {product.deliveryTime || "1-2 saat"}</span>
+                        <span>Delivery Time: {product.deliveryTime || "1-2 hours"}</span>
                       </li>
                       <li className="flex items-center text-sm">
                         <Activity className="h-4 w-4 mr-2 text-purple-500" />
-                        <span>Teslim Hızı: {product.deliverySpeed || "Normal"}</span>
+                        <span>Delivery Speed: {product.deliverySpeed || "Normal"}</span>
                       </li>
                       <li className="flex items-center text-sm">
                         <ThumbsUp className="h-4 w-4 mr-2 text-blue-500" />
-                        <span>Müşteri Memnuniyeti: %{product.satisfactionRate || 98}</span>
+                        <span>Customer Satisfaction: {product.satisfactionRate || 98}%</span>
                       </li>
                     </ul>
                   </div>
@@ -237,34 +237,34 @@ const ProductDetail = () => {
 
                 <Tabs defaultValue="details" className="mt-6">
                   <TabsList>
-                    <TabsTrigger value="details">Detaylar</TabsTrigger>
-                    <TabsTrigger value="usage">Kullanım</TabsTrigger>
-                    <TabsTrigger value="faq">Sık Sorulan Sorular</TabsTrigger>
+                    <TabsTrigger value="details">Details</TabsTrigger>
+                    <TabsTrigger value="usage">Usage</TabsTrigger>
+                    <TabsTrigger value="faq">FAQs</TabsTrigger>
                   </TabsList>
                   <TabsContent value="details" className="space-y-4 mt-4">
                     <div>
-                      <h4 className="font-medium mb-2">Bu ürün ne sağlar?</h4>
+                      <h4 className="font-medium mb-2">What does this product provide?</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         {product.longDescription || 
-                          `Bu ürün ${product.platform.name} platformunda ${product.category.name.toLowerCase()} sayınızı artırmak için profesyonel bir hizmettir. Tamamen güvenli ve platforma uygun şekilde çalışır.`}
+                          `This is a professional service designed to increase your ${product.category.name.toLowerCase()} count on the ${product.platform.name} platform. It works securely and in compliance with platform guidelines.`}
                       </p>
                     </div>
                     <div>
-                      <h4 className="font-medium mb-2">Servis Kalitesi</h4>
+                      <h4 className="font-medium mb-2">Service Quality</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Yüksek kaliteli, gerçek hesaplardan gelen etkileşim sağlanmaktadır. Hesaplarınız için tamamen güvenlidir ve platform kurallarına uygundur.
+                        We provide high-quality engagement from real accounts. This service is completely safe for your accounts and complies with platform guidelines.
                       </p>
                     </div>
                   </TabsContent>
                   <TabsContent value="usage" className="space-y-4 mt-4">
                     <div>
-                      <h4 className="font-medium mb-2">Nasıl Kullanılır?</h4>
+                      <h4 className="font-medium mb-2">How to Use?</h4>
                       <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                        <li>Ürünü sepete ekleyin ve ödeme işlemini tamamlayın</li>
-                        <li>Sipariş onayından sonra profilinizde sipariş detaylarını görüntüleyebilirsiniz</li>
-                        <li>Gerekli bağlantı bilgilerini (profil URL, kullanıcı adı vb.) girin</li>
-                        <li>Servis aktivasyonu genellikle 5-30 dakika içinde tamamlanır</li>
-                        <li>Siparişinizin durumunu "Siparişlerim" sayfasından takip edebilirsiniz</li>
+                        <li>Complete your purchase</li>
+                        <li>After order confirmation, you can view order details in your profile</li>
+                        <li>Enter the required connection information (profile URL, username, etc.)</li>
+                        <li>Service activation typically completes within 5-30 minutes</li>
+                        <li>You can track your order status from the "My Orders" page</li>
                       </ol>
                     </div>
                   </TabsContent>
