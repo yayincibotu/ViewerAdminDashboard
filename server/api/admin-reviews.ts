@@ -1,26 +1,48 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { reviews, products } from '@shared/schema';
+import { digitalProducts } from '@shared/schema';
+import { productReviews } from '../schema/reviews';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { requireAdmin } from '../middleware/auth';
+
+// Middleware for admin authorization
+const requireAdmin = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated || !req.isAuthenticated() || req.user?.role !== 'admin') {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  next();
+};
 
 const router = Router();
 
 // GET - Fetch all reviews with product info for admin
 router.get('/admin/reviews', requireAdmin, async (req, res) => {
   try {
-    // Get all reviews with their related product information
-    const allReviews = await db.query.reviews.findMany({
-      with: {
-        product: {
-          columns: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-      orderBy: [desc(reviews.created_at)],
-    });
+    // Get all reviews with product information using a join
+    const allReviews = await db.select({
+      id: productReviews.id,
+      productId: productReviews.productId,
+      userId: productReviews.userId,
+      rating: productReviews.rating,
+      title: productReviews.title,
+      content: productReviews.content,
+      pros: productReviews.pros,
+      cons: productReviews.cons,
+      verifiedPurchase: productReviews.verifiedPurchase,
+      helpfulCount: productReviews.helpfulCount,
+      reportCount: productReviews.reportCount,
+      status: productReviews.status,
+      source: productReviews.source,
+      authorInfo: productReviews.authorInfo,
+      platform: productReviews.platform,
+      countryCode: productReviews.countryCode,
+      deviceType: productReviews.deviceType,
+      createdAt: productReviews.createdAt,
+      updatedAt: productReviews.updatedAt,
+      productName: digitalProducts.name,
+    })
+    .from(productReviews)
+    .leftJoin(digitalProducts, eq(productReviews.productId, digitalProducts.id))
+    .orderBy(desc(productReviews.createdAt));
 
     res.json(allReviews);
   } catch (error) {
@@ -38,17 +60,31 @@ router.get('/admin/reviews/:id', requireAdmin, async (req, res) => {
   }
 
   try {
-    const review = await db.query.reviews.findFirst({
-      where: eq(reviews.id, parseInt(id)),
-      with: {
-        product: {
-          columns: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+    const [review] = await db.select({
+      id: productReviews.id,
+      productId: productReviews.productId,
+      userId: productReviews.userId,
+      rating: productReviews.rating,
+      title: productReviews.title,
+      content: productReviews.content,
+      pros: productReviews.pros,
+      cons: productReviews.cons,
+      verifiedPurchase: productReviews.verifiedPurchase,
+      helpfulCount: productReviews.helpfulCount,
+      reportCount: productReviews.reportCount,
+      status: productReviews.status,
+      source: productReviews.source,
+      authorInfo: productReviews.authorInfo,
+      platform: productReviews.platform,
+      countryCode: productReviews.countryCode,
+      deviceType: productReviews.deviceType,
+      createdAt: productReviews.createdAt,
+      updatedAt: productReviews.updatedAt,
+      productName: digitalProducts.name,
+    })
+    .from(productReviews)
+    .leftJoin(digitalProducts, eq(productReviews.productId, digitalProducts.id))
+    .where(eq(productReviews.id, parseInt(id)));
 
     if (!review) {
       return res.status(404).json({ message: 'Review not found' });
@@ -71,13 +107,14 @@ router.patch('/admin/reviews/:id', requireAdmin, async (req, res) => {
   }
 
   // Remove fields that shouldn't be updated directly
-  const { id: reviewId, product_id, created_at, ...allowedUpdates } = updateData;
+  const { id: reviewId, productId, createdAt, ...allowedUpdates } = updateData;
 
   try {
     // Verify the review exists
-    const existingReview = await db.query.reviews.findFirst({
-      where: eq(reviews.id, parseInt(id)),
-    });
+    const [existingReview] = await db
+      .select()
+      .from(productReviews)
+      .where(eq(productReviews.id, parseInt(id)));
 
     if (!existingReview) {
       return res.status(404).json({ message: 'Review not found' });
@@ -86,14 +123,14 @@ router.patch('/admin/reviews/:id', requireAdmin, async (req, res) => {
     // Add updated_at timestamp
     const dataToUpdate = {
       ...allowedUpdates,
-      updated_at: new Date(),
+      updatedAt: new Date(),
     };
 
     // Update the review
     const updatedReview = await db
-      .update(reviews)
+      .update(productReviews)
       .set(dataToUpdate)
-      .where(eq(reviews.id, parseInt(id)))
+      .where(eq(productReviews.id, parseInt(id)))
       .returning();
 
     res.json(updatedReview[0]);
@@ -113,16 +150,17 @@ router.delete('/admin/reviews/:id', requireAdmin, async (req, res) => {
 
   try {
     // Verify the review exists
-    const existingReview = await db.query.reviews.findFirst({
-      where: eq(reviews.id, parseInt(id)),
-    });
+    const [existingReview] = await db
+      .select()
+      .from(productReviews)
+      .where(eq(productReviews.id, parseInt(id)));
 
     if (!existingReview) {
       return res.status(404).json({ message: 'Review not found' });
     }
 
     // Delete the review
-    await db.delete(reviews).where(eq(reviews.id, parseInt(id)));
+    await db.delete(productReviews).where(eq(productReviews.id, parseInt(id)));
 
     res.status(200).json({ message: 'Review deleted successfully' });
   } catch (error) {

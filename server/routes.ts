@@ -101,7 +101,12 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 // Removed duplicated SMM API functions - now using the implementation in server/api/smm-providers.ts
 
+// Import admin reviews router
+import adminReviewsRouter from './api/admin-reviews';
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register admin reviews router
+  app.use('/api', adminReviewsRouter);
   // Import required functions and modules
   const { hashPassword, comparePasswords } = await import('./auth');
   const digitalProductsRouter = await import('./api/digital-products').then(m => m.default);
