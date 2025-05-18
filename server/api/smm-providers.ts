@@ -665,7 +665,7 @@ router.post("/:id/import-services", requireAdmin, async (req: Request, res: Resp
               platformId,
               category,
               serviceType: "instant", // Default to instant
-              externalProductId: service.id?.toString() || null,
+              externalProductId: service.service.toString(),
               externalServiceId: service.service.toString(),
               providerName: provider.name,
               minQuantity: service.min || 1,
