@@ -788,19 +788,19 @@ H3: Organic-Looking Viewers"
                             name="faqQuestions"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>SSS Soruları</FormLabel>
+                                <FormLabel>FAQ Questions</FormLabel>
                                 <FormControl>
                                   <Textarea 
-                                    placeholder="İzleyici botuyla Twitch kanalım güvende olur mu?
-İzleyiciler ne kadar süre kalır?
-İzleyici sayısı neden önemlidir?
-Ödeme sonrası ne kadar sürede teslimat yapılır?" 
+                                    placeholder="Is my Twitch channel safe with viewer bots?
+How long do viewers stay?
+Why is viewer count important?
+How soon after payment is delivery made?" 
                                     {...field} 
                                     className="min-h-[120px]"
                                   />
                                 </FormControl>
                                 <FormDescription>
-                                  Her satıra bir soru ekleyin (10+ ideal)
+                                  Add one question per line (10+ ideal)
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -812,19 +812,19 @@ H3: Organic-Looking Viewers"
                             name="faqAnswers"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>SSS Cevapları</FormLabel>
+                                <FormLabel>FAQ Answers</FormLabel>
                                 <FormControl>
                                   <Textarea 
-                                    placeholder="Evet, hizmetimiz %100 güvenlidir ve TOS uyumludur.
-İzleyiciler 30-60 dakika izleme süresine sahiptir.
-Yüksek izleyici sayısı, kanalınızın keşfette görünürlüğünü artırır.
-Genellikle siparişiniz 0-1 saat içinde başlatılır." 
+                                    placeholder="Yes, our service is 100% safe and compliant with TOS.
+Viewers typically stay for 30-60 minutes per session.
+Higher viewer count increases your channel visibility in Discover.
+Most orders start processing within 0-1 hour after payment." 
                                     {...field} 
                                     className="min-h-[120px]"
                                   />
                                 </FormControl>
                                 <FormDescription>
-                                  Sorulara karşılık gelen cevaplar (aynı sırada)
+                                  Answers corresponding to questions (in the same order)
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -838,17 +838,17 @@ Genellikle siparişiniz 0-1 saat içinde başlatılır."
                             name="semanticLinkText"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Semantik Link Metinleri</FormLabel>
+                                <FormLabel>Semantic Link Text</FormLabel>
                                 <FormControl>
                                   <Textarea 
-                                    placeholder="Twitch izleyici paketleri
-Twitch takipçi hizmeti
-Twitch yayıncı büyütme rehberi" 
+                                    placeholder="Twitch viewer packages
+Twitch follower service
+Twitch streamer growth guide" 
                                     {...field} 
                                   />
                                 </FormControl>
                                 <FormDescription>
-                                  Her satıra bir link metni ekleyin
+                                  Add one link text per line
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -860,7 +860,7 @@ Twitch yayıncı büyütme rehberi"
                             name="semanticLinkUrls"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Semantik Link URL'leri</FormLabel>
+                                <FormLabel>Semantic Link URLs</FormLabel>
                                 <FormControl>
                                   <Textarea 
                                     placeholder="/shop/twitch
@@ -870,7 +870,7 @@ Twitch yayıncı büyütme rehberi"
                                   />
                                 </FormControl>
                                 <FormDescription>
-                                  Link metinlerine karşılık gelen URL'ler (aynı sırada)
+                                  URLs corresponding to link text (in the same order)
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
