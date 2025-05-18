@@ -75,6 +75,9 @@ const SmmProviders: React.FC = () => {
   const [servicesList, setServicesList] = useState<any>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [platformMapping, setPlatformMapping] = useState<Record<string, number>>({});
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
 
   const { toast } = useToast();
 
@@ -198,6 +201,18 @@ const SmmProviders: React.FC = () => {
     onSuccess: async (response) => {
       const data = await response.json();
       setServicesList(data);
+      
+      // Extract unique categories for filtering
+      if (data && data.services) {
+        const categories = Object.keys(data.services).sort();
+        setUniqueCategories(categories);
+        
+        // Set default category if available
+        if (categories.length > 0) {
+          setSelectedCategory(categories[0]);
+        }
+      }
+      
       setIsServicesDialogOpen(true);
     },
     onError: (error: any) => {
@@ -601,68 +616,150 @@ const SmmProviders: React.FC = () => {
                   </Button>
                 </div>
                 
-                <div className="flex-1 overflow-hidden">
-                  <Tabs defaultValue={Object.keys(servicesList.services)[0]}>
-                    <TabsList className="mb-2 overflow-auto flex w-full justify-start">
-                      {Object.keys(servicesList.services).map((category) => (
-                        <TabsTrigger key={category} value={category} className="whitespace-nowrap">
-                          {category} ({servicesList.services[category].length})
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  {/* Servis Arama ve Filtreleme Alanı */}
+                  <div className="p-4 bg-muted/30 rounded-md mb-4">
+                    <div className="flex flex-col gap-4 md:flex-row">
+                      <div className="flex-1">
+                        <div className="mb-1 text-sm font-medium">Servis Ara</div>
+                        <div className="relative">
+                          <Input
+                            placeholder="Servis adı veya ID'ye göre ara..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-8"
+                          />
+                          <div className="absolute left-2 top-2.5 text-muted-foreground">
+                            <Filter className="h-4 w-4" />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="mb-1 text-sm font-medium">Kategori</div>
+                        <Select 
+                          value={selectedCategory} 
+                          onValueChange={setSelectedCategory}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Kategori seçin" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            <div className="px-2 py-1.5">
+                              <Input
+                                placeholder="Kategori ara..."
+                                className="mb-2"
+                                onChange={(e) => {
+                                  // Filter categories on input
+                                  const searchValue = e.target.value.toLowerCase();
+                                  const filteredCategories = uniqueCategories
+                                    .filter(cat => cat.toLowerCase().includes(searchValue));
+                                }}
+                              />
+                            </div>
+                            {uniqueCategories.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category} ({servicesList.services[category].length})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex items-end">
+                        <Button 
+                          variant="outline" 
+                          className="flex items-center gap-2"
+                          onClick={() => {
+                            setSearchTerm('');
+                            setSelectedCategory(uniqueCategories[0] || '');
+                          }}
+                        >
+                          <RefreshCcw className="h-4 w-4" />
+                          Sıfırla
+                        </Button>
+                      </div>
+                    </div>
                     
-                    {Object.keys(servicesList.services).map((category) => (
-                      <TabsContent key={category} value={category} className="flex-1 overflow-auto">
-                        <ScrollArea className="h-[calc(80vh-220px)]">
-                          <Table className="border">
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-[50px]">Seç</TableHead>
-                                <TableHead>ID</TableHead>
-                                <TableHead>Servis Adı</TableHead>
-                                <TableHead>Fiyat</TableHead>
-                                <TableHead>Min-Max</TableHead>
-                                <TableHead className="w-[200px]">Platform</TableHead>
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {uniqueCategories.slice(0, 8).map((category) => (
+                        <Badge 
+                          key={category}
+                          variant={selectedCategory === category ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => setSelectedCategory(category)}
+                        >
+                          {category} ({servicesList.services[category].length})
+                        </Badge>
+                      ))}
+                      {uniqueCategories.length > 8 && (
+                        <Badge variant="outline">
+                          +{uniqueCategories.length - 8} kategori daha
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Servis Tablosu */}
+                  <div className="flex-1 overflow-hidden">
+                    <ScrollArea className="h-[calc(80vh-320px)]">
+                      <Table className="border">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[50px]">Seç</TableHead>
+                            <TableHead>ID</TableHead>
+                            <TableHead>Servis Adı</TableHead>
+                            <TableHead>Fiyat</TableHead>
+                            <TableHead>Min-Max</TableHead>
+                            <TableHead className="w-[200px]">Platform</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedCategory && servicesList.services[selectedCategory]
+                            .filter((service: any) => {
+                              if (!searchTerm) return true;
+                              const term = searchTerm.toLowerCase();
+                              return (
+                                service.name.toLowerCase().includes(term) ||
+                                service.id.toString().includes(term)
+                              );
+                            })
+                            .map((service: any) => (
+                              <TableRow key={service.id}>
+                                <TableCell>
+                                  <Checkbox 
+                                    checked={selectedServices.includes(service.id.toString())}
+                                    onCheckedChange={() => toggleServiceSelection(service.id.toString())}
+                                  />
+                                </TableCell>
+                                <TableCell>{service.id}</TableCell>
+                                <TableCell>{service.name}</TableCell>
+                                <TableCell>{service.rate} ₺</TableCell>
+                                <TableCell>{service.min} - {service.max}</TableCell>
+                                <TableCell>
+                                  <Select 
+                                    value={platformMapping[service.id]?.toString() || "platform-placeholder"}
+                                    onValueChange={(value) => handlePlatformChange(service.id.toString(), value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Platform seçin" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="platform-placeholder">Platform seçin</SelectItem>
+                                      {servicesList.platforms.map((platform: any) => (
+                                        <SelectItem key={platform.id} value={platform.id.toString()}>
+                                          {platform.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
                               </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {servicesList.services[category].map((service: any) => (
-                                <TableRow key={service.id}>
-                                  <TableCell>
-                                    <Checkbox 
-                                      checked={selectedServices.includes(service.id.toString())}
-                                      onCheckedChange={() => toggleServiceSelection(service.id.toString())}
-                                    />
-                                  </TableCell>
-                                  <TableCell>{service.id}</TableCell>
-                                  <TableCell>{service.name}</TableCell>
-                                  <TableCell>{service.rate} ₺</TableCell>
-                                  <TableCell>{service.min} - {service.max}</TableCell>
-                                  <TableCell>
-                                    <Select 
-                                      value={platformMapping[service.id]?.toString() || ""}
-                                      onValueChange={(value) => handlePlatformChange(service.id.toString(), value)}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Platform seçin" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {servicesList.platforms.map((platform: any) => (
-                                          <SelectItem key={platform.id} value={platform.id.toString()}>
-                                            {platform.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </ScrollArea>
-                      </TabsContent>
-                    ))}
-                  </Tabs>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
                 </div>
               </div>
             )}
