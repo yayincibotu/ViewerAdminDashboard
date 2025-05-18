@@ -340,7 +340,7 @@ const DigitalProducts: React.FC = () => {
                               <FormLabel>Platform</FormLabel>
                               <Select 
                                 onValueChange={(value) => field.onChange(parseInt(value))}
-                                defaultValue={field.value.toString()}
+                                defaultValue={field.value ? field.value.toString() : ""}
                               >
                                 <FormControl>
                                   <SelectTrigger>
@@ -368,7 +368,7 @@ const DigitalProducts: React.FC = () => {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Kategori</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Kategori seçin" />
@@ -393,7 +393,7 @@ const DigitalProducts: React.FC = () => {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Servis Tipi</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Servis tipi seçin" />
