@@ -76,32 +76,39 @@ app.use((req, res, next) => {
    */
   function initializeReviewScheduler() {
     // Run the scheduler immediately
-    scheduleRandomReviews()
-      .then(result => {
-        if (result.success) {
-          log(`Review scheduler initialized: ${result.message}`);
-        } else {
-          log(`Failed to initialize review scheduler: ${result.error}`);
-        }
-      })
-      .catch(error => {
-        log(`Error in review scheduler: ${error.message}`);
-      });
-    
-    // Set up a daily scheduler (every 24 hours)
-    const HOURS_24 = 24 * 60 * 60 * 1000;
-    setInterval(() => {
+    import('./review-generator.js').then(module => {
+      const { scheduleRandomReviews } = module;
+      
+      // Run immediately
       scheduleRandomReviews()
         .then(result => {
           if (result.success) {
-            log(`Daily review scheduler run: ${result.message}`);
+            log(`Review scheduler initialized: ${result.message}`);
           } else {
-            log(`Failed to run daily review scheduler: ${result.error}`);
+            log(`Failed to initialize review scheduler: ${result.error}`);
           }
         })
         .catch(error => {
-          log(`Error in daily review scheduler: ${error.message}`);
+          log(`Error in review scheduler: ${error.message}`);
         });
-    }, HOURS_24);
+      
+      // Set up a daily scheduler (every 24 hours)
+      const HOURS_24 = 24 * 60 * 60 * 1000;
+      setInterval(() => {
+        scheduleRandomReviews()
+          .then(result => {
+            if (result.success) {
+              log(`Daily review scheduler run: ${result.message}`);
+            } else {
+              log(`Failed to run daily review scheduler: ${result.error}`);
+            }
+          })
+          .catch(error => {
+            log(`Error in daily review scheduler: ${error.message}`);
+          });
+      }, HOURS_24);
+    }).catch(error => {
+      log(`Failed to load review scheduler: ${error.message}`);
+    });
   }
 })();
