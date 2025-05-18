@@ -177,8 +177,7 @@ router.get('/similar', async (req, res) => {
     
     let query = db.select()
       .from(digitalProducts)
-      .leftJoin(platforms, eq(digitalProducts.platformId, platforms.id))
-      .leftJoin(productCategories, eq(digitalProducts.categoryId, productCategories.id));
+      .leftJoin(platforms, eq(digitalProducts.platform_id, platforms.id));
     
     // Filter by platform and/or category
     if (platform) {
@@ -189,36 +188,36 @@ router.get('/similar', async (req, res) => {
       if (platform) {
         query = query.where(and(
           eq(platforms.slug, platform as string),
-          eq(productCategories.slug, category as string)
+          eq(digitalProducts.category, category as string)
         ));
       } else {
-        query = query.where(eq(productCategories.slug, category as string));
+        query = query.where(eq(digitalProducts.category, category as string));
       }
     }
     
     const similarProductsData = await query.limit(6);
     
-    const similarProducts = similarProductsData.map(({ digital_products, platforms, product_categories }) => ({
+    const similarProducts = similarProductsData.map(({ digital_products, platforms }) => ({
       id: digital_products.id,
       name: digital_products.name,
       description: digital_products.description,
       price: digital_products.price,
-      discountPercentage: digital_products.discountPercentage,
-      minOrder: digital_products.minQuantity,
-      maxOrder: digital_products.maxQuantity,
-      deliveryTime: digital_products.deliveryTime,
-      satisfactionRate: digital_products.satisfactionRate,
+      discountPercentage: digital_products.discount_percentage,
+      minOrder: digital_products.min_quantity,
+      maxOrder: digital_products.max_quantity,
+      deliveryTime: digital_products.delivery_time,
+      satisfactionRate: digital_products.satisfaction_rate,
       platform: {
         id: platforms?.id,
         name: platforms?.name,
         slug: platforms?.slug,
       },
       category: {
-        id: product_categories?.id,
-        name: product_categories?.name,
-        slug: product_categories?.slug,
+        id: null,
+        name: digital_products.category,
+        slug: digital_products.category?.toLowerCase().replace(/\s+/g, '-'),
       },
-      imageUrl: digital_products.imageUrl,
+      imageUrl: digital_products.image_url,
     }));
     
     res.json(similarProducts);
