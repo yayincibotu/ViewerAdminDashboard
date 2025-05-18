@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import bcrypt from "bcrypt";
 import { storage } from "./storage";
@@ -38,6 +38,20 @@ export async function comparePasswords(supplied: string, stored: string) {
       return true;
     }
   }
+}
+
+// Admin middleware to check if user is an admin
+export function isAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Access denied. Admin role required.' });
+  }
+  
+  next();
+}
   
   console.log(`Comparing passwords: supplied length=${supplied.length}, stored=${stored.substring(0, 10)}...`);
   
