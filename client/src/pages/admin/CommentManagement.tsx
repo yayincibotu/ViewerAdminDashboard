@@ -51,8 +51,8 @@ export default function CommentManagement() {
   // State for filters and pagination
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [productId, setProductId] = useState<string>("");
-  const [status, setStatus] = useState<ReviewStatus | "">("");
+  const [productId, setProductId] = useState<string>("all");
+  const [status, setStatus] = useState<ReviewStatus | "all">("all");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -71,8 +71,8 @@ export default function CommentManagement() {
       const searchParams = new URLSearchParams();
       searchParams.append('page', page.toString());
       searchParams.append('limit', limit.toString());
-      if (productId) searchParams.append('productId', productId);
-      if (status) searchParams.append('status', status);
+      if (productId && productId !== 'all') searchParams.append('productId', productId);
+      if (status && status !== 'all') searchParams.append('status', status);
       if (search) searchParams.append('search', search);
       searchParams.append('sortBy', sortBy);
       searchParams.append('sortOrder', sortOrder);
@@ -258,8 +258,8 @@ export default function CommentManagement() {
 
   // Reset filters
   const resetFilters = () => {
-    setProductId("");
-    setStatus("");
+    setProductId("all");
+    setStatus("all");
     setSearch("");
     setSortBy("created_at");
     setSortOrder("desc");
@@ -295,7 +295,7 @@ export default function CommentManagement() {
                       <SelectValue placeholder="Tüm Ürünler" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tüm Ürünler</SelectItem>
+                      <SelectItem value="all">Tüm Ürünler</SelectItem>
                       {productsQuery.data?.map((product: any) => (
                         <SelectItem key={product.id} value={product.id.toString()}>
                           {product.name}
@@ -309,13 +309,13 @@ export default function CommentManagement() {
                   <Label htmlFor="status">Durum</Label>
                   <Select 
                     value={status} 
-                    onValueChange={(value) => setStatus(value as ReviewStatus | "")}
+                    onValueChange={(value) => setStatus(value as ReviewStatus | "all")}
                   >
                     <SelectTrigger id="status">
                       <SelectValue placeholder="Tüm Durumlar" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tüm Durumlar</SelectItem>
+                      <SelectItem value="all">Tüm Durumlar</SelectItem>
                       <SelectItem value="published">Yayında</SelectItem>
                       <SelectItem value="pending">Beklemede</SelectItem>
                       <SelectItem value="rejected">Reddedildi</SelectItem>
@@ -712,7 +712,7 @@ export default function CommentManagement() {
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="rating">Değerlendirme</Label>
                   <Select 
-                    value={editedReview.rating.toString()} 
+                    value={editedReview.rating?.toString() || "5"} 
                     onValueChange={(value) => setEditedReview({...editedReview, rating: parseInt(value)})}
                   >
                     <SelectTrigger id="rating">
