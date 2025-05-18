@@ -163,7 +163,7 @@ router.patch("/:id", async (req, res) => {
 });
 
 // Kategori sil - Sadece admin
-productCategoriesRouter.delete("/:id", async (req, res) => {
+router.delete("/:id", async (req, res) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
