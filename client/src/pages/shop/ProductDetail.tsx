@@ -471,7 +471,16 @@ const ProductDetail = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
               {/* Product Header - Mobile Only */}
               <div className="p-4 lg:hidden">
-                <h1 className="text-xl font-bold">{product.name}</h1>
+                <h1 className="text-xl font-bold">{product.name.split('[')[0].trim()}</h1>
+                {product.name.includes('[') && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {product.name.match(/\[(.*?)\]/g)?.map((param, idx) => (
+                      <span key={idx} className="inline-block mr-2 mb-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                        {param}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="flex items-center text-sm mt-2">
                   <Badge variant="outline" className="mr-2">{product.platform.name}</Badge>
                   <Badge variant="outline">{product.category.name}</Badge>
@@ -527,7 +536,16 @@ const ProductDetail = () => {
                 {/* Desktop Header */}
                 <div className="hidden lg:flex justify-between items-start mb-4">
                   <div>
-                    <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
+                    <h1 className="text-2xl font-bold mb-2">{product.name.split('[')[0].trim()}</h1>
+                    {product.name.includes('[') && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {product.name.match(/\[(.*?)\]/g)?.map((param, idx) => (
+                          <span key={idx} className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                            {param}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{product.platform.name}</Badge>
                       <Badge variant="outline">{product.category.name}</Badge>
