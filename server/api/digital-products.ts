@@ -120,26 +120,25 @@ router.get('/related/:id', async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
     
-    const platformId = product[0].platformId;
-    const categoryId = product[0].categoryId;
+    const platformId = product[0].platform_id;
+    const categoryName = product[0].category;
     
     // Find related products by same platform OR same category, excluding the current product
     const relatedProductsData = await db.select()
       .from(digitalProducts)
-      .leftJoin(platforms, eq(digitalProducts.platformId, platforms.id))
-      .leftJoin(productCategories, eq(digitalProducts.categoryId, productCategories.id))
+      .leftJoin(platforms, eq(digitalProducts.platform_id, platforms.id))
       .where(
         and(
           not(eq(digitalProducts.id, productId)),
           or(
-            eq(digitalProducts.platformId, platformId),
-            eq(digitalProducts.categoryId, categoryId)
+            eq(digitalProducts.platform_id, platformId),
+            eq(digitalProducts.category, categoryName)
           )
         )
       )
       .limit(4);
     
-    const relatedProducts = relatedProductsData.map(({ digital_products, platforms, product_categories }) => ({
+    const relatedProducts = relatedProductsData.map(({ digital_products, platforms }) => ({
       id: digital_products.id,
       name: digital_products.name,
       description: digital_products.description,

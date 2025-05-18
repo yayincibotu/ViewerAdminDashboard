@@ -3,15 +3,14 @@ import { pgTable, serial, text, varchar, integer, decimal, timestamp, boolean } 
 // Platforms (e.g., Twitch, YouTube, Instagram, etc.)
 export const platforms = pgTable('platforms', {
   id: serial('id').primaryKey(),
-  name: varchar('name', { length: 255 }).notNull(),
-  slug: varchar('slug', { length: 255 }).notNull().unique(),
+  name: text('name'),
+  slug: text('slug'),
   description: text('description'),
-  icon: varchar('icon', { length: 255 }),
-  banner: varchar('banner', { length: 255 }),
-  isActive: boolean('is_active').default(true),
-  displayOrder: integer('display_order').default(0),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  icon_class: text('icon_class'),
+  bg_color: text('bg_color'),
+  is_active: boolean('is_active').default(true),
+  created_at: timestamp('created_at').defaultNow(),
+  updated_at: timestamp('updated_at').defaultNow(),
 });
 
 // Product Categories (e.g., Followers, Viewers, Likes, etc.)
