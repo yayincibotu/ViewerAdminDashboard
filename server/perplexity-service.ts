@@ -1,6 +1,7 @@
 /**
  * Perplexity AI API Service for enhanced SEO content generation
  */
+import fetch from 'node-fetch';
 import { db } from './db';
 import { settings } from './schema/settings';
 import { eq } from 'drizzle-orm';
@@ -46,13 +47,14 @@ interface SEOContentOptions {
  */
 export async function getPerplexityApiKey(): Promise<string | null> {
   try {
-    const settingRecord = await db.select().from(settings).where(eq(settings.key, 'PERPLEXITY_API_KEY')).limit(1);
-    if (settingRecord.length > 0 && settingRecord[0].value) {
-      return settingRecord[0].value;
-    }
-    return null;
+    const [apiKeySetting] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, 'perplexity_api_key'));
+    
+    return apiKeySetting?.value || null;
   } catch (error) {
-    console.error('Error fetching Perplexity API key:', error);
+    console.error('Error retrieving Perplexity API key:', error);
     return null;
   }
 }
@@ -61,51 +63,47 @@ export async function getPerplexityApiKey(): Promise<string | null> {
  * Generate SEO content using Perplexity AI
  */
 export async function generateSEOContent(options: SEOContentOptions): Promise<{
-  seoTitle: string;
-  seoDescription: string;
-  seoKeywords: string;
-  seoFaqs: { question: string; answer: string }[];
-  semanticContent: string;
+  title: string;
+  metaDescription: string;
+  mainContent: string;
+  faq: { question: string; answer: string }[];
+  lsiKeywords: string[];
+  citations: string[];
 } | null> {
+  const apiKey = await getPerplexityApiKey();
+  
+  if (!apiKey) {
+    console.error('Perplexity API key not found in settings');
+    return null;
+  }
+  
   try {
-    const apiKey = await getPerplexityApiKey();
+    // Build the prompt with specific instructions for SEO content
+    const featuresText = options.features?.length 
+      ? `The service offers these features: ${options.features.join(', ')}.` 
+      : '';
     
-    if (!apiKey) {
-      console.error('Perplexity API key not found in settings');
-      return null;
-    }
+    const prompt = `Generate SEO-optimized content for a digital service that provides ${options.serviceType} for ${options.platform}. 
+    
+Product details:
+- Name: ${options.productName}
+- Platform: ${options.platform}
+- Category: ${options.category}
+- Price: $${options.price}
+- Minimum order: ${options.minOrder}
+- Maximum order: ${options.maxOrder}
+${featuresText}
 
-    // Create a specialized prompt for generating SEO content
-    const prompt = `
-    I need comprehensive SEO content for a social media marketing service with the following details:
-    
-    Product: ${options.productName}
-    Platform: ${options.platform}
-    Category: ${options.category}
-    Price: $${options.price}
-    Min Order: ${options.minOrder}
-    Max Order: ${options.maxOrder}
-    Service Type: ${options.serviceType}
-    Features: ${options.features ? options.features.join(', ') : 'None specified'}
-    
-    Please generate the following in a JSON format:
-    1. An SEO title (under 60 characters)
-    2. An SEO meta description (150-160 characters) that includes benefits and call to action
-    3. A list of SEO keywords (comma separated) including long-tail keywords
-    4. 5 FAQ questions and answers related to this service
-    5. A 300-word semantic content section for the product details page
-    
-    Format everything as valid JSON with these keys: "seoTitle", "seoDescription", "seoKeywords", "seoFaqs" (array of objects with "question" and "answer"), and "semanticContent".
-    
-    Make sure to: 
-    - Include the platform name (${options.platform}) and category (${options.category}) in the title and description
-    - Use relevant industry-specific terms for social media marketing
-    - Focus on benefits, safety, speed, and reliability
-    - Use persuasive language that encourages purchase
-    - Include keywords about growth, engagement, and visibility
-    
-    Return only the JSON response with no additional explanation.`;
+I need the following output in JSON format:
+1. SEO title (max 60 characters)
+2. Meta description (max 160 characters)
+3. Main content with H1, H2 headings and 3-4 paragraphs (600-800 words)
+4. 5 FAQ questions and answers related to the service
+5. 10 LSI keywords for semantic relevance
 
+Format the response as valid JSON with these keys: title, metaDescription, mainContent, faq (array of {question, answer}), lsiKeywords (array of strings).`;
+
+    // Make the API call to Perplexity
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
@@ -113,55 +111,105 @@ export async function generateSEOContent(options: SEOContentOptions): Promise<{
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
+        model: "llama-3.1-sonar-small-128k-online",
         messages: [
           {
-            role: 'system',
-            content: 'You are a skilled SEO specialist who creates optimized content for social media marketing services. Return only JSON format.'
+            role: "system",
+            content: "You are an expert SEO content writer specializing in digital services for social media marketing. Create highly optimized content that follows SEO best practices and ranks well on Google."
           },
           {
-            role: 'user',
+            role: "user",
             content: prompt
           }
         ],
-        max_tokens: 1500,
         temperature: 0.2,
+        max_tokens: 2000,
+        top_p: 0.9,
+        search_domain_filter: ["smm", "social-media", "viewer-bot", "social-media-marketing"],
         return_images: false,
         return_related_questions: false,
-        frequency_penalty: 1,
-        response_format: { type: "json_object" }
+        search_recency_filter: "month",
+        top_k: 0,
+        stream: false,
+        presence_penalty: 0,
+        frequency_penalty: 1
       })
     });
-
+    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Perplexity API error (${response.status}):`, errorText);
-      return null;
+      throw new Error(`API call failed with status: ${response.status} - ${response.statusText}`);
     }
-
+    
     const data = await response.json() as PerplexityResponse;
     
-    if (!data.choices || data.choices.length === 0 || !data.choices[0].message.content) {
-      console.error('Invalid response from Perplexity API:', data);
-      return null;
-    }
-
-    const contentStr = data.choices[0].message.content;
+    // Parse the content as JSON
     try {
-      const seoContent = JSON.parse(contentStr);
+      const content = data.choices[0].message.content;
+      const parsedContent = JSON.parse(content);
+      
+      // Add citations from the Perplexity response
       return {
-        seoTitle: seoContent.seoTitle || '',
-        seoDescription: seoContent.seoDescription || '',
-        seoKeywords: seoContent.seoKeywords || '',
-        seoFaqs: seoContent.seoFaqs || [],
-        semanticContent: seoContent.semanticContent || ''
+        ...parsedContent,
+        citations: data.citations || []
       };
-    } catch (error) {
-      console.error('Error parsing Perplexity API response:', error);
-      return null;
+    } catch (parseError) {
+      console.error('Error parsing JSON response from Perplexity:', parseError);
+      
+      // Try to extract structured data even if not properly formatted as JSON
+      const content = data.choices[0].message.content;
+      const titleMatch = content.match(/\"title\":\s*\"([^\"]+)\"/);
+      const metaDescriptionMatch = content.match(/\"metaDescription\":\s*\"([^\"]+)\"/);
+      const mainContentMatch = content.match(/\"mainContent\":\s*\"([^\"]+)\"/);
+      
+      return {
+        title: titleMatch?.[1] || "Generated Title",
+        metaDescription: metaDescriptionMatch?.[1] || "Generated meta description for the service.",
+        mainContent: mainContentMatch?.[1] || content,
+        faq: [],
+        lsiKeywords: [],
+        citations: data.citations || []
+      };
     }
+    
   } catch (error) {
-    console.error('Error generating SEO content:', error);
+    console.error('Error generating SEO content with Perplexity:', error);
     return null;
+  }
+}
+
+/**
+ * Save API key to settings
+ */
+export async function savePerplexityApiKey(apiKey: string, updatedBy: string): Promise<boolean> {
+  try {
+    const [existing] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, 'perplexity_api_key'));
+    
+    if (existing) {
+      await db
+        .update(settings)
+        .set({ 
+          value: apiKey,
+          last_updated_by: updatedBy,
+          updated_at: new Date()
+        })
+        .where(eq(settings.id, existing.id));
+    } else {
+      await db.insert(settings).values({
+        key: 'perplexity_api_key',
+        value: apiKey,
+        description: 'API key for Perplexity AI content generation',
+        category: 'api_keys',
+        is_encrypted: true,
+        last_updated_by: updatedBy
+      });
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error saving Perplexity API key:', error);
+    return false;
   }
 }

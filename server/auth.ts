@@ -38,6 +38,17 @@ export async function comparePasswords(supplied: string, stored: string) {
       return true;
     }
   }
+  
+  console.log(`Comparing passwords: supplied length=${supplied.length}, stored=${stored.substring(0, 10)}...`);
+  
+  try {
+    const result = await bcrypt.compare(supplied, stored);
+    console.log(`Password comparison result: ${result}`);
+    return result;
+  } catch (error) {
+    console.error("Password comparison error:", error);
+    return false;
+  }
 }
 
 // Admin middleware to check if user is an admin
@@ -51,18 +62,6 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
   }
   
   next();
-}
-  
-  console.log(`Comparing passwords: supplied length=${supplied.length}, stored=${stored.substring(0, 10)}...`);
-  
-  try {
-    const result = await bcrypt.compare(supplied, stored);
-    console.log(`Password comparison result: ${result}`);
-    return result;
-  } catch (error) {
-    console.error("Password comparison error:", error);
-    return false;
-  }
 }
 
 export function setupAuth(app: Express) {
