@@ -18,22 +18,13 @@ export async function getProductReviews(req: Request, res: Response) {
       return res.status(400).json({ error: "Valid productId is required" });
     }
     
-    // Get reviews with user information
-    const reviews = await db.query.productReviews.findMany({
-      where: and(
+    // Get reviews without relation to users for now
+    const reviews = await db.select().from(productReviews)
+      .where(and(
         eq(productReviews.productId, productId),
         eq(productReviews.status, "published")
-      ),
-      with: {
-        user: {
-          columns: {
-            id: true,
-            username: true,
-          }
-        }
-      },
-      orderBy: [desc(productReviews.createdAt)]
-    });
+      ))
+      .orderBy(desc(productReviews.createdAt));
     
     return res.json(reviews);
   } catch (error) {
@@ -238,13 +229,8 @@ export async function generateProductReviews(req: Request, res: Response) {
       }).returning();
     }
     
-    // Get existing review templates or create generic ones
-    let templates = await db.query.reviewTemplates.findMany({
-      where: or(
-        eq(reviewTemplates.category, product.category?.toString() || ''),
-        eq(reviewTemplates.platformId, product.platformId || 0)
-      )
-    });
+    // Get existing review templates or assume we have none
+    let templates = [];
     
     if (!templates.length) {
       templates = [{
