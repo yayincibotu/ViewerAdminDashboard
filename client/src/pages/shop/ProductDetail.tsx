@@ -237,6 +237,89 @@ const ProductDetail = () => {
     }
   }, [quantity, product]);
   
+  // SEO için meta bilgileri
+  useEffect(() => {
+    if (product) {
+      // Sayfa başlığını güncelle - Her sayfaya özel
+      document.title = `${product.name} - ${product.platform.name} ${product.category.name} | ViewerApps`;
+      
+      // Meta açıklamasını güncelle
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute('content', 
+          `Buy ${product.name} - ${product.platform.name} ${product.category.name}. ` +
+          `${product.description.substring(0, 120)}... Starting from ${product.price.toFixed(2)}₺. ` +
+          `Fast delivery in ${product.deliveryTime || '24-48 hours'}.`
+        );
+      } else {
+        const meta = document.createElement('meta');
+        meta.name = 'description';
+        meta.content = `Buy ${product.name} - ${product.platform.name} ${product.category.name}. ` +
+          `${product.description.substring(0, 120)}... Starting from ${product.price.toFixed(2)}₺.`;
+        document.head.appendChild(meta);
+      }
+      
+      // Açık grafik meta etiketleri - sosyal paylaşım için
+      const ogTags = [
+        { property: 'og:title', content: `${product.name} - ${product.platform.name} Services` },
+        { property: 'og:description', content: product.description.substring(0, 200) },
+        { property: 'og:type', content: 'product' },
+        { property: 'og:url', content: window.location.href },
+        { property: 'og:price:amount', content: product.price.toString() },
+        { property: 'og:price:currency', content: 'TRY' },
+        { property: 'og:availability', content: 'in stock' }
+      ];
+      
+      ogTags.forEach(tag => {
+        let existingTag = document.querySelector(`meta[property="${tag.property}"]`);
+        if (existingTag) {
+          existingTag.setAttribute('content', tag.content);
+        } else {
+          const meta = document.createElement('meta');
+          meta.setAttribute('property', tag.property);
+          meta.setAttribute('content', tag.content);
+          document.head.appendChild(meta);
+        }
+      });
+      
+      // Ürün şemalarını ekle - Google için yapılandırılmış veri
+      const jsonLd = {
+        '@context': 'https://schema.org/',
+        '@type': 'Product',
+        name: product.name,
+        description: product.description,
+        sku: `VAPP-${product.id}`,
+        brand: {
+          '@type': 'Brand',
+          name: 'ViewerApps'
+        },
+        offers: {
+          '@type': 'Offer',
+          url: window.location.href,
+          priceCurrency: 'TRY',
+          price: product.price,
+          priceValidUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+          availability: 'https://schema.org/InStock',
+          seller: {
+            '@type': 'Organization',
+            name: 'ViewerApps'
+          }
+        }
+      };
+      
+      // Mevcut JSON-LD etiketini güncelle veya yeni oluştur
+      let scriptElement = document.querySelector('script[type="application/ld+json"]');
+      if (scriptElement) {
+        scriptElement.textContent = JSON.stringify(jsonLd);
+      } else {
+        scriptElement = document.createElement('script');
+        scriptElement.setAttribute('type', 'application/ld+json');
+        scriptElement.textContent = JSON.stringify(jsonLd);
+        document.head.appendChild(scriptElement);
+      }
+    }
+  }, [product]);
+  
   const handleBuyNow = () => {
     if (!product) return;
     
@@ -340,88 +423,7 @@ const ProductDetail = () => {
     );
   }
   
-  // SEO için meta bilgileri
-  useEffect(() => {
-    if (product) {
-      // Sayfa başlığını güncelle - Her sayfaya özel
-      document.title = `${product.name} - ${product.platform.name} ${product.category.name} | ViewerApps`;
-      
-      // Meta açıklamasını güncelle
-      const metaDescription = document.querySelector('meta[name="description"]');
-      if (metaDescription) {
-        metaDescription.setAttribute('content', 
-          `Buy ${product.name} - ${product.platform.name} ${product.category.name}. ` +
-          `${product.description.substring(0, 120)}... Starting from ${product.price.toFixed(2)}₺. ` +
-          `Fast delivery in ${product.deliveryTime || '24-48 hours'}.`
-        );
-      } else {
-        const meta = document.createElement('meta');
-        meta.name = 'description';
-        meta.content = `Buy ${product.name} - ${product.platform.name} ${product.category.name}. ` +
-          `${product.description.substring(0, 120)}... Starting from ${product.price.toFixed(2)}₺.`;
-        document.head.appendChild(meta);
-      }
-      
-      // Açık grafik meta etiketleri - sosyal paylaşım için
-      const ogTags = [
-        { property: 'og:title', content: `${product.name} - ${product.platform.name} Services` },
-        { property: 'og:description', content: product.description.substring(0, 200) },
-        { property: 'og:type', content: 'product' },
-        { property: 'og:url', content: window.location.href },
-        { property: 'og:price:amount', content: product.price.toString() },
-        { property: 'og:price:currency', content: 'TRY' },
-        { property: 'og:availability', content: 'in stock' }
-      ];
-      
-      ogTags.forEach(tag => {
-        const existingTag = document.querySelector(`meta[property="${tag.property}"]`);
-        if (existingTag) {
-          existingTag.setAttribute('content', tag.content);
-        } else {
-          const meta = document.createElement('meta');
-          meta.setAttribute('property', tag.property);
-          meta.setAttribute('content', tag.content);
-          document.head.appendChild(meta);
-        }
-      });
-      
-      // Ürün şemalarını ekle - Google için yapılandırılmış veri
-      const jsonLd = {
-        '@context': 'https://schema.org/',
-        '@type': 'Product',
-        name: product.name,
-        description: product.description,
-        sku: `VAPP-${product.id}`,
-        brand: {
-          '@type': 'Brand',
-          name: 'ViewerApps'
-        },
-        offers: {
-          '@type': 'Offer',
-          url: window.location.href,
-          priceCurrency: 'TRY',
-          price: product.price,
-          priceValidUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-          availability: 'https://schema.org/InStock',
-          seller: {
-            '@type': 'Organization',
-            name: 'ViewerApps'
-          }
-        }
-      };
-      
-      // Mevcut JSON-LD etiketini güncelle veya yeni oluştur
-      let scriptElement = document.querySelector('script[type="application/ld+json"]');
-      if (scriptElement) {
-        scriptElement.textContent = JSON.stringify(jsonLd);
-      } else {
-        scriptElement = document.createElement('script');
-        scriptElement.type = 'application/ld+json';
-        scriptElement.textContent = JSON.stringify(jsonLd);
-        document.head.appendChild(scriptElement);
-      }
-    }
-  }, [product]);
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
