@@ -158,8 +158,8 @@ const DigitalProducts: React.FC = () => {
     },
     onSuccess: () => {
       toast({
-        title: 'Başarılı',
-        description: 'Dijital ürün başarıyla eklendi',
+        title: 'Success',
+        description: 'Digital product added successfully',
       });
       setIsAddDialogOpen(false);
       form.reset();
@@ -167,8 +167,8 @@ const DigitalProducts: React.FC = () => {
     },
     onError: (error: any) => {
       toast({
-        title: 'Hata',
-        description: `Ürün eklenirken bir hata oluştu: ${error.message}`,
+        title: 'Error',
+        description: `An error occurred while adding the product: ${error.message}`,
         variant: 'destructive',
       });
     },
@@ -184,8 +184,8 @@ const DigitalProducts: React.FC = () => {
     },
     onSuccess: () => {
       toast({
-        title: 'Başarılı',
-        description: 'Dijital ürün başarıyla güncellendi',
+        title: 'Success',
+        description: 'Digital product updated successfully',
       });
       setIsAddDialogOpen(false);
       setSelectedProduct(null);
@@ -194,8 +194,8 @@ const DigitalProducts: React.FC = () => {
     },
     onError: (error: any) => {
       toast({
-        title: 'Hata',
-        description: `Ürün güncellenirken bir hata oluştu: ${error.message}`,
+        title: 'Error',
+        description: `An error occurred while updating the product: ${error.message}`,
         variant: 'destructive',
       });
     },
@@ -208,15 +208,15 @@ const DigitalProducts: React.FC = () => {
     },
     onSuccess: () => {
       toast({
-        title: 'Başarılı',
-        description: 'Dijital ürün başarıyla silindi',
+        title: 'Success',
+        description: 'Digital product deleted successfully',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/digital-products'] });
     },
     onError: (error: any) => {
       toast({
-        title: 'Hata',
-        description: `Ürün silinirken bir hata oluştu: ${error.message}`,
+        title: 'Error',
+        description: `An error occurred while deleting the product: ${error.message}`,
         variant: 'destructive',
       });
     },
@@ -366,7 +366,7 @@ ${platformName} streamer growth guide`;
     <AdminLayout>
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Dijital Ürün Yönetimi</h1>
+          <h1 className="text-2xl font-bold">Digital Products Management</h1>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => {
