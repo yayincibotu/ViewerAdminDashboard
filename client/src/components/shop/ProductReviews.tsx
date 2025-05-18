@@ -266,13 +266,43 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
   const jsonLdData = {
     "@context": "https://schema.org",
     "@type": "Product",
+    "name": `${platform} ${category} Service`,
+    "description": `Professional ${platform} ${category} service with verified delivery and customer satisfaction.`,
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": stats.avgRating.toFixed(1),
       "reviewCount": stats.totalReviews,
       "bestRating": "5",
       "worstRating": "1"
-    }
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": window.location.href,
+      "priceCurrency": "USD",
+      "price": "23.00",
+      "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+      "availability": "https://schema.org/InStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "ViewerApps"
+      }
+    },
+    "review": filteredReviews?.slice(0, 5).map(review => ({
+      "@type": "Review",
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": review.rating,
+        "bestRating": "5",
+        "worstRating": "1"
+      },
+      "author": {
+        "@type": "Person",
+        "name": review.user?.username || review.author_info || "Anonymous"
+      },
+      "datePublished": new Date(review.created_at).toISOString(),
+      "reviewBody": review.content,
+      "name": review.title
+    })) || []
   };
 
   return (
