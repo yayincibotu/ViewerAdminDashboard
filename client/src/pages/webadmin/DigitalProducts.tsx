@@ -231,62 +231,62 @@ const DigitalProducts: React.FC = () => {
     }
   };
 
-  // SEO alanları için platform ve kategoriye göre içerik oluşturma
+  // Generate SEO content based on platform and category
   const generateSeoContent = (product: any) => {
     const platformName = product.platform?.name || 'Platform';
-    const categoryName = product.category?.name || product.category || 'Servis';
+    const categoryName = product.category?.name || product.category || 'Service';
     
-    // Her platformu küçük harflerle ifade edelim
+    // Use lowercase for platforms and categories
     const platformLower = platformName.toLowerCase();
     const categoryLower = (typeof categoryName === 'string' ? categoryName : '').toLowerCase();
     
-    // Başlık ve açıklama için temel şablonlar oluşturalım
-    let seoTitle = `En İyi ${platformName} ${getCategoryDisplayName(categoryLower)} Servisi | Güvenli ve Hızlı Teslimat`;
-    let seoDescription = `${platformName} kanalınız için güvenilir ve organik ${getCategoryDisplayName(categoryLower)}. 24 saat içinde teslimat, %100 güvenli. 30 gün garanti ile ${platformName} ${getCategoryDisplayName(categoryLower)} sayınızı arttırın.`;
+    // Basic templates for title and description
+    let seoTitle = `Best ${platformName} ${getEnglishCategoryName(categoryLower)} Service | Safe and Fast Delivery`;
+    let seoDescription = `Reliable and organic ${getEnglishCategoryName(categoryLower)} for your ${platformName} channel. Delivery within 24 hours, 100% safe. Increase your ${platformName} ${getEnglishCategoryName(categoryLower)} count with 30-day guarantee.`;
     
-    // Platform ve kategoriye göre özelleştirilmiş anahtar kelimeler
-    let seoKeywords = `${platformLower} ${getCategoryDisplayName(categoryLower).toLowerCase()}, ${platformLower} bot, ${getCategoryDisplayName(categoryLower).toLowerCase()} arttırma, ${platformLower} kanal büyütme`;
+    // Platform and category specific keywords
+    let seoKeywords = `${platformLower} ${getEnglishCategoryName(categoryLower).toLowerCase()}, ${platformLower} bot, increase ${getEnglishCategoryName(categoryLower).toLowerCase()}, grow ${platformLower} channel`;
     
-    // Başlık hiyerarşisi
-    let semanticHeadings = `H1: ${platformName} ${getCategoryDisplayName(categoryLower)} Hizmeti ve Özellikleri
-H2: Neden ${platformName} Kanalınıza ${getCategoryDisplayName(categoryLower)} Eklemek Önemlidir?
-H2: ${getCategoryDisplayName(categoryLower)} Hizmetimizin Avantajları
-H3: Güvenli ve Kesintisiz Teslimat
-H3: Organik Görünümlü ${getCategoryDisplayName(categoryLower)}`;
+    // Heading hierarchy
+    let semanticHeadings = `H1: ${platformName} ${getEnglishCategoryName(categoryLower)} Service and Features
+H2: Why Adding ${getEnglishCategoryName(categoryLower)} to Your ${platformName} Channel is Important
+H2: Advantages of Our ${getEnglishCategoryName(categoryLower)} Service
+H3: Safe and Continuous Delivery
+H3: Organic-Looking ${getEnglishCategoryName(categoryLower)}`;
     
-    // LSI anahtar kelimeleri
-    let lsiKeywords = `${platformLower} ${getCategoryDisplayName(categoryLower).toLowerCase()} sayısı arttırma, ${platformLower} canlı yayın ${getCategoryDisplayName(categoryLower).toLowerCase()}, ${platformLower} yayın ${getCategoryDisplayName(categoryLower).toLowerCase()} oranı, ${platformLower} kanal popülaritesi, ${platformLower} keşfet, ${platformLower} yayıncı büyütme teknikleri`;
+    // LSI keywords
+    let lsiKeywords = `increase ${platformLower} ${getEnglishCategoryName(categoryLower).toLowerCase()} count, ${platformLower} live ${getEnglishCategoryName(categoryLower).toLowerCase()}, ${platformLower} stream ${getEnglishCategoryName(categoryLower).toLowerCase()} rate, ${platformLower} channel popularity, ${platformLower} discover, ${platformLower} streamer growth techniques`;
     
-    // SSS Soruları
-    let faqQuestions = `${getCategoryDisplayName(categoryLower)} servisiyle ${platformName} kanalım güvende olur mu?
-${getCategoryDisplayName(categoryLower)} ne kadar süre kalır?
-${getCategoryDisplayName(categoryLower)} sayısı neden önemlidir?
-Ödeme sonrası ne kadar sürede teslimat yapılır?
-Servis sırasında hesabım ban riski taşır mı?
-Gerçek kullanıcılar mı yoksa bot mu alacağım?
-Siparişim için garanti süresi var mı?
-Siparişimde sorun olursa ne yapmalıyım?
-Tekrarlayan sipariş için indirim var mı?
-Bu servisi aldıktan sonra kanalımdaki etkileşim artar mı?`;
+    // FAQ Questions
+    let faqQuestions = `Is my ${platformName} channel safe with your ${getEnglishCategoryName(categoryLower)} service?
+How long will the ${getEnglishCategoryName(categoryLower)} stay?
+Why is the number of ${getEnglishCategoryName(categoryLower)} important?
+How soon after payment will my order be delivered?
+Is there any risk of my account getting banned during the service?
+Will I get real users or bots?
+Is there a guarantee period for my order?
+What should I do if there's an issue with my order?
+Are there any discounts for recurring orders?
+Will my channel engagement increase after using this service?`;
     
-    // SSS Cevapları
-    let faqAnswers = `Evet, hizmetimiz %100 güvenlidir ve TOS uyumludur.
-${getCategoryDisplayName(categoryLower)} genellikle kalıcıdır ve düşüş çok nadir görülür.
-Yüksek ${getCategoryDisplayName(categoryLower).toLowerCase()} sayısı, kanalınızın keşfette görünürlüğünü artırır.
-Genellikle siparişiniz 0-1 saat içinde başlatılır.
-Hayır, kullandığımız yöntemler hesabınızın güvenliğini tehlikeye atmaz.
-Servisimiz organik görünümlü, kaliteli hesaplardan oluşur.
-Evet, tüm siparişlerimiz 30 gün garantilidir.
-7/24 müşteri desteğimizle iletişime geçebilirsiniz.
-Evet, düzenli müşterilerimize özel indirim paketlerimiz mevcuttur.
-Evet, daha yüksek ${getCategoryDisplayName(categoryLower).toLowerCase()} sayısı daha fazla organik etkileşim getirir.`;
+    // FAQ Answers
+    let faqAnswers = `Yes, our service is 100% secure and TOS compliant.
+The ${getEnglishCategoryName(categoryLower)} are generally permanent with very rare drop-offs.
+Higher ${getEnglishCategoryName(categoryLower).toLowerCase()} count increases your channel's visibility in discovery.
+Your order is typically started within 0-1 hour after payment.
+No, our methods do not compromise your account's security.
+Our service consists of high-quality accounts that look organic.
+Yes, all our orders come with a 30-day guarantee.
+You can contact our 24/7 customer support.
+Yes, we offer special discount packages for our regular customers.
+Yes, higher ${getEnglishCategoryName(categoryLower).toLowerCase()} count attracts more organic engagement.`;
 
-    // Semantik Link Metinleri
-    let semanticLinkText = `${platformName} ${getCategoryDisplayName(categoryLower)} paketleri
-${platformName} ${categoryLower=='followers' ? 'İzleyici' : 'Takipçi'} hizmeti
-${platformName} yayıncı büyütme rehberi`;
+    // Semantic Link Text
+    let semanticLinkText = `${platformName} ${getEnglishCategoryName(categoryLower)} packages
+${platformName} ${categoryLower=='followers' ? 'Viewers' : 'Followers'} service
+${platformName} streamer growth guide`;
 
-    // Semantik Link URL'leri
+    // Semantic Link URLs
     let semanticLinkUrls = `/shop/${platformLower}
 /shop/${platformLower}/${categoryLower=='followers' ? 'viewers' : 'followers'}
 /blog/streamer-guide`;
@@ -304,30 +304,44 @@ ${platformName} yayıncı büyütme rehberi`;
     };
   };
   
-  // Kategori isimlerini görüntüleme için dönüştürme
-  const getCategoryDisplayName = (category: string) => {
+  // Convert category names to English display names
+  const getEnglishCategoryName = (category: string) => {
     switch(category) {
-      case 'followers': return 'Takipçi';
-      case 'likes': return 'Beğeni';
-      case 'views': return 'İzleyici';
-      case 'comments': return 'Yorum';
-      case 'subscribers': return 'Abone';
-      default: return 'Hizmet';
+      case 'followers': return 'Followers';
+      case 'likes': return 'Likes';
+      case 'views': return 'Viewers';
+      case 'comments': return 'Comments';
+      case 'subscribers': return 'Subscribers';
+      default: return 'Service';
     }
   };
 
   // Open dialog for editing
   const handleEditProduct = (product: any) => {
-    // Convert price from cents to dollars for display
+    console.log("Editing product:", product);
+    
+    // Convert price from cents to dollars for display and ensure all fields are preserved
     const productForForm = {
       ...product,
       price: product.price / 100,
+      platformId: product.platformId || (product.platform?.id || 0),
+      category: product.category?.name || product.category || '',
+      serviceType: product.serviceType || 'instant',
+      minQuantity: product.minQuantity || 1,
+      maxQuantity: product.maxQuantity || 1000,
+      isActive: typeof product.isActive === 'boolean' ? product.isActive : true,
+      sortOrder: product.sortOrder || 0,
+      
+      // SMM Provider related fields
+      providerName: product.providerName || '',
+      externalServiceId: product.externalServiceId || '',
+      externalProductId: product.externalProductId || '',
     };
     
-    // SEO içeriklerini oluştur
+    // Generate SEO content
     const seoContent = generateSeoContent(product);
     
-    // Üründe SEO alanları yoksa otomatik oluşturulanları ekle
+    // Add generated SEO content if fields are empty
     const enhancedProduct = {
       ...productForForm,
       seoTitle: product.seoTitle || seoContent.seoTitle,
@@ -340,6 +354,8 @@ ${platformName} yayıncı büyütme rehberi`;
       semanticLinkText: product.semanticLinkText || seoContent.semanticLinkText,
       semanticLinkUrls: product.semanticLinkUrls || seoContent.semanticLinkUrls
     };
+    
+    console.log("Prepared form data:", enhancedProduct);
     
     setSelectedProduct(product);
     form.reset(enhancedProduct);
@@ -520,15 +536,18 @@ ${platformName} yayıncı büyütme rehberi`;
                         name="providerName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>SMM Sağlayıcı</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                            <FormLabel>SMM Provider</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              value={field.value || ""}
+                            >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Sağlayıcı seçin (isteğe bağlı)" />
+                                  <SelectValue placeholder="Select provider (optional)" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="manual-no-api">Manuel (API yok)</SelectItem>
+                                <SelectItem value="manual-no-api">Manual (No API)</SelectItem>
                                 {smmProviders.map((provider: any) => (
                                   <SelectItem key={provider.id} value={provider.name}>
                                     {provider.name}
@@ -546,10 +565,13 @@ ${platformName} yayıncı büyütme rehberi`;
                         name="externalServiceId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Harici Servis ID</FormLabel>
+                            <FormLabel>External Service ID</FormLabel>
                             <FormControl>
-                              <Input placeholder="SMM paneldeki servis ID" {...field} value={field.value || ""} />
+                              <Input placeholder="Service ID in SMM panel" {...field} value={field.value || ""} />
                             </FormControl>
+                            <FormDescription>
+                              The service ID from your SMM provider's panel
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -560,10 +582,13 @@ ${platformName} yayıncı büyütme rehberi`;
                         name="externalProductId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Harici Ürün ID</FormLabel>
+                            <FormLabel>External Product ID</FormLabel>
                             <FormControl>
-                              <Input placeholder="SMM paneldeki ürün ID" {...field} value={field.value || ""} />
+                              <Input placeholder="Product ID in SMM panel" {...field} value={field.value || ""} />
                             </FormControl>
+                            <FormDescription>
+                              The product ID from your SMM provider's panel
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
