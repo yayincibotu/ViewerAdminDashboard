@@ -123,7 +123,7 @@ const ProductDetail = () => {
           </CardHeader>
           <CardFooter>
             <Link href="/shop">
-              <Button>Mağazaya Dön</Button>
+              <Button>Return to Shop</Button>
             </Link>
           </CardFooter>
         </Card>
@@ -168,14 +168,14 @@ const ProductDetail = () => {
                     {product.popularityScore > 80 && (
                       <Badge className="bg-orange-500 hover:bg-orange-600">
                         <TrendingUp className="h-3 w-3 mr-1" />
-                        Popüler
+                        Popular
                       </Badge>
                     )}
                   </div>
                 </div>
                 {product.discountPercentage > 0 && (
                   <Badge className="bg-red-500 hover:bg-red-600">
-                    %{product.discountPercentage} İndirim
+                    {product.discountPercentage}% Discount
                   </Badge>
                 )}
               </div>
@@ -183,7 +183,7 @@ const ProductDetail = () => {
             <CardContent className="pt-6">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Ürün Açıklaması</h3>
+                  <h3 className="text-lg font-semibold mb-2">Product Description</h3>
                   <p className="text-gray-700 dark:text-gray-300">{product.description}</p>
                 </div>
 
@@ -191,24 +191,24 @@ const ProductDetail = () => {
                   <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                     <h4 className="font-medium flex items-center mb-3">
                       <ListChecks className="h-5 w-5 mr-2 text-blue-500" />
-                      Özellikler
+                      Features
                     </h4>
                     <ul className="space-y-2">
                       <li className="flex items-center text-sm">
                         <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                        <span>{product.minOrder} - {product.maxOrder} arası sipariş</span>
+                        <span>Order quantity: {product.minOrder} - {product.maxOrder}</span>
                       </li>
                       <li className="flex items-center text-sm">
                         <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                        <span>Anında başlangıç</span>
+                        <span>Instant start</span>
                       </li>
                       <li className="flex items-center text-sm">
                         <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                        <span>Kaliteli ve kalıcı servis</span>
+                        <span>High-quality and permanent service</span>
                       </li>
                       <li className="flex items-center text-sm">
                         <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                        <span>7/24 Destek</span>
+                        <span>24/7 Support</span>
                       </li>
                     </ul>
                   </div>
@@ -216,7 +216,7 @@ const ProductDetail = () => {
                   <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                     <h4 className="font-medium flex items-center mb-3">
                       <Truck className="h-5 w-5 mr-2 text-blue-500" />
-                      Teslimat Bilgileri
+                      Delivery Information
                     </h4>
                     <ul className="space-y-2">
                       <li className="flex items-center text-sm">
