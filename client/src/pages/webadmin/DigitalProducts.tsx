@@ -412,7 +412,7 @@ const DigitalProducts: React.FC = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="">Manuel (API yok)</SelectItem>
+                                <SelectItem value="manual-no-api">Manuel (API yok)</SelectItem>
                                 {smmProviders.map((provider: any) => (
                                   <SelectItem key={provider.id} value={provider.name}>
                                     {provider.name}
