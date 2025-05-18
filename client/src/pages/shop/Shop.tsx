@@ -39,13 +39,13 @@ const ProductCard = ({ product }: any) => {
   };
 
   const categoryLabel = {
-    'followers': 'Takipçiler',
-    'viewers': 'İzleyiciler',
-    'likes': 'Beğeniler',
-    'views': 'Görüntülenmeler',
-    'comments': 'Yorumlar',
-    'subscribers': 'Aboneler',
-    'default': 'Diğer'
+    'followers': 'Followers',
+    'viewers': 'Viewers',
+    'likes': 'Likes',
+    'views': 'Views',
+    'comments': 'Comments',
+    'subscribers': 'Subscribers',
+    'default': 'Other'
   };
 
   const getColor = (platform: string) => {
@@ -201,7 +201,7 @@ const ShopPage = () => {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input
               type="search"
-              placeholder="Ürün ara..."
+              placeholder="Search products..."
               className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -215,7 +215,7 @@ const ShopPage = () => {
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tüm Platformlar</SelectItem>
+              <SelectItem value="all">All Platforms</SelectItem>
               {Array.isArray(platforms) && platforms.map(platform => (
                 <SelectItem key={platform.id} value={platform.slug}>
                   {platform.name}
@@ -226,10 +226,10 @@ const ShopPage = () => {
           
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Kategori" />
+              <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tüm Kategoriler</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {Array.isArray(categories) && categories.map(category => (
                 <SelectItem key={category.id} value={category.slug}>
                   {category.name}
@@ -240,13 +240,13 @@ const ShopPage = () => {
           
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Sıralama" />
+              <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="popularity">Popülerlik</SelectItem>
-              <SelectItem value="price-low">Fiyat (Düşükten Yükseğe)</SelectItem>
-              <SelectItem value="price-high">Fiyat (Yüksekten Düşüğe)</SelectItem>
-              <SelectItem value="newest">En Yeni</SelectItem>
+              <SelectItem value="popularity">Popularity</SelectItem>
+              <SelectItem value="price-low">Price (Low to High)</SelectItem>
+              <SelectItem value="price-high">Price (High to Low)</SelectItem>
+              <SelectItem value="newest">Newest</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -255,9 +255,9 @@ const ShopPage = () => {
       {/* İçerik */}
       <Tabs defaultValue="all" className="mb-8">
         <TabsList>
-          <TabsTrigger value="all">Tüm Ürünler</TabsTrigger>
-          <TabsTrigger value="featured">Öne Çıkanlar</TabsTrigger>
-          <TabsTrigger value="discounted">İndirimli Ürünler</TabsTrigger>
+          <TabsTrigger value="all">All Products</TabsTrigger>
+          <TabsTrigger value="featured">Featured</TabsTrigger>
+          <TabsTrigger value="discounted">Discounted</TabsTrigger>
         </TabsList>
         
         <TabsContent value="all" className="mt-6">
@@ -269,16 +269,16 @@ const ShopPage = () => {
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-12">
-              <h3 className="text-lg font-semibold mb-2">Ürün Bulunamadı</h3>
+              <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
-                Arama kriterlerinize uygun ürün bulunamadı. Lütfen farklı filtreler deneyin.
+                No products match your search criteria. Please try different filters.
               </p>
               <Button onClick={() => {
                 setSearchQuery('');
                 setPlatformFilter('all');
                 setCategoryFilter('all');
               }}>
-                Filtreleri Sıfırla
+                Reset Filters
               </Button>
             </div>
           ) : (
