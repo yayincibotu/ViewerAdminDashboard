@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ProductVisual, getPlatformIcon, getCategoryIcon } from '@/utils/productImageHelper';
 import { useParams, useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
