@@ -610,13 +610,18 @@ const SettingsPage: React.FC = () => {
                             description: 'Connecting to Perplexity API...',
                           });
                           
-                          // Specify the headers and response type explicitly
-                          const res = await fetch('/api/perplexity/test', {
-                            method: 'GET',
+                          // Get the API key from the system configs
+                          const apiKeyConfig = systemConfigs.find(config => config.key === 'perplexity_api_key');
+                          const apiKey = apiKeyConfig?.value || '';
+                          
+                          // Send test request with the API key in the body
+                          const res = await fetch('/api/perplexity-seo/test', {
+                            method: 'POST',
                             headers: {
                               'Accept': 'application/json',
                               'Content-Type': 'application/json',
                             },
+                            body: JSON.stringify({ apiKey }),
                           });
                           
                           // Check for non-JSON responses

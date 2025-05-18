@@ -6087,8 +6087,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ received: true });
   });
 
-  // Perplexity SEO content generation API
-  app.use('/api/perplexity', perplexitySeoRouter);
+  // We already have a Perplexity API route registered above with the admin middleware
+  // app.use('/api/perplexity', perplexitySeoRouter);
 
   const httpServer = createServer(app);
 
