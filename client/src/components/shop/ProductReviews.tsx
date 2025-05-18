@@ -259,25 +259,52 @@ export function ProductReviews({ productId, platform, category }: ProductReviews
       ));
   };
 
+  // Schema.org review aggregate markup for SEO
+  const jsonLdData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": stats.avgRating.toFixed(1),
+      "reviewCount": stats.totalReviews,
+      "bestRating": "5",
+      "worstRating": "1"
+    }
+  };
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Customer Reviews</span>
-          {!showWriteReview && user && (
-            <Button 
-              onClick={() => setShowWriteReview(true)} 
-              disabled={hasUserReviewed}
-              title={hasUserReviewed ? "You have already reviewed this product" : "Share your experience"}
-            >
-              {hasUserReviewed ? "Already Reviewed" : "Write a Review"}
-            </Button>
-          )}
-        </CardTitle>
-        <CardDescription>
-          {stats.totalReviews} reviews for this product
-        </CardDescription>
-      </CardHeader>
+    <section className="w-full" itemScope itemType="https://schema.org/Product">
+      <Head>
+        {stats.totalReviews > 0 && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(jsonLdData)
+            }}
+          />
+        )}
+      </Head>
+      
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between" id="customer-reviews">
+            <h2 className="text-2xl">Customer Reviews</h2>
+            {!showWriteReview && user && (
+              <Button 
+                onClick={() => setShowWriteReview(true)} 
+                disabled={hasUserReviewed}
+                title={hasUserReviewed ? "You have already reviewed this product" : "Share your experience"}
+                aria-label={hasUserReviewed ? "You have already reviewed this product" : "Write a review"}
+              >
+                {hasUserReviewed ? "Already Reviewed" : "Write a Review"}
+              </Button>
+            )}
+          </CardTitle>
+          <CardDescription>
+            <meta itemProp="reviewCount" content={stats.totalReviews.toString()} />
+            {stats.totalReviews} reviews for this product
+          </CardDescription>
+        </CardHeader>
       
       <CardContent>
         {/* Show write review form if button clicked */}
