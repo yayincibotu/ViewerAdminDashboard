@@ -2,30 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface StickyBuyButtonProps {
+// Import or define the Product type if needed
+interface Product {
+  id: number;
+  name: string;
   price: number;
+  discountPercentage?: number;
+  // Add other product fields as needed
+}
+
+interface StickyBuyButtonProps {
+  product: Product;
   quantity: number;
-  discount?: number;
+  total: number;
   isProcessing: boolean;
   onBuyNow: () => void;
 }
 
 const StickyBuyButton: React.FC<StickyBuyButtonProps> = ({
-  price,
+  product,
   quantity,
-  discount = 0,
+  total,
   isProcessing,
   onBuyNow
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [total, setTotal] = useState(0);
   
-  // Calculate total price with discount
-  useEffect(() => {
-    const baseTotal = price * quantity;
-    const discountAmount = discount > 0 ? (baseTotal * discount / 100) : 0;
-    setTotal(baseTotal - discountAmount);
-  }, [price, quantity, discount]);
+  // Safely handle product price
+  const price = product?.price || 0;
+  const discount = product?.discountPercentage || 0;
   
   // Control visibility based on scroll position
   useEffect(() => {
@@ -49,16 +54,21 @@ const StickyBuyButton: React.FC<StickyBuyButtonProps> = ({
     return null;
   }
   
+  // Format values safely
+  const formattedTotal = typeof total === 'number' ? total.toFixed(2) : "0.00";
+  const formattedQuantity = typeof quantity === 'number' ? quantity.toLocaleString() : "0";
+  const formattedPrice = typeof price === 'number' ? price.toFixed(2) : "0.00";
+  
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg py-3 px-4 z-40 transform transition-transform duration-300 ease-in-out">
       <div className="container mx-auto flex items-center justify-between">
         <div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 mr-2">Total:</span>
-            <span className="text-xl font-bold">₺{total.toFixed(2)}</span>
+            <span className="text-xl font-bold">₺{formattedTotal}</span>
           </div>
           <div className="text-xs text-gray-500">
-            {quantity.toLocaleString()} items at ₺{price.toFixed(2)} each
+            {formattedQuantity} items at ₺{formattedPrice} each
             {discount > 0 && <span className="text-green-500 ml-1">(Save {discount}%)</span>}
           </div>
         </div>
