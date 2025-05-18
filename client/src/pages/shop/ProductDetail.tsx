@@ -380,22 +380,22 @@ const ProductDetail = () => {
                   disabled={product.minOrder && quantity < product.minOrder}
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
-                  Hemen Satın Al
+                  Buy Now
                 </Button>
               </div>
 
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
                 <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <ShieldCheck className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Güvenli Ödeme</span>
+                  <span>Secure Payment</span>
                 </div>
                 <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                  <span>Hızlı Teslimat</span>
+                  <span>Fast Delivery</span>
                 </div>
                 <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>%100 Müşteri Memnuniyeti</span>
+                  <span>100% Customer Satisfaction</span>
                 </div>
               </div>
             </CardContent>
