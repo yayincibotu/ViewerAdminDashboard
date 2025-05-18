@@ -203,43 +203,85 @@ router.get("/:id/services", requireAdmin, async (req: Request, res: Response) =>
       return res.status(404).json({ message: "SMM provider not found" });
     }
     
-    // Get services from the SMM provider
-    const services = await getSmmServiceList(provider, useMockData);
-    
-    // Group services by platform/category
-    const groupedServices: {[key: string]: any[]} = {};
-    
-    for (const service of services) {
-      if (!service.name || !service.category || !service.rate) {
-        continue;
+    try {
+      // Get services from the SMM provider
+      const services = await getSmmServiceList(provider, useMockData);
+      
+      // Group services by platform/category
+      const groupedServices: {[key: string]: any[]} = {};
+      
+      for (const service of services) {
+        if (!service.name || !service.category || !service.rate) {
+          continue;
+        }
+        
+        // Use the category from the service or extract from name
+        const category = service.category || 'Other';
+        
+        if (!groupedServices[category]) {
+          groupedServices[category] = [];
+        }
+        
+        groupedServices[category].push({
+          id: service.service,
+          name: service.name,
+          rate: parseFloat(service.rate),
+          min: service.min || 1,
+          max: service.max || 1000,
+          type: service.type || 'Default',
+          category
+        });
       }
       
-      // Use the category from the service or extract from name
-      const category = service.category || 'Other';
+      // Get available platforms
+      const platforms = await db.select().from(platforms);
       
-      if (!groupedServices[category]) {
-        groupedServices[category] = [];
-      }
-      
-      groupedServices[category].push({
-        id: service.service,
-        name: service.name,
-        rate: parseFloat(service.rate),
-        min: service.min || 1,
-        max: service.max || 1000,
-        type: service.type || 'Default',
-        category
+      return res.json({ 
+        services: groupedServices,
+        platforms
       });
+    } catch (serviceError: any) {
+      console.error("[SMM API] Error fetching services:", serviceError);
+      
+      // Fallback to using mock data if there's an error
+      if (provider.apiUrl.includes('testing') || provider.apiKey.includes('test') || useMockData) {
+        console.log("[SMM API] Using fallback mock data after error");
+        
+        // Process mock services
+        const groupedMockServices: {[key: string]: any[]} = {};
+        
+        // Group mock services by category
+        for (const service of MOCK_SMM_SERVICES) {
+          const category = service.category || 'Other';
+          
+          if (!groupedMockServices[category]) {
+            groupedMockServices[category] = [];
+          }
+          
+          groupedMockServices[category].push({
+            id: service.service,
+            name: service.name,
+            rate: parseFloat(service.rate),
+            min: service.min || 1,
+            max: service.max || 1000,
+            type: service.type || 'Default',
+            category
+          });
+        }
+        
+        // Get available platforms
+        const platforms = await db.select().from(platforms);
+        
+        return res.json({ 
+          services: groupedMockServices,
+          platforms
+        });
+      }
+      
+      throw serviceError;
     }
-    
-    // Get available platforms
-    const platforms = await db.select().from(platforms);
-    
-    res.json({ 
-      services: groupedServices,
-      platforms
-    });
   } catch (error: any) {
+    console.error("[SMM API] Handler error:", error);
     res.status(500).json({ message: error.message });
   }
 });
