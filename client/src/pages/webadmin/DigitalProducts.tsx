@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Sparkles } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -673,11 +674,57 @@ ${platformName} streamer growth guide`;
                     
                     <TabsContent value="seo" className="space-y-4">
                       <div className="rounded-lg border p-4 mb-4">
-                        <h3 className="text-lg font-medium mb-2">Semantic Content Optimization</h3>
-                        <p className="text-sm text-gray-500 mb-4">
-                          Google uses semantic relationships to understand user intent. The fields below
-                          will help you rank better in search engine results.
-                        </p>
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                          <div>
+                            <h3 className="text-lg font-medium mb-2">Semantic Content Optimization</h3>
+                            <p className="text-sm text-gray-500 mb-0">
+                              Google uses semantic relationships to understand user intent. The fields below
+                              will help you rank better in search engine results.
+                            </p>
+                          </div>
+                          
+                          {/* Add SEO Content Generator Dialog */}
+                          {selectedProduct && (
+                            <div className="flex-shrink-0">
+                              <Button
+                                variant="outline"
+                                className="flex items-center gap-1"
+                                onClick={() => {
+                                  // Create data for SEO content generation
+                                  const product = form.getValues();
+                                  const platformName = platforms.find(p => p.id === parseInt(product.platformId))?.name || 'Unknown Platform';
+                                  const categoryName = product.category || 'Unknown Category';
+                                  
+                                  // Open in a new window to avoid dialog issues
+                                  const newWindow = window.open('/webadmin/seo-generator', '_blank');
+                                  
+                                  if (newWindow) {
+                                    // Pass data via sessionStorage
+                                    sessionStorage.setItem('seoProductData', JSON.stringify({
+                                      productId: selectedProduct.id,
+                                      productName: product.name,
+                                      platform: platformName,
+                                      category: categoryName,
+                                      price: parseFloat(product.price) || 0,
+                                      minOrder: parseInt(product.minQuantity) || 1,
+                                      maxOrder: parseInt(product.maxQuantity) || 100,
+                                      serviceType: product.serviceType || 'viewer service'
+                                    }));
+                                  } else {
+                                    toast({
+                                      title: "Error",
+                                      description: "Pop-up blocked. Please enable pop-ups for this site to use the SEO generator.",
+                                      variant: "destructive"
+                                    });
+                                  }
+                                }}
+                              >
+                                <Sparkles className="w-4 h-4" />
+                                Generate SEO Content
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="grid grid-cols-1 gap-4">

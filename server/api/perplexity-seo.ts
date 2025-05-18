@@ -1,34 +1,21 @@
 /**
- * Perplexity API endpoints for SEO content generation
+ * Perplexity SEO Content Generation API
+ * This API endpoint handles requests for generating SEO content using Perplexity AI
  */
-import express from 'express';
-import { getPerplexityApiKey, generateSEOContent, savePerplexityApiKey } from '../perplexity-service';
-import { isAdmin } from '../auth';
-
-const router = express.Router();
-
-// Middleware to ensure user is authenticated and has admin rights
-router.use(isAdmin);
+import { Request, Response } from 'express';
+import { generateSEOContent } from '../perplexity-service';
+import { db } from '../db';
+import { digitalProducts } from '../schema/digital-products';
+import { eq } from 'drizzle-orm';
 
 /**
  * Test the Perplexity API connection
  */
-router.get('/test', async (req, res) => {
+export async function testPerplexityAPIConnection(req: Request, res: Response) {
   try {
-    // Make sure we're setting the correct content type header
-    res.setHeader('Content-Type', 'application/json');
+    const { apiKey } = req.body;
     
-    const apiKey = await getPerplexityApiKey();
-    console.log('Testing Perplexity API with key available:', !!apiKey);
-    
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        message: 'Perplexity API key not found. Please set up your API key in the settings.'
-      });
-    }
-    
-    // Instead of generating full content, let's make a simple API call to test the connection
+    // Test connection to Perplexity API
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
@@ -39,26 +26,22 @@ router.get('/test', async (req, res) => {
         model: "llama-3.1-sonar-small-128k-online",
         messages: [
           {
-            role: "system",
-            content: "You are a helpful assistant."
-          },
-          {
             role: "user",
-            content: "Hello, this is a test message to verify the API connection. Please respond with 'Connection successful'."
+            content: "Test connection"
           }
         ],
+        max_tokens: 5,
         temperature: 0.1,
-        max_tokens: 20,
         stream: false
       })
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Perplexity API error:', errorText);
-      return res.status(response.status).json({
-        success: false,
-        message: `Failed to connect to Perplexity API: ${response.statusText}`
+      return res.status(400).json({ 
+        success: false, 
+        message: `API connection failed: ${response.status} - ${response.statusText}`,
+        error: errorText
       });
     }
     
@@ -66,109 +49,114 @@ router.get('/test', async (req, res) => {
     
     return res.json({
       success: true,
-      message: 'Perplexity API connection successful!'
+      message: 'Successfully connected to Perplexity API',
+      model: data.model
     });
   } catch (error: any) {
     console.error('Error testing Perplexity API:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'An error occurred while testing the Perplexity API connection'
+      message: 'Failed to connect to Perplexity API',
+      error: error.message
     });
   }
-});
+}
 
 /**
- * Generate SEO content for a digital product
+ * Generate SEO content for a product
  */
-router.post('/generate', async (req, res) => {
+export async function generateSEOContentForProduct(req: Request, res: Response) {
   try {
-    const { 
-      productId, 
-      productName, 
-      platform, 
-      category, 
-      price, 
-      minOrder, 
-      maxOrder, 
-      serviceType, 
-      features 
+    const {
+      productId,
+      productName,
+      platform,
+      category,
+      price,
+      minOrder,
+      maxOrder,
+      serviceType,
+      features
     } = req.body;
     
     if (!productName || !platform || !category) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required product information'
+        message: 'Missing required fields for SEO content generation'
       });
     }
     
-    const content = await generateSEOContent({
+    const seoContent = await generateSEOContent({
       productName,
       platform,
       category,
-      price: price || 0,
-      minOrder: minOrder || 1,
-      maxOrder: maxOrder || 1000,
+      price: parseFloat(price) || 0,
+      minOrder: parseInt(minOrder) || 1,
+      maxOrder: parseInt(maxOrder) || 100,
       serviceType: serviceType || 'viewer service',
       features: features || []
     });
     
-    if (!content) {
+    if (!seoContent) {
       return res.status(500).json({
         success: false,
-        message: 'Failed to generate SEO content'
+        message: 'Failed to generate SEO content. Check Perplexity API key in Settings.'
       });
     }
     
     return res.json({
       success: true,
-      data: content
+      message: 'SEO content generated successfully',
+      data: seoContent
     });
-    
   } catch (error: any) {
     console.error('Error generating SEO content:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'An error occurred while generating SEO content'
+      message: 'Failed to generate SEO content',
+      error: error.message
     });
   }
-});
+}
 
 /**
- * Update Perplexity API key
+ * Save SEO content to a product
  */
-router.post('/api-key', async (req, res) => {
+export async function saveSEOContentToProduct(req: Request, res: Response) {
   try {
-    const { apiKey } = req.body;
+    const { id } = req.params;
+    const {
+      seoTitle,
+      seoDescription,
+      lsiKeywords,
+      faqQuestions,
+      faqAnswers,
+      productDescription
+    } = req.body;
     
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        message: 'API key is required'
-      });
-    }
+    // Update the product with the SEO content
+    await db.update(digitalProducts)
+      .set({
+        seo_title: seoTitle,
+        seo_description: seoDescription,
+        lsi_keywords: lsiKeywords,
+        faq_questions: faqQuestions,
+        faq_answers: faqAnswers,
+        product_description: productDescription,
+        updated_at: new Date()
+      })
+      .where(eq(digitalProducts.id, parseInt(id)));
     
-    const username = req.user?.username || 'admin';
-    const success = await savePerplexityApiKey(apiKey, username);
-    
-    if (success) {
-      return res.json({
-        success: true,
-        message: 'Perplexity API key saved successfully'
-      });
-    } else {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to save API key'
-      });
-    }
-    
+    return res.json({
+      success: true,
+      message: 'SEO content saved successfully'
+    });
   } catch (error: any) {
-    console.error('Error saving Perplexity API key:', error);
+    console.error('Error saving SEO content:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'An error occurred while saving the API key'
+      message: 'Failed to save SEO content',
+      error: error.message
     });
   }
-});
-
-export default router;
+}
