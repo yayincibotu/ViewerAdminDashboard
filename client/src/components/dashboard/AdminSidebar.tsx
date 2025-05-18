@@ -66,7 +66,8 @@ const AdminSidebar: React.FC = () => {
                 location.startsWith('/webadmin/digital-products') || 
                 location.startsWith('/webadmin/platforms') || 
                 location.startsWith('/webadmin/product-categories') || 
-                location.startsWith('/webadmin/smm-providers') 
+                location.startsWith('/webadmin/smm-providers') ||
+                location.startsWith('/webadmin/comment-management')
                   ? 'bg-sidebar-accent text-white' 
                   : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
               }`}>
@@ -91,6 +92,12 @@ const AdminSidebar: React.FC = () => {
                 <div className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-md ${isActivePath('/webadmin/smm-providers')}`}>
                   <i className="fas fa-cloud mr-2"></i>
                   SMM Sağlayıcıları
+                </div>
+              </Link>
+              <Link href="/webadmin/comment-management">
+                <div className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-md ${isActivePath('/webadmin/comment-management')}`}>
+                  <i className="fas fa-comments mr-2"></i>
+                  Yorum Yönetimi
                 </div>
               </Link>
             </div>
