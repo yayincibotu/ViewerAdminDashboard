@@ -326,16 +326,16 @@ ${platformName} streamer growth guide`;
       price: product.price / 100,
       platformId: product.platformId || (product.platform?.id || 0),
       category: product.category?.name || product.category || '',
-      serviceType: product.serviceType || 'instant',
-      minQuantity: product.minQuantity || 1,
-      maxQuantity: product.maxQuantity || 1000,
-      isActive: typeof product.isActive === 'boolean' ? product.isActive : true,
-      sortOrder: product.sortOrder || 0,
+      serviceType: product.service_type || product.serviceType || 'instant',
+      minQuantity: product.min_order || product.minOrder || product.minQuantity || 1,
+      maxQuantity: product.max_order || product.maxOrder || product.maxQuantity || 1000,
+      isActive: product.is_active !== undefined ? product.is_active : (typeof product.isActive === 'boolean' ? product.isActive : true),
+      sortOrder: product.sort_order || product.sortOrder || 0,
       
       // SMM Provider related fields
-      providerName: product.providerName || '',
-      externalServiceId: product.externalServiceId || '',
-      externalProductId: product.externalProductId || '',
+      providerName: product.provider_name || product.providerName || '',
+      externalServiceId: product.external_service_id || product.externalServiceId || '',
+      externalProductId: product.external_product_id || product.externalProductId || '',
     };
     
     // Generate SEO content
@@ -400,10 +400,10 @@ ${platformName} streamer growth guide`;
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <Tabs defaultValue="basic" className="w-full">
                     <TabsList className="mb-4">
-                      <TabsTrigger value="basic">Temel Bilgiler</TabsTrigger>
-                      <TabsTrigger value="integration">Entegrasyon</TabsTrigger>
-                      <TabsTrigger value="advanced">Gelişmiş</TabsTrigger>
-                      <TabsTrigger value="seo">SEO Ayarları</TabsTrigger>
+                      <TabsTrigger value="basic">Basic Information</TabsTrigger>
+                      <TabsTrigger value="integration">Integration</TabsTrigger>
+                      <TabsTrigger value="advanced">Advanced</TabsTrigger>
+                      <TabsTrigger value="seo">SEO Settings</TabsTrigger>
                     </TabsList>
                     
                     <TabsContent value="basic" className="space-y-4">
@@ -412,9 +412,9 @@ ${platformName} streamer growth guide`;
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Ürün Adı</FormLabel>
+                            <FormLabel>Product Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Instagram Takipçi Paketi" {...field} />
+                              <Input placeholder="Instagram Followers Package" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -426,9 +426,9 @@ ${platformName} streamer growth guide`;
                         name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Açıklama</FormLabel>
+                            <FormLabel>Description</FormLabel>
                             <FormControl>
-                              <Textarea placeholder="Ürün açıklaması..." {...field} />
+                              <Textarea placeholder="Product description..." {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -441,7 +441,7 @@ ${platformName} streamer growth guide`;
                           name="price"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Fiyat (₺)</FormLabel>
+                              <FormLabel>Price ($)</FormLabel>
                               <FormControl>
                                 <Input type="number" min="0" step="0.01" {...field} />
                               </FormControl>
