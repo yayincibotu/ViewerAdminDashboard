@@ -23,7 +23,7 @@ interface SeoContentGeneratorProps {
   onContentGenerated?: (content: GeneratedSeoContent) => void;
 }
 
-interface GeneratedSeoContent {
+export interface GeneratedSeoContent {
   title: string;
   metaDescription: string;
   mainContent: string;
