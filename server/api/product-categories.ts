@@ -15,11 +15,11 @@ export const productCategories = pgTable("product_categories", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-const productCategoriesRouter = express.Router();
-export default productCategoriesRouter;
+const router = express.Router();
+export default router;
 
 // Tüm kategorileri getir
-productCategoriesRouter.get("/", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const allCategories = await db.select().from(productCategories);
     res.json(allCategories);
@@ -30,7 +30,7 @@ productCategoriesRouter.get("/", async (req, res) => {
 });
 
 // Kategori ID'sine göre getir
-productCategoriesRouter.get("/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -51,7 +51,7 @@ productCategoriesRouter.get("/:id", async (req, res) => {
 });
 
 // Yeni kategori oluştur - Sadece admin
-productCategoriesRouter.post("/", async (req, res) => {
+router.post("/", async (req, res) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
@@ -96,7 +96,7 @@ productCategoriesRouter.post("/", async (req, res) => {
 });
 
 // Kategori güncelle - Sadece admin
-productCategoriesRouter.patch("/:id", async (req, res) => {
+router.patch("/:id", async (req, res) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }

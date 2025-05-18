@@ -19,7 +19,7 @@ router.get("/", async (req, res) => {
 });
 
 // Get platform by ID
-platformsRouter.get("/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -40,7 +40,7 @@ platformsRouter.get("/:id", async (req, res) => {
 });
 
 // Create new platform - Admin only
-platformsRouter.post("/", async (req, res) => {
+router.post("/", async (req, res) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
@@ -89,7 +89,7 @@ platformsRouter.post("/", async (req, res) => {
 });
 
 // Update platform - Admin only
-platformsRouter.patch("/:id", async (req, res) => {
+router.patch("/:id", async (req, res) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
@@ -160,7 +160,7 @@ platformsRouter.patch("/:id", async (req, res) => {
 });
 
 // Delete platform - Admin only
-platformsRouter.delete("/:id", async (req, res) => {
+router.delete("/:id", async (req, res) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
