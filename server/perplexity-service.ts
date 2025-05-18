@@ -52,7 +52,21 @@ export async function getPerplexityApiKey(): Promise<string | null> {
       .from(settings)
       .where(eq(settings.key, 'perplexity_api_key'));
     
-    return apiKeySetting?.value || null;
+    console.log('Found Perplexity API key setting:', apiKeySetting);
+    
+    // If there's an API key setting in the database, return its value
+    if (apiKeySetting?.value) {
+      return apiKeySetting.value;
+    }
+    
+    // Check if we have an API key in the environment variables as a fallback
+    const envApiKey = process.env.PERPLEXITY_API_KEY;
+    if (envApiKey) {
+      console.log('Using Perplexity API key from environment variables');
+      return envApiKey;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error retrieving Perplexity API key:', error);
     return null;
