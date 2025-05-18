@@ -850,53 +850,68 @@ const ProductDetail = () => {
                   </TabsContent>
                   
                   <TabsContent value="faq" className="mt-4">
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-medium mb-2 flex items-center">
+                    {/* Semantik İçerik Optimizasyonu: Yapılandırılmış ve genişletilmiş SSS bölümü */}
+                    <section itemScope itemType="https://schema.org/FAQPage" className="space-y-4">
+                      <h2 className="text-lg font-semibold border-b pb-2 mb-4">{product.platform.name} {product.category.name} Service - Frequently Asked Questions</h2>
+                      
+                      <div itemScope itemType="https://schema.org/Question" className="border-b border-gray-100 dark:border-gray-700 pb-3">
+                        <h3 itemProp="name" className="font-medium mb-2 flex items-center">
                           <Info className="h-4 w-4 mr-2 text-primary" />
-                          How long does delivery take?
+                          How long does delivery take for {product.platform.name} {product.category.name}?
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm ml-6">
-                          Most orders are processed within {product.deliveryTime || '24-48 hours'}. 
-                          You'll receive a notification once the service has been completed.
-                        </p>
+                        <div itemScope itemType="https://schema.org/Answer" itemProp="acceptedAnswer">
+                          <p itemProp="text" className="text-gray-600 dark:text-gray-300 text-sm ml-6">
+                            Most orders are processed within {product.deliveryTime || '24-48 hours'}. 
+                            You'll receive a notification once the service has been completed. For large orders of {product.maxOrder}+ {product.category.name}, 
+                            delivery may be split into batches to ensure quality.
+                          </p>
+                        </div>
                       </div>
                       
-                      <div>
-                        <h3 className="font-medium mb-2 flex items-center">
+                      <div itemScope itemType="https://schema.org/Question" className="border-b border-gray-100 dark:border-gray-700 pb-3">
+                        <h3 itemProp="name" className="font-medium mb-2 flex items-center">
                           <Info className="h-4 w-4 mr-2 text-primary" />
-                          Is this service safe for my {product.platform.name} account?
+                          Is this {product.platform.name} {product.category.name} service safe for my account?
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm ml-6">
-                          Yes, our services are 100% safe and comply with {product.platform.name}'s terms of service. 
-                          We never ask for your password or access to your account.
-                        </p>
+                        <div itemScope itemType="https://schema.org/Answer" itemProp="acceptedAnswer">
+                          <p itemProp="text" className="text-gray-600 dark:text-gray-300 text-sm ml-6">
+                            Yes, our services are 100% safe and comply with {product.platform.name}'s terms of service. 
+                            We never ask for your password or access to your account. Our {product.category.name} are delivered 
+                            through organic methods that mimic natural growth patterns on {product.platform.name}.
+                          </p>
+                        </div>
                       </div>
                       
-                      <div>
-                        <h3 className="font-medium mb-2 flex items-center">
+                      <div itemScope itemType="https://schema.org/Question" className="border-b border-gray-100 dark:border-gray-700 pb-3">
+                        <h3 itemProp="name" className="font-medium mb-2 flex items-center">
                           <Info className="h-4 w-4 mr-2 text-primary" />
-                          Can I get a refund if I'm not satisfied?
+                          Can I get a refund if I'm not satisfied with my {product.platform.name} {product.category.name}?
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm ml-6">
-                          We offer a satisfaction guarantee. If the service is not delivered as described, 
-                          you can request a refund within 7 days of purchase.
-                        </p>
+                        <div itemScope itemType="https://schema.org/Answer" itemProp="acceptedAnswer">
+                          <p itemProp="text" className="text-gray-600 dark:text-gray-300 text-sm ml-6">
+                            We offer a satisfaction guarantee. If the service is not delivered as described, 
+                            you can request a refund within 7 days of purchase. Our {product.satisfactionRate || 98}% satisfaction rate 
+                            demonstrates our commitment to quality.
+                          </p>
+                        </div>
                       </div>
                       
-                      <div>
-                        <h3 className="font-medium mb-2 flex items-center">
+                      <div itemScope itemType="https://schema.org/Question" className="border-b border-gray-100 dark:border-gray-700 pb-3">
+                        <h3 itemProp="name" className="font-medium mb-2 flex items-center">
                           <Info className="h-4 w-4 mr-2 text-primary" />
-                          What information do you need from me?
+                          What information do you need for my {product.platform.name} {product.category.name} order?
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm ml-6">
-                          We only need your {product.platform.name} username (public information). 
-                          We never require passwords or other sensitive account details.
-                        </p>
+                        <div itemScope itemType="https://schema.org/Answer" itemProp="acceptedAnswer">
+                          <p itemProp="text" className="text-gray-600 dark:text-gray-300 text-sm ml-6">
+                            We only need your {product.platform.name} username or channel URL (public information). 
+                            We never require passwords or other sensitive account details. This keeps your account secure 
+                            while we deliver your {product.category.name}.
+                          </p>
+                        </div>
                       </div>
                       
-                      <div>
-                        <h3 className="font-medium mb-2 flex items-center">
+                      <div itemScope itemType="https://schema.org/Question" className="border-b border-gray-100 dark:border-gray-700 pb-3">
+                        <h3 itemProp="name" className="font-medium mb-2 flex items-center">
                           <Info className="h-4 w-4 mr-2 text-primary" />
                           Do you offer bulk discounts?
                         </h3>
