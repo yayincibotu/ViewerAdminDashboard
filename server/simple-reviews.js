@@ -93,3 +93,100 @@ export async function voteOnReview(reviewId, userId, isHelpful) {
     throw error;
   }
 }
+
+/**
+ * Helper function to generate review content for automated review creation
+ * @param {string} productName - The name of the product
+ * @param {string} category - The category of the product
+ * @param {number} rating - The rating (1-5) for the review
+ * @returns {Object} - Object containing title, content, pros, and cons
+ */
+export function generateReviewContent(productName, category, rating) {
+  const titleTemplates = [
+    "Great service, very satisfied",
+    "Does exactly what it promises",
+    "Worth the money",
+    "Good quality service",
+    "Fast delivery and good results",
+    "Exactly what I needed",
+    "Impressive service",
+    "Smooth experience",
+    "Reliable service",
+    "Excellent value for money"
+  ];
+  
+  const contentTemplates = [
+    `I tried this ${category} service for my channel and was really impressed with the results. The delivery process was smooth and the quality exceeded my expectations.`,
+    `The ${category} service was excellent. The quality was good and delivery was even faster than promised. Will definitely order again when needed.`,
+    `This service helped me break through the initial viewer threshold. Now I get much more organic traffic and everything looks authentic. Highly recommend!`,
+    `After struggling to grow my account for months, this service helped me push through to the next level. The growth looks natural and I've seen an increase in real engagement too!`,
+    `Just what my channel needed. Delivery was fast and support was responsive when I had questions.`,
+    `I was skeptical at first, but this service delivered exactly as promised. Impressed with the quality and speed.`,
+    `This is my second time using this service and the results are consistent. Good quality and natural-looking growth.`,
+    `The service was delivered promptly and the quality was exactly what I needed for my channel.`,
+    `Great value for the price. I've tried other services before, but this one stands out in terms of quality.`,
+    `Very professional service that helped boost my channel significantly. The effects were noticeable right away.`
+  ];
+  
+  const positivePoints = [
+    "Fast delivery",
+    "Good quality",
+    "Helpful support",
+    "Natural looking results",
+    "Improved organic traffic",
+    "Good retention rate",
+    "Responsive customer service",
+    "Helped grow my channel",
+    "Reasonable pricing",
+    "Easy ordering process",
+    "Authentic appearance",
+    "No suspicious activity",
+    "Secure transaction",
+    "Clear instructions",
+    "Visible results quickly"
+  ];
+  
+  const negativePoints = [
+    "Could be slightly cheaper",
+    "Delivery took a bit longer than expected",
+    "Would prefer more customization options",
+    "Small percentage dropped off after a week",
+    "Website could be improved",
+    "Ordering process could be simpler",
+    "Basic analytics only",
+    "Limited tracking options",
+    "More detailed documentation would help",
+    "Mobile ordering experience needs work"
+  ];
+  
+  // Select random content
+  const title = titleTemplates[Math.floor(Math.random() * titleTemplates.length)];
+  const content = contentTemplates[Math.floor(Math.random() * contentTemplates.length)];
+  
+  // Shuffle and select pros and cons
+  const shuffledPros = shuffleArray([...positivePoints]);
+  const shuffledCons = shuffleArray([...negativePoints]);
+  
+  // Number of pros/cons based on rating
+  const numPros = Math.max(1, Math.min(3, rating - 1)); // 1-3 pros, higher for better ratings
+  const numCons = Math.max(1, Math.min(2, 5 - rating)); // 1-2 cons, higher for worse ratings
+  
+  const pros = shuffledPros.slice(0, numPros);
+  const cons = shuffledCons.slice(0, numCons);
+  
+  return { title, content, pros, cons };
+}
+
+/**
+ * Helper function to shuffle an array
+ * @param {Array} array - Array to shuffle
+ * @returns {Array} - Shuffled array
+ */
+export function shuffleArray(array) {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+}

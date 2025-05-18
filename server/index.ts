@@ -66,5 +66,42 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Schedule daily automated reviews
+    initializeReviewScheduler();
   });
+  
+  /**
+   * Initialize the daily review scheduler system
+   */
+  function initializeReviewScheduler() {
+    // Run the scheduler immediately
+    scheduleRandomReviews()
+      .then(result => {
+        if (result.success) {
+          log(`Review scheduler initialized: ${result.message}`);
+        } else {
+          log(`Failed to initialize review scheduler: ${result.error}`);
+        }
+      })
+      .catch(error => {
+        log(`Error in review scheduler: ${error.message}`);
+      });
+    
+    // Set up a daily scheduler (every 24 hours)
+    const HOURS_24 = 24 * 60 * 60 * 1000;
+    setInterval(() => {
+      scheduleRandomReviews()
+        .then(result => {
+          if (result.success) {
+            log(`Daily review scheduler run: ${result.message}`);
+          } else {
+            log(`Failed to run daily review scheduler: ${result.error}`);
+          }
+        })
+        .catch(error => {
+          log(`Error in daily review scheduler: ${error.message}`);
+        });
+    }, HOURS_24);
+  }
 })();
