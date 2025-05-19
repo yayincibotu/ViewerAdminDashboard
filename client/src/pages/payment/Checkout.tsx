@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useStripe, Elements, PaymentElement, useElements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
@@ -11,14 +10,32 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle, CreditCard, Lock, ShieldCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getStripe } from '@/lib/stripe-loader';
+import { Elements } from '@stripe/react-stripe-js';
 
-// Make sure to call `loadStripe` outside of a component's render to avoid
-// recreating the `Stripe` object on every render.
-const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-if (!stripePublicKey) {
-  console.warn('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
-}
-const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
+// This component only loads Stripe when needed and provides the Elements context
+const StripeElementsProvider: React.FC<{clientSecret: string, children: React.ReactNode}> = ({ clientSecret, children }) => {
+  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
+  
+  useEffect(() => {
+    // Only initialize Stripe when this component mounts
+    setStripePromise(getStripe());
+  }, []);
+  
+  return (
+    <>
+      {stripePromise ? (
+        <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+          {children}
+        </Elements>
+      ) : (
+        <div className="flex justify-center items-center py-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      )}
+    </>
+  );
+};
 
 const CheckoutForm = ({ amount, serviceName }: { amount: number, serviceName: string }) => {
   const stripe = useStripe();
@@ -307,13 +324,13 @@ const CheckoutPage: React.FC = () => {
                         </div>
                       ) : (
                         <>
-                          {clientSecret && stripePromise ? (
-                            <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+                          {clientSecret ? (
+                            <StripeElementsProvider clientSecret={clientSecret}>
                               <CheckoutForm amount={serviceAmount} serviceName={serviceName} />
-                            </Elements>
+                            </StripeElementsProvider>
                           ) : (
                             <div className="text-center py-8 text-red-500">
-                              Unable to initialize Stripe. Please try again later.
+                              Unable to initialize payment. Please try again later.
                             </div>
                           )}
                         </>
