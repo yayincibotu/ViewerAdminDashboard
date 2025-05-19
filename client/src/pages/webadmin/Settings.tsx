@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LoaderCircle, Save, Trash2, Plus, CheckCircle, Info, ShieldAlert, MailCheck, Zap, RefreshCw, Image, FileCode, FileJson, Clock, Gauge, Sparkles, Rocket } from 'lucide-react';
+import { LoaderCircle, Save, Trash2, Plus, CheckCircle, Info, ShieldAlert, MailCheck, Zap, RefreshCw } from 'lucide-react';
 import AdminLayout from '@/components/dashboard/AdminLayout';
 import AdminHeader from '@/components/dashboard/AdminHeader';
 import { queryClient, apiRequest } from '@/lib/queryClient';
@@ -19,18 +19,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { SystemConfig, EmailTemplate, IpRestriction } from '@shared/schema';
 
-// Extended SystemConfig interface with UI properties added by the server
-interface EnhancedSystemConfig extends SystemConfig {
-  name?: string;
-  type?: string;
-}
-
 // Individual configuration item component
 const ConfigItem: React.FC<{
-  config: EnhancedSystemConfig;
+  config: SystemConfig;
   onSave: (id: number, value: string) => void;
 }> = ({ config, onSave }) => {
-  const [value, setValue] = useState(config.value || '');
+  const [value, setValue] = useState(config.value);
   const [isEditing, setIsEditing] = useState(false);
   
   const handleSave = () => {
@@ -38,15 +32,8 @@ const ConfigItem: React.FC<{
     setIsEditing(false);
   };
   
-  // Determine if multiline based on content or configuration type
-  const isMultiline = (config.type === 'textarea' || config.type === 'text' || 
-                       (config.value && config.value.length > 100));
-  
-  // Determine if boolean field based on key prefixes/content or configuration type
-  const isBooleanField = config.type === 'boolean' || 
-    config.key.startsWith('is_') || 
-    config.key.startsWith('optimize_') || 
-    (config.key.startsWith('image_') && !config.key.includes('quality')) ||
+  const isMultiline = config.type === 'text' || config.value.length > 100;
+  const isBooleanField = config.key.startsWith('is_') || 
     ['enabled', 'disabled', 'active', 'maintenance_mode', 'allow_registrations'].some(
       suffix => config.key.includes(suffix)
     );
@@ -56,7 +43,7 @@ const ConfigItem: React.FC<{
       <div className="flex flex-col space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="font-medium">{config.name || config.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+            <h4 className="font-medium">{config.name}</h4>
             <p className="text-sm text-muted-foreground">{config.description}</p>
           </div>
           <Switch 
@@ -75,14 +62,14 @@ const ConfigItem: React.FC<{
   return (
     <div className="space-y-2">
       <div className="flex justify-between">
-        <Label>{config.name || config.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Label>
+        <Label>{config.name}</Label>
         {isEditing && (
           <div className="flex gap-2">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => {
-                setValue(config.value || '');
+                setValue(config.value);
                 setIsEditing(false);
               }}
             >
@@ -100,7 +87,7 @@ const ConfigItem: React.FC<{
       {isEditing ? (
         isMultiline ? (
           <Textarea
-            value={value || ''}
+            value={value}
             onChange={(e) => setValue(e.target.value)}
             rows={5}
             className={`w-full ${config.type === 'code' ? 'font-mono text-sm' : ''}`}
@@ -108,10 +95,10 @@ const ConfigItem: React.FC<{
           />
         ) : (
           <Input
-            value={value || ''}
+            value={value}
             onChange={(e) => setValue(e.target.value)}
-            type={(config.type === 'number' || config.key.includes('max_age')) ? 'number' : 'text'}
-            className={`w-full ${(config.type === 'number' || config.key.includes('max_age')) ? 'font-mono' : ''}`}
+            type={config.type === 'number' ? 'number' : 'text'}
+            className={`w-full ${config.type === 'number' ? 'font-mono' : ''}`}
             style={{ wordBreak: "break-word" }}
           />
         )
@@ -461,10 +448,6 @@ const SettingsPage: React.FC = () => {
             <TabsTrigger value="email-templates" className="flex items-center gap-2">
               <MailCheck size={16} />
               Email Templates
-            </TabsTrigger>
-            <TabsTrigger value="performance" className="flex items-center gap-2">
-              <Zap size={16} />
-              Performance
             </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-2">
               <ShieldAlert size={16} />
@@ -1033,564 +1016,6 @@ const SettingsPage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          {/* Performance tab */}
-          <TabsContent value="performance" className="space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              {/* Browser Caching Section */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Clock size={20} className="text-primary" />
-                    <CardTitle>Browser Caching</CardTitle>
-                  </div>
-                  <CardDescription>Control how long browsers cache your content to improve loading speed for repeat visitors</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {systemConfigs
-                      .filter(config => config.category === 'performance' && ['cache_max_age_images', 'cache_max_age_static', 'cache_max_age_api'].includes(config.key))
-                      .map(config => (
-                        <ConfigItem 
-                          key={config.id} 
-                          config={config} 
-                          onSave={handleSaveConfig}
-                        />
-                      ))}
-                      
-                    {/* If no config exists, add default options */}
-                    {systemConfigs.filter(config => config.category === 'performance' && ['cache_max_age_images'].includes(config.key)).length === 0 && (
-                      <Card className="p-4 border-dashed border-2 bg-muted/50">
-                        <div className="text-center">
-                          <Button 
-                            variant="outline" 
-                            className="mb-2"
-                            onClick={() => {
-                              const newConfigs = [
-                                { key: 'cache_max_age_images', value: '31536000', description: 'Cache lifetime for images in seconds (default: 1 year)', category: 'performance' },
-                                { key: 'cache_max_age_static', value: '604800', description: 'Cache lifetime for static assets (JS, CSS) in seconds (default: 1 week)', category: 'performance' },
-                                { key: 'cache_max_age_api', value: '0', description: 'Cache lifetime for API responses in seconds (default: no caching)', category: 'performance' },
-                              ];
-                              
-                              // Create each config
-                              Promise.all(newConfigs.map(config => 
-                                apiRequest('POST', '/api/admin/system-config', config)
-                              )).then(() => {
-                                refetch();
-                                toast({
-                                  title: "Caching configurations created",
-                                  description: "Default caching settings have been added.",
-                                });
-                              });
-                            }}
-                          >
-                            Add Default Cache Settings
-                          </Button>
-                          <p className="text-sm text-muted-foreground">
-                            No caching configurations found. Click to add default recommended settings.
-                          </p>
-                        </div>
-                      </Card>
-                    )}
-                  </div>
-                  
-                  <div className="bg-muted p-4 rounded-md">
-                    <p className="text-sm">
-                      <strong>Recommended settings:</strong><br />
-                      - Images: 31536000 (1 year)<br />
-                      - Static assets (JS, CSS): 604800 (1 week)<br />
-                      - API responses: 0 (no caching) or short-lived for static content
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Resource Optimization Section */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Rocket size={20} className="text-primary" />
-                    <CardTitle>Resource Optimization</CardTitle>
-                  </div>
-                  <CardDescription>Optimize delivery of web resources to improve loading times and Core Web Vitals</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Minify CSS</h4>
-                          <p className="text-sm text-muted-foreground">Removes whitespace and comments to reduce file size</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'optimize_minify_css')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'optimize_minify_css');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'optimize_minify_css',
-                                value: checked ? 'true' : 'false',
-                                description: 'Minify CSS by removing whitespace and comments',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Minify JavaScript</h4>
-                          <p className="text-sm text-muted-foreground">Removes whitespace and comments to reduce file size</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'optimize_minify_js')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'optimize_minify_js');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'optimize_minify_js',
-                                value: checked ? 'true' : 'false',
-                                description: 'Minify JavaScript by removing whitespace and comments',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Load JavaScript Deferred</h4>
-                          <p className="text-sm text-muted-foreground">Eliminates render-blocking JavaScript</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'optimize_defer_js')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'optimize_defer_js');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'optimize_defer_js',
-                                value: checked ? 'true' : 'false',
-                                description: 'Load JavaScript with defer attribute to avoid render blocking',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Optimize CSS Delivery</h4>
-                          <p className="text-sm text-muted-foreground">Inline critical CSS and defer non-critical CSS</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'optimize_css_delivery')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'optimize_css_delivery');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'optimize_css_delivery',
-                                value: checked ? 'true' : 'false',
-                                description: 'Inline critical CSS and defer loading of non-critical CSS',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Preconnect to Critical Origins</h4>
-                          <p className="text-sm text-muted-foreground">Establish early connections to important third-party domains</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'optimize_preconnect')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'optimize_preconnect');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'optimize_preconnect',
-                                value: checked ? 'true' : 'false',
-                                description: 'Use preconnect for critical third-party origins',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Link Preloading</h4>
-                          <p className="text-sm text-muted-foreground">Improves the perceived load time of important resources</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'optimize_preload')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'optimize_preload');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'optimize_preload',
-                                value: checked ? 'true' : 'false',
-                                description: 'Preload critical resources for faster perceived loading',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Image Optimization Section */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Image size={20} className="text-primary" />
-                    <CardTitle>Image Optimization</CardTitle>
-                  </div>
-                  <CardDescription>Configure image loading behavior to prevent layout shifts and improve Core Web Vitals</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Lazy Load Images</h4>
-                          <p className="text-sm text-muted-foreground">Only load images when they enter the viewport</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'image_lazy_loading')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'image_lazy_loading');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'image_lazy_loading',
-                                value: checked ? 'true' : 'false',
-                                description: 'Lazy load images that are not immediately visible',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Image Dimensions</h4>
-                          <p className="text-sm text-muted-foreground">Add width and height attributes to prevent layout shifts</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'image_dimensions')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'image_dimensions');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'image_dimensions',
-                                value: checked ? 'true' : 'false',
-                                description: 'Add width and height attributes to images to prevent layout shifts',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Image Compression</h4>
-                          <p className="text-sm text-muted-foreground">Automatically compress images to reduce file size</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'image_compression')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'image_compression');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'image_compression',
-                                value: checked ? 'true' : 'false',
-                                description: 'Automatically compress images to optimize loading speed',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Next-gen Formats</h4>
-                          <p className="text-sm text-muted-foreground">Serve images in WebP format for smaller file sizes</p>
-                        </div>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'image_next_gen_formats')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'image_next_gen_formats');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'image_next_gen_formats',
-                                value: checked ? 'true' : 'false',
-                                description: 'Serve images in modern formats like WebP for better compression',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Image Quality</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Set the default quality for image compression (1-100). Lower values mean smaller file size but lower quality.
-                    </p>
-                    
-                    {systemConfigs.find(c => c.key === 'image_quality') ? (
-                      <ConfigItem 
-                        key={systemConfigs.find(c => c.key === 'image_quality')?.id} 
-                        config={systemConfigs.find(c => c.key === 'image_quality') as SystemConfig} 
-                        onSave={handleSaveConfig}
-                      />
-                    ) : (
-                      <div className="flex items-center space-x-4">
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          max="100" 
-                          defaultValue="85"
-                          placeholder="Quality (1-100)"
-                          className="max-w-xs"
-                          id="image-quality-input"
-                        />
-                        <Button
-                          onClick={() => {
-                            const value = (document.getElementById('image-quality-input') as HTMLInputElement).value;
-                            apiRequest('POST', '/api/admin/system-config', {
-                              key: 'image_quality',
-                              value: value,
-                              description: 'Default quality for image compression (1-100)',
-                              category: 'performance'
-                            }).then(() => refetch());
-                          }}
-                        >
-                          Save
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Core Web Vitals Section */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Gauge size={20} className="text-primary" />
-                    <CardTitle>Core Web Vitals</CardTitle>
-                  </div>
-                  <CardDescription>Optimize for Google's Core Web Vitals metrics</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-8">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-base font-semibold">LCP (Largest Contentful Paint)</h3>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'optimize_lcp')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'optimize_lcp');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'optimize_lcp',
-                                value: checked ? 'true' : 'false',
-                                description: 'Enable LCP optimization techniques',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">Measures loading performance - how quickly the largest content element becomes visible</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-muted p-3 rounded-md">
-                          <p className="text-sm"><strong>Techniques applied:</strong></p>
-                          <ul className="text-sm list-disc pl-5 space-y-1 mt-1">
-                            <li>Preload critical resources</li>
-                            <li>Prioritize above-the-fold content</li>
-                            <li>Optimize server response time</li>
-                            <li>Implement content delivery network</li>
-                          </ul>
-                        </div>
-                        <div className="bg-muted p-3 rounded-md">
-                          <p className="text-sm"><strong>Goal:</strong> Under 2.5 seconds</p>
-                          <p className="text-sm mt-1">Good LCP scores improve search ranking and user experience by showing content quickly</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-base font-semibold">FID (First Input Delay)</h3>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'optimize_fid')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'optimize_fid');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'optimize_fid',
-                                value: checked ? 'true' : 'false',
-                                description: 'Enable FID optimization techniques',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">Measures interactivity - how quickly your site responds to user interactions</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-muted p-3 rounded-md">
-                          <p className="text-sm"><strong>Techniques applied:</strong></p>
-                          <ul className="text-sm list-disc pl-5 space-y-1 mt-1">
-                            <li>Break up long tasks</li>
-                            <li>Minimize main thread work</li>
-                            <li>Use web workers for heavy operations</li>
-                            <li>Optimize JavaScript execution</li>
-                          </ul>
-                        </div>
-                        <div className="bg-muted p-3 rounded-md">
-                          <p className="text-sm"><strong>Goal:</strong> Under 100 milliseconds</p>
-                          <p className="text-sm mt-1">Good FID scores ensure your site feels responsive and interactive to users</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-base font-semibold">CLS (Cumulative Layout Shift)</h3>
-                        <Switch 
-                          checked={systemConfigs.find(c => c.key === 'optimize_cls')?.value === 'true'} 
-                          onCheckedChange={(checked) => {
-                            const config = systemConfigs.find(c => c.key === 'optimize_cls');
-                            if (config) {
-                              handleSaveConfig(config.id, checked ? 'true' : 'false');
-                            } else {
-                              apiRequest('POST', '/api/admin/system-config', {
-                                key: 'optimize_cls',
-                                value: checked ? 'true' : 'false',
-                                description: 'Enable CLS optimization techniques',
-                                category: 'performance'
-                              }).then(() => refetch());
-                            }
-                          }} 
-                        />
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">Measures visual stability - how much elements move around during page load</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-muted p-3 rounded-md">
-                          <p className="text-sm"><strong>Techniques applied:</strong></p>
-                          <ul className="text-sm list-disc pl-5 space-y-1 mt-1">
-                            <li>Size images and videos in HTML</li>
-                            <li>Reserve space for ads and embeds</li>
-                            <li>Avoid inserting content above existing content</li>
-                            <li>Use transform animations instead of top/left</li>
-                          </ul>
-                        </div>
-                        <div className="bg-muted p-3 rounded-md">
-                          <p className="text-sm"><strong>Goal:</strong> Under 0.1</p>
-                          <p className="text-sm mt-1">Good CLS scores prevent frustrating layout shifts that can cause users to click wrong elements</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => {
-                      toast({
-                        title: "Web Vitals monitoring enabled",
-                        description: "Performance metrics will be collected for your site",
-                      });
-                    }}
-                  >
-                    <Sparkles size={16} />
-                    Enable Web Vitals Monitoring
-                  </Button>
-                  
-                  <Button
-                    className="gap-2"
-                    onClick={() => {
-                      // Enable all Core Web Vitals optimizations
-                      const cwvKeys = ['optimize_lcp', 'optimize_fid', 'optimize_cls'];
-                      
-                      // Create or update each key
-                      Promise.all(cwvKeys.map(key => {
-                        const config = systemConfigs.find(c => c.key === key);
-                        if (config) {
-                          return apiRequest('PUT', `/api/admin/system-config/${config.id}`, {
-                            value: 'true'
-                          });
-                        } else {
-                          return apiRequest('POST', '/api/admin/system-config', {
-                            key,
-                            value: 'true',
-                            description: `Enable ${key.split('_')[1].toUpperCase()} optimization techniques`,
-                            category: 'performance'
-                          });
-                        }
-                      })).then(() => {
-                        refetch();
-                        toast({
-                          title: "Core Web Vitals optimization enabled",
-                          description: "All optimization techniques have been enabled",
-                        });
-                      });
-                    }}
-                  >
-                    <Rocket size={16} />
-                    Enable All Optimizations
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
           </TabsContent>
           
           {/* Integrations tab */}

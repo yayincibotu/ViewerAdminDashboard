@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useStripe, PaymentElement, useElements } from '@stripe/react-stripe-js';
+import { useStripe, Elements, PaymentElement, useElements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
@@ -10,10 +11,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle, CreditCard, Lock, ShieldCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import StripeProvider from '@/components/payment/StripeProvider';
 
-// We're using the StripeProvider component from @/components/payment/StripeProvider 
-// instead of defining the provider here
+// Make sure to call `loadStripe` outside of a component's render to avoid
+// recreating the `Stripe` object on every render.
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+if (!stripePublicKey) {
+  console.warn('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
+}
+const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 const CheckoutForm = ({ amount, serviceName }: { amount: number, serviceName: string }) => {
   const stripe = useStripe();
@@ -302,13 +307,13 @@ const CheckoutPage: React.FC = () => {
                         </div>
                       ) : (
                         <>
-                          {clientSecret ? (
-                            <StripeProvider clientSecret={clientSecret}>
+                          {clientSecret && stripePromise ? (
+                            <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
                               <CheckoutForm amount={serviceAmount} serviceName={serviceName} />
-                            </StripeProvider>
+                            </Elements>
                           ) : (
                             <div className="text-center py-8 text-red-500">
-                              Unable to initialize payment. Please try again later.
+                              Unable to initialize Stripe. Please try again later.
                             </div>
                           )}
                         </>

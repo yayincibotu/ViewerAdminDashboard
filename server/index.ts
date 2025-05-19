@@ -1,28 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
-import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Support for nested objects
-
-// Add compression middleware for all routes
-app.use(compression({
-  level: 6, // Balanced compression level
-  threshold: 1024, // Only compress responses larger than 1KB
-  filter: (req, res) => {
-    // Don't compress responses with this header
-    if (req.headers['x-no-compression']) {
-      return false;
-    }
-    // Use compression filter function from the module
-    return compression.filter(req, res);
-  }
-}));
-
-// Using built-in compression middleware for now
-// Will implement more advanced performance optimizations in a separate PR
+app.use(express.urlencoded({ extended: true })); // İç içe nesneleri desteklemesi için true yapıldı
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -127,25 +109,6 @@ app.use((req, res, next) => {
       }, HOURS_24);
     }).catch(error => {
       log(`Failed to load review scheduler: ${error.message}`);
-    });
-    
-    // Initialize performance configurations
-    import('./performance-controller').then(module => {
-      const { initializePerformanceConfigs } = module;
-      
-      initializePerformanceConfigs()
-        .then(result => {
-          if (result.success) {
-            log(`Performance configurations initialized: ${result.message}`);
-          } else {
-            log(`Failed to initialize performance configurations: ${result.error}`);
-          }
-        })
-        .catch(error => {
-          log(`Error initializing performance configurations: ${error.message}`);
-        });
-    }).catch(error => {
-      log(`Failed to load performance controller: ${error.message}`);
     });
   }
 })();
