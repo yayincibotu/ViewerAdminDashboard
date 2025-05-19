@@ -5,12 +5,17 @@ import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
 import { useQuery } from '@tanstack/react-query';
 
-// Doğrudan bileşenleri import edelim
+// Performans için optimize edilmiş doğrudan import'lar
 import FeatureCard from '@/components/FeatureCard';
 import PlatformCard from '@/components/PlatformCard';
 import BenefitCard from '@/components/BenefitCard';
 import PricingCard from '@/components/PricingCard';
 import PaymentMethodCard from '@/components/PaymentMethodCard';
+
+// Performans optimizasyonu için lazy-loading ve deferred yükleme araçları
+import { preloadImages, startPerformanceMeasure, endPerformanceMeasure } from '@/lib/performance-utils';
+import { LazyTestimonials, LazyFeatures, LazyPartners, DeferredHomeSection } from '@/components/LazyHomeComponents';
+import DeferredContent from '@/components/DeferredContent';
 
 const HomePage: React.FC = () => {
   // Kimlik doğrulama gerektirmeyen bir API çağrısı
@@ -20,20 +25,21 @@ const HomePage: React.FC = () => {
   
   // Kritik görüntülerin önceden yüklenmesi için efekt
   useEffect(() => {
+    // Sayfa render performansını ölçmeye başla
+    startPerformanceMeasure('homepage-render');
+    
     // Anasayfada görünecek kritik görüntüleri önbelleğe alma
-    const preloadImages = () => {
-      const criticalImages = [
-        '/images/hero-bg.jpg',
-        '/images/platforms/twitch.jpg',
-        '/images/platforms/youtube.jpg'
-      ];
-      
-      // Görüntüleri browser önbelleğine alma
-      criticalImages.forEach(src => {
-        const img = new Image();
-        img.src = src;
-      });
-    };
+    const criticalImages = [
+      '/images/hero-bg.jpg',
+      '/images/platforms/twitch.jpg',
+      '/images/platforms/youtube.jpg'
+    ];
+    
+    // Görüntüleri doğrudan önbelleğe al - daha güvenli
+    criticalImages.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
     
     // Intersection Observer API ile lazy loading
     const setupLazyLoading = () => {
@@ -64,15 +70,12 @@ const HomePage: React.FC = () => {
       }
     };
     
-    // Önce kritik görüntüleri yükle
-    preloadImages();
-    
     // Sonra lazy loading ayarla
     setTimeout(setupLazyLoading, 1000);
     
-    // Sayfa kapanırken cleanup
+    // Sayfa kapanırken cleanup ve performans ölçümü sonlandır
     return () => {
-      // Cleanup
+      endPerformanceMeasure('homepage-render');
     };
   }, []);
   
