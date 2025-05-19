@@ -319,8 +319,39 @@ const ProductDetail = () => {
     isLoading: isLoadingRelated 
   } = useQuery<Product[]>({
     queryKey: ['/api/digital-products/related', productId],
-    queryFn: () => apiRequest('GET', `/api/digital-products/related/${productId}`)
-      .then(res => res.json()),
+    queryFn: async () => {
+      // Check local storage cache first
+      const cacheKey = `related_products_${productId}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      
+      if (cachedData) {
+        try {
+          const parsedData = JSON.parse(cachedData);
+          const cacheTime = parsedData.timestamp;
+          const currentTime = new Date().getTime();
+          
+          // Cache valid for 30 minutes for related products
+          if (currentTime - cacheTime < 30 * 60 * 1000) {
+            console.log('Using cached related products');
+            return parsedData.data;
+          }
+        } catch (e) {
+          console.error('Cache parse error:', e);
+        }
+      }
+      
+      // Fetch from API if cache miss or expired
+      const res = await apiRequest('GET', `/api/digital-products/related/${productId}`);
+      const data = await res.json();
+      
+      // Save to cache
+      localStorage.setItem(cacheKey, JSON.stringify({
+        data,
+        timestamp: new Date().getTime()
+      }));
+      
+      return data;
+    },
     enabled: !!productId && !isLoading && !!product,
   });
   
@@ -1096,7 +1127,7 @@ const ProductDetail = () => {
                     </Card>
                   ))}
                 </div>
-              </div>
+              </DeferredContent>
             )}
             
             {/* FAQ Section with Deferred Loading - Important for SEO */}
