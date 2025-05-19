@@ -2,246 +2,130 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5" />
-    <title>ViewerApps - Grow Your Audience Instantly</title>
-    
-    <!-- Performance Optimizations -->
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="color-scheme" content="dark light">
-    
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="Premium services to boost your social media presence across platforms including Twitch, YouTube, Instagram, and TikTok" />
-    <meta name="keywords" content="viewbots, twitch viewers, youtube views, social media boost, grow audience, streaming viewers, twitch, youtube, kick, vk play, trovo" />
-    <meta name="author" content="ViewerApps" />
-    
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://viewerapps.com" />
-    
-    <!-- Cache Control -->
-    <meta http-equiv="Cache-Control" content="max-age=86400, must-revalidate" />
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
-    
-    <!-- Manifest for PWA -->
-    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta name="description" content="ViewerApps - Grow Your Audience Instantly with our social media boosting services" />
     <meta name="theme-color" content="#4f46e5" />
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
     
-    <!-- Core Web Vitals and Performance Optimizations -->
-    <script>
-      // Optimize CLS by defining document layout early
-      document.documentElement.style.scrollBehavior = 'smooth';
-      // Preconnect to critical domains
-      const domains = [
-        'https://fonts.googleapis.com',
-        'https://fonts.gstatic.com',
-        'https://cdnjs.cloudflare.com'
-      ];
-      domains.forEach(domain => {
-        const link = document.createElement('link');
-        link.rel = 'preconnect';
-        link.href = domain;
-        link.crossOrigin = 'anonymous';
-        document.head.appendChild(link);
-        
-        const dns = document.createElement('link');
-        dns.rel = 'dns-prefetch';
-        dns.href = domain;
-        document.head.appendChild(dns);
-      });
-    </script>
+    <!-- Performance Optimization: Preload critical assets -->
+    <link rel="preload" href="/src/index.css" as="style" />
+    <link rel="preload" href="/src/main.tsx" as="script" />
     
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="/src/main.tsx" as="script" fetchpriority="high" />
-    <link rel="preload" href="/icons/icon-192x192.png" as="image" fetchpriority="high" />
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" as="style" />
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" as="style" />
+    <!-- Performance Optimization: Preconnect to third-party domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     
-    <!-- Font Display Optimization -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" media="print" onload="this.media='all'">
+    <!-- PWA Support -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="/icon-192x192.png" />
+    <link rel="apple-touch-icon" href="/icon-192x192.png" />
     
-    <!-- Fallback for Font Stylesheets -->
-    <noscript>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    </noscript>
+    <!-- Google Fonts with display=swap for better performance -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
     
-    <!-- Open Graph / Social Media Tags -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="ViewerApps - Grow Your Audience Instantly" />
-    <meta property="og:description" content="Premium services to boost your social media presence across platforms including Twitch, YouTube, Instagram, and TikTok" />
-    <meta property="og:image" content="/icons/icon-512x512.png" />
-    <meta property="og:url" content="https://viewerapps.com" />
-    
-    <!-- Twitter Card Tags -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="ViewerApps - Grow Your Audience Instantly" />
-    <meta name="twitter:description" content="Premium services to boost your social media presence across platforms including Twitch, YouTube, Instagram, and TikTok" />
-    <meta name="twitter:image" content="/icons/icon-512x512.png" />
-    
-    <!-- Critical CSS to reduce LCP (Largest Contentful Paint) -->
+    <!-- Critical CSS Inline -->
     <style>
-      /* Inline critical CSS to reduce render-blocking CSS */
-      :root {
-        --foreground: #0f172a;
-        --background: #ffffff;
-        --primary: #4f46e5;
-        --secondary: #818cf8;
-      }
-      
+      /* Critical rendering path CSS */
       body {
         margin: 0;
+        padding: 0;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        background-color: var(--background);
-        color: var(--foreground);
-        text-rendering: optimizeSpeed;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #f8fafc;
+        color: #1e293b;
       }
-      
-      /* Layout CLS optimization (content layout shift prevention) */
-      #root {
-        display: block;
+      /* Prevent layout shifts during loading */
+      .content-placeholder {
         min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
-      
-      /* Image placeholders to prevent layout shifts */
-      img {
-        max-width: 100%;
-        height: auto;
-        display: block;
+      /* Loading spinner with reduced CLS */
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(79, 70, 229, 0.2);
+        border-radius: 50%;
+        border-top-color: #4f46e5;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
       }
-      
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --foreground: #f8fafc;
-          --background: #0f172a;
-        }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      /* Prevent FOUC */
+      .js-loading * {
+        transition: none !important;
       }
     </style>
+    
+    <title>ViewerApps - Grow Your Audience Instantly</title>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="js-loading">
+    <div id="root">
+      <!-- Minimal loading state to reduce CLS -->
+      <div class="content-placeholder">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
     
-    <!-- Add content placeholders to reduce CLS -->
+    <!-- Remove JS loading class once the page starts loading -->
     <script>
-      // Optimize Core Web Vitals
-      (function() {
-        // Performance measurement
-        if (window.performance && "PerformanceObserver" in window) {
-          // Largest Contentful Paint
-          const lcpObserver = new PerformanceObserver((entryList) => {
-            const entries = entryList.getEntries();
-            const lastEntry = entries[entries.length - 1];
-            console.debug("LCP:", lastEntry.startTime);
-            
-            // Send metrics to analytics
-            if (lastEntry.startTime > 2500) {
-              // LCP is high, do optimizations
-              sessionStorage.setItem('highLCP', 'true');
-            }
-          });
-          
-          // Cumulative Layout Shift
-          const clsObserver = new PerformanceObserver((entryList) => {
-            let clsValue = 0;
-            for (const entry of entryList.getEntries()) {
-              if (!entry.hadRecentInput) {
-                clsValue += entry.value;
-              }
-            }
-            
-            console.debug("CLS:", clsValue);
-            // High CLS detection
-            if (clsValue > 0.1) {
-              console.debug("High CLS detected:", clsValue);
-            }
-          });
-          
-          // First Input Delay
-          const fidObserver = new PerformanceObserver((entryList) => {
-            for (const entry of entryList.getEntries()) {
-              const delay = entry.processingStart - entry.startTime;
-              console.debug("FID:", delay);
-            }
-          });
-          
-          // Start observers
-          try {
-            lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
-            clsObserver.observe({ type: 'layout-shift', buffered: true });
-            fidObserver.observe({ type: 'first-input', buffered: true });
-          } catch (e) {
-            console.error("Error setting up performance observers:", e);
-          }
-        }
-      })();
-    </script>
-    
-    <!-- Defer non-critical JavaScript -->
-    <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-      // Defer service worker registration until after page load
+      // Remove the JS loading class once the DOM is interactive
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.classList.remove('js-loading');
+      });
+      
+      // Register service worker for PWA support
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          // Use setTimeout to prioritize main thread for LCP
-          setTimeout(() => {
-            navigator.serviceWorker.register('/service-worker.js')
-              .then(registration => {
-                console.log('Service Worker registered with scope:', registration.scope);
-              })
-              .catch(error => {
-                console.error('Service Worker registration failed:', error);
-              });
-          }, 1000); // Delay service worker registration by 1 second
-        });
-      }
-    </script>
-    
-    <!-- Browser caching directives to improve loading times on repeat visits -->
-    <script>
-      // Add cache headers for browser caching
-      if ('caches' in window) {
-        // Cache static assets
-        caches.open('static-assets-v1').then(cache => {
-          const urlsToCache = [
-            '/icons/icon-192x192.png',
-            '/icons/icon-512x512.png',
-            '/manifest.json'
-          ];
-          cache.addAll(urlsToCache);
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(function(registration) {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(function(err) {
+              console.log('ServiceWorker registration failed: ', err);
+            });
         });
       }
       
-      // Initialize performance optimizations
-      window.addEventListener('load', () => {
-        // Lazy load all images
-        const lazyImages = document.querySelectorAll('img[loading="lazy"]');
-        if ('IntersectionObserver' in window) {
-          const imageObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-              if (entry.isIntersecting) {
-                const img = entry.target;
-                const src = img.getAttribute('data-src');
-                if (src) {
-                  img.setAttribute('src', src);
-                  img.removeAttribute('data-src');
-                }
-                imageObserver.unobserve(img);
-              }
-            });
-          });
-          
-          lazyImages.forEach(img => {
-            imageObserver.observe(img);
-          });
-        }
-      });
+      // Performance monitoring
+      if ('performance' in window && 'PerformanceObserver' in window) {
+        // Create performance observer for LCP
+        const lcpObserver = new PerformanceObserver((entryList) => {
+          const entries = entryList.getEntries();
+          const lastEntry = entries[entries.length - 1];
+          console.log('LCP:', lastEntry.startTime);
+        });
+        lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+        
+        // Create performance observer for CLS
+        let clsValue = 0;
+        const clsObserver = new PerformanceObserver((entryList) => {
+          for (const entry of entryList.getEntries()) {
+            if (!entry.hadRecentInput) {
+              clsValue += entry.value;
+            }
+          }
+          console.log('CLS:', clsValue);
+        });
+        clsObserver.observe({ type: 'layout-shift', buffered: true });
+        
+        // Create performance observer for FID
+        const fidObserver = new PerformanceObserver((entryList) => {
+          for (const entry of entryList.getEntries()) {
+            const delay = entry.processingStart - entry.startTime;
+            console.log('FID:', delay);
+          }
+        });
+        fidObserver.observe({ type: 'first-input', buffered: true });
+      }
     </script>
     
-    <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
-    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js" defer></script>
+    <!-- Main application script with defer to avoid blocking render -->
+    <script type="module" src="/src/main.tsx" defer></script>
   </body>
 </html>

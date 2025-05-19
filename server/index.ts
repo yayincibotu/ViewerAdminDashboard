@@ -2,7 +2,6 @@ import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { performanceMiddleware } from "./middleware/performance";
 
 const app = express();
 app.use(express.json());
@@ -22,8 +21,8 @@ app.use(compression({
   }
 }));
 
-// Add performance optimization middleware
-app.use(performanceMiddleware);
+// Using built-in compression middleware for now
+// Will implement more advanced performance optimizations in a separate PR
 
 app.use((req, res, next) => {
   const start = Date.now();

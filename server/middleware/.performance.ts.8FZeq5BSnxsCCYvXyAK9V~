@@ -1,0 +1,155 @@
+/**
+ * Performance Middleware
+ * Implements various performance optimization techniques based on system configurations
+ */
+import { Request, Response, NextFunction } from 'express';
+import { getActivePerformanceConfig } from '../performance-controller';
+import compression from 'compression';
+import { db } from '../db';
+import { systemConfigs } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
+
+/**
+ * Set up compression middleware with appropriate options
+ */
+export function compressionMiddleware() {
+  return compression({
+    // Don't compress responses smaller than 1KB
+    threshold: 1024,
+    // Compress all HTTP methods
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+    // Set compression level (0-9, where 9 is max compression but slower)
+    level: 6
+  });
+}
+
+/**
+ * Implement browser cache control based on configuration
+ */
+export function cacheControlMiddleware() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Skip for certain paths that should never be cached
+      if (req.path.includes('/api/auth') || 
+          req.path.includes('/api/user') || 
+          req.path.includes('/api/admin') ||
+          req.method !== 'GET') {
+        return next();
+      }
+
+      // Get active performance configuration
+      const config = await getActivePerformanceConfig();
+      
+      // Determine cache duration based on path
+      let maxAge = 0;
+
+      // For API responses
+      if (req.path.startsWith('/api')) {
+        maxAge = parseInt(config.cache_max_age_api || '300', 10);
+      } 
+      // For static assets (CSS, JS, etc)
+      else if (/\.(js|css|svg|json)$/.test(req.path)) {
+        maxAge = parseInt(config.cache_max_age_static || '604800', 10);
+      } 
+      // For images
+      else if (/\.(jpg|jpeg|png|gif|webp|avif)$/.test(req.path)) {
+        maxAge = parseInt(config.cache_max_age_images || '2592000', 10);
+      }
+      
+      // Set cache control headers if maxAge > 0
+      if (maxAge > 0) {
+        res.setHeader('Cache-Control', `public, max-age=${maxAge}, stale-while-revalidate=60`);
+      } else {
+        // For non-cached responses, ensure they're not cached
+        res.setHeader('Cache-Control', 'no-store, must-revalidate');
+      }
+      
+      next();
+    } catch (error) {
+      // If there's an error, proceed without setting cache headers
+      console.error('Error in cache control middleware:', error);
+      next();
+    }
+  };
+}
+
+/**
+ * Middleware for HTML response optimization
+ * This handles various HTML optimizations like script defer, CSS optimization, etc.
+ */
+export function htmlOptimizationMiddleware() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Only process HTML responses
+      const originalSend = res.send;
+      
+      res.send = function(body) {
+        // Only modify HTML responses
+        if (typeof body === 'string' && 
+            res.getHeader('Content-Type')?.toString().includes('text/html')) {
+          
+          // Get performance config (only if needed)
+          getActivePerformanceConfig().then(config => {
+            // Skip if optimizations are disabled
+            const optimizeJs = config.optimize_defer_js === 'true';
+            const optimizeCss = config.optimize_css_delivery === 'true';
+            const optimizeCls = config.optimize_cls === 'true';
+            
+            if (!optimizeJs && !optimizeCss && !optimizeCls) {
+              return originalSend.call(res, body);
+            }
+            
+            let modifiedBody = body;
+            
+            // Add script deferrals if enabled
+            if (optimizeJs) {
+              modifiedBody = modifiedBody.replace(
+                /<script(?!.*\bdefer\b)(?!.*\basync\b)(?!.*\btype="module"\b).*?>/gi, 
+                '<script defer>'
+              );
+            }
+            
+            // Set return-to response
+            return originalSend.call(res, modifiedBody);
+          }).catch(error => {
+            console.error('Error optimizing HTML:', error);
+            return originalSend.call(res, body);
+          });
+        } else {
+          // Not HTML, send as is
+          return originalSend.call(res, body);
+        }
+        
+        // TypeScript requires a return value
+        return res;
+      };
+      
+      next();
+    } catch (error) {
+      // If there's an error, proceed without optimization
+      console.error('Error in HTML optimization middleware:', error);
+      next();
+    }
+  };
+}
+
+/**
+ * Combine all performance middleware
+ */
+export function setupPerformanceMiddleware(app: any) {
+  // Apply compression middleware (always on)
+  app.use(compressionMiddleware());
+  
+  // Apply cache control middleware
+  app.use(cacheControlMiddleware());
+  
+  // Apply HTML optimization middleware
+  app.use(htmlOptimizationMiddleware());
+  
+  console.log('Performance middleware initialized');
+}

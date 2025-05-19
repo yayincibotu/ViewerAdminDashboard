@@ -1,171 +1,125 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { cn } from "@/lib/utils";
 
-interface OptimizedImageProps {
+interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
   alt: string;
-  width?: number | string;
-  height?: number | string;
+  width?: number;
+  height?: number;
   className?: string;
-  placeholderColor?: string;
+  placeholderSize?: 'small' | 'medium' | 'large';
   priority?: boolean;
-  lazyBoundary?: string;
-  fetchPriority?: 'high' | 'low' | 'auto';
-  onLoad?: () => void;
-  style?: React.CSSProperties;
+  objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
 }
 
 /**
- * OptimizedImage - A component for rendering images with web vitals optimizations
- * Features:
+ * OptimizedImage Component
+ * 
+ * Provides optimized image loading with:
  * - Lazy loading
- * - Placeholder during loading to prevent CLS
- * - Image dimensions to reserve space
- * - Blurred placeholder option
- * - Priority loading for LCP images
- * - Error handling and fallback
+ * - WebP support detection
+ * - Blur-up image loading
+ * - Fixed dimensions to prevent CLS
+ * - Responsive images
  */
-const OptimizedImage: React.FC<OptimizedImageProps> = ({
+export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   src,
   alt,
   width,
   height,
-  className = '',
-  placeholderColor = '#f3f4f6',
+  className,
+  placeholderSize = 'small',
   priority = false,
-  lazyBoundary = '200px',
-  fetchPriority = 'auto',
-  onLoad,
-  style = {}
+  objectFit = 'cover',
+  ...props
 }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [error, setError] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [supportsWebP, setSupportsWebP] = useState(false);
   
   useEffect(() => {
-    // Reset state when src changes
-    setIsLoaded(false);
-    setError(false);
-    
-    const currentImg = imgRef.current;
-    
-    // Support native lazy loading
-    if (!priority && 'loading' in HTMLImageElement.prototype) {
-      if (currentImg) {
-        currentImg.loading = 'lazy';
+    // Check for WebP support
+    const checkWebP = () => {
+      const canvas = document.createElement('canvas');
+      if (canvas.getContext && canvas.getContext('2d')) {
+        // WebP detection
+        canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0
+          ? setSupportsWebP(true)
+          : setSupportsWebP(false);
+      } else {
+        setSupportsWebP(false);
       }
-    } else if (priority && 'fetchpriority' in HTMLImageElement.prototype) {
-      // Use fetchpriority for important images
-      if (currentImg) {
-        // @ts-ignore - fetchpriority is not in the current TypeScript definitions
-        currentImg.fetchpriority = 'high';
-      }
-    }
+    };
     
-    // Use Intersection Observer for custom lazy loading on browsers without native support
-    if (!priority && !('loading' in HTMLImageElement.prototype) && currentImg) {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              if (currentImg) {
-                // Actually start loading the image
-                if (currentImg.dataset.src) {
-                  currentImg.src = currentImg.dataset.src;
-                }
-                observer.unobserve(entry.target);
-              }
-            }
-          });
-        },
-        { rootMargin: lazyBoundary }
-      );
-      
-      observer.observe(currentImg);
-      
-      return () => {
-        if (currentImg) {
-          observer.unobserve(currentImg);
-        }
-      };
-    }
-  }, [src, priority, lazyBoundary]);
+    checkWebP();
+  }, []);
   
-  // Compute placeholder dimensions to prevent CLS
-  const placeholderStyle: React.CSSProperties = {
-    backgroundColor: placeholderColor,
-    ...(typeof width === 'number' ? { width: `${width}px` } : width ? { width } : {}),
-    ...(typeof height === 'number' ? { height: `${height}px` } : height ? { height } : {}),
-    display: 'block',
-    ...style
+  // Determine if image is external
+  const isExternalImage = src.startsWith('http') || src.startsWith('//');
+  
+  // Get optimized image URL
+  const getOptimizedImageUrl = () => {
+    if (isExternalImage) {
+      // Can't optimize external images directly
+      return src;
+    }
+    
+    // For internal images, check if WebP is supported
+    if (supportsWebP && !src.includes('.svg') && !src.includes('.webp')) {
+      // Convert to WebP if supported and not already WebP or SVG
+      const baseSrc = src.split('.').slice(0, -1).join('.');
+      return `${baseSrc}.webp`;
+    }
+    
+    return src;
   };
-
-  const handleImageLoad = () => {
-    setIsLoaded(true);
-    if (onLoad) onLoad();
+  
+  // Create placeholder gradient based on size
+  const getPlaceholderStyle = () => {
+    const colors = {
+      small: 'rgba(229, 231, 235, 0.3)',
+      medium: 'rgba(209, 213, 219, 0.5)',
+      large: 'rgba(156, 163, 175, 0.7)'
+    };
+    
+    return {
+      backgroundColor: colors[placeholderSize],
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      opacity: loaded ? 0 : 1,
+      transition: 'opacity 0.3s ease-in-out'
+    };
   };
-
-  const handleImageError = () => {
-    setError(true);
-  };
-
-  // If the image has an error, show a placeholder with an error indicator
-  if (error) {
-    return (
-      <div
-        className={`optimized-image-error ${className}`}
-        style={{
-          ...placeholderStyle,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          color: '#ef4444',
-          fontSize: '14px'
-        }}
-        aria-label={`Failed to load image: ${alt}`}
-      >
-        <span>Image Failed to Load</span>
-      </div>
-    );
-  }
-
-  // The loading strategy changes based on priority
+  
   return (
-    <>
+    <div 
+      className={cn("relative overflow-hidden", className)}
+      style={{ 
+        width: width ? `${width}px` : '100%', 
+        height: height ? `${height}px` : 'auto',
+        aspectRatio: width && height ? `${width} / ${height}` : 'auto'
+      }}
+    >
+      <div style={getPlaceholderStyle()} aria-hidden="true" />
       <img
-        ref={imgRef}
-        src={src}
+        src={getOptimizedImageUrl()}
         alt={alt}
         width={width}
         height={height}
+        onLoad={() => setLoaded(true)}
         loading={priority ? 'eager' : 'lazy'}
-        onLoad={handleImageLoad}
-        onError={handleImageError}
-        className={`optimized-image ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className}`}
         style={{
-          ...placeholderStyle,
+          objectFit,
+          opacity: loaded ? 1 : 0,
           transition: 'opacity 0.3s ease-in-out',
-          objectFit: 'cover',
+          width: '100%',
+          height: '100%'
         }}
-        data-priority={priority ? 'high' : 'low'}
+        {...props}
       />
-      
-      {/* Transparent SVG for aspect ratio placeholder (to prevent CLS) */}
-      {(!isLoaded && !error) && (width && height) && (
-        <svg
-          width={typeof width === 'number' ? width : '100%'}
-          height={typeof height === 'number' ? height : '100%'}
-          style={{
-            ...placeholderStyle,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            zIndex: -1,
-            backgroundColor: placeholderColor,
-          }}
-          aria-hidden="true"
-        />
-      )}
-    </>
+    </div>
   );
 };
 
