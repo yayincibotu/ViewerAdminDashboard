@@ -1,54 +1,66 @@
+import React, { lazy, Suspense } from "react";
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
-import HomePage from "@/pages/HomePage";
-import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "@/lib/protected-route";
-import Dashboard from "@/pages/app/Dashboard";
-import Services from "@/pages/app/Services";
-import BotControl from "@/pages/app/BotControl";
-import Billing from "@/pages/app/Billing";
-import Profile from "@/pages/app/Profile";
-import AdminDashboard from "@/pages/webadmin/Dashboard";
-import UsersPage from "@/pages/webadmin/Users";
-import UserDetails from "@/pages/webadmin/UserDetails";
-import AdminPayments from "@/pages/webadmin/Payments";
-import AdminInvoices from "@/pages/webadmin/Invoices";
-import AdminServices from "@/pages/webadmin/Services";
-import AdminPageContents from "@/pages/webadmin/PageContents";
-import Blog from "@/pages/webadmin/Blog";
-import BlogCategories from "@/pages/webadmin/BlogCategories";
-import Faq from "@/pages/webadmin/Faq";
-import FaqCategories from "@/pages/webadmin/FaqCategories";
-import ContactMessages from "@/pages/webadmin/ContactMessages";
-import Settings from "@/pages/webadmin/Settings";
-import Analytics from "@/pages/webadmin/Analytics";
-import DigitalProducts from "@/pages/webadmin/DigitalProducts";
-import SmmProviders from "@/pages/webadmin/SmmProviders";
-import Platforms from "@/pages/webadmin/Platforms";
-import ProductCategories from "@/pages/webadmin/ProductCategories";
-import CommentManagement from "@/pages/webadmin/CommentManagement";
-import Checkout from "@/pages/payment/Checkout";
-import Subscribe from "@/pages/payment/Subscribe";
 import { useAuth } from "@/hooks/use-auth";
 
-// Shop Pages
-import ShopPage from "./pages/shop/Shop";
-import ProductDetail from "./pages/shop/ProductDetail";
-import PlatformShop from "./pages/shop/PlatformShop";
-import CategoryShop from "./pages/shop/CategoryShop";
-import ShopCheckout from "./pages/shop/Checkout";
-import PaymentSuccess from "./pages/shop/PaymentSuccess";
+// Anasayfa bileşenlerini her zaman yükle (kritik)
+import NotFound from "@/pages/not-found";
+import HomePage from "@/pages/HomePage";
 
-// Service Pages
-import TwitchViewers from "@/pages/services/TwitchViewers";
-import KickViewers from "@/pages/services/KickViewers";
+// Yükleme Göstergeleri
+const LoadingFallback = () => <div className="flex items-center justify-center min-h-screen">
+  <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full"></div>
+</div>;
 
-// Platform Pages
-import TwitchPlatform from "@/pages/platforms/Twitch";
+// Lazy-loaded routes
+const AuthPage = lazy(() => import("@/pages/auth-page"));
+
+// User Dashboard Pages - Lazy loaded
+const Dashboard = lazy(() => import("@/pages/app/Dashboard"));
+const Services = lazy(() => import("@/pages/app/Services"));
+const BotControl = lazy(() => import("@/pages/app/BotControl"));
+const Billing = lazy(() => import("@/pages/app/Billing"));
+const Profile = lazy(() => import("@/pages/app/Profile"));
+
+// Admin Pages - Lazy loaded
+const AdminDashboard = lazy(() => import("@/pages/webadmin/Dashboard"));
+const UsersPage = lazy(() => import("@/pages/webadmin/Users"));
+const UserDetails = lazy(() => import("@/pages/webadmin/UserDetails"));
+const AdminPayments = lazy(() => import("@/pages/webadmin/Payments"));
+const AdminInvoices = lazy(() => import("@/pages/webadmin/Invoices"));
+const AdminServices = lazy(() => import("@/pages/webadmin/Services"));
+const AdminPageContents = lazy(() => import("@/pages/webadmin/PageContents"));
+const Blog = lazy(() => import("@/pages/webadmin/Blog"));
+const BlogCategories = lazy(() => import("@/pages/webadmin/BlogCategories"));
+const Faq = lazy(() => import("@/pages/webadmin/Faq"));
+const FaqCategories = lazy(() => import("@/pages/webadmin/FaqCategories"));
+const ContactMessages = lazy(() => import("@/pages/webadmin/ContactMessages"));
+const Settings = lazy(() => import("@/pages/webadmin/Settings"));
+const Analytics = lazy(() => import("@/pages/webadmin/Analytics"));
+const DigitalProducts = lazy(() => import("@/pages/webadmin/DigitalProducts"));
+const SmmProviders = lazy(() => import("@/pages/webadmin/SmmProviders"));
+const Platforms = lazy(() => import("@/pages/webadmin/Platforms"));
+const ProductCategories = lazy(() => import("@/pages/webadmin/ProductCategories"));
+const CommentManagement = lazy(() => import("@/pages/webadmin/CommentManagement"));
+
+// Payment Pages - Lazy loaded
+const Checkout = lazy(() => import("@/pages/payment/Checkout"));
+const Subscribe = lazy(() => import("@/pages/payment/Subscribe"));
+
+// Shop Pages - Lazy loaded
+const ShopPage = lazy(() => import("./pages/shop/Shop"));
+const ProductDetail = lazy(() => import("./pages/shop/ProductDetail"));
+const PlatformShop = lazy(() => import("./pages/shop/PlatformShop"));
+const CategoryShop = lazy(() => import("./pages/shop/CategoryShop"));
+const ShopCheckout = lazy(() => import("./pages/shop/Checkout"));
+const PaymentSuccess = lazy(() => import("./pages/shop/PaymentSuccess"));
+
+// Service Pages - Lazy loaded
+const TwitchViewers = lazy(() => import("@/pages/services/TwitchViewers"));
+const KickViewers = lazy(() => import("@/pages/services/KickViewers"));
+
+// Platform Pages - Lazy loaded
+const TwitchPlatform = lazy(() => import("@/pages/platforms/Twitch"));
 
 function Router() {
   const { user } = useAuth();
@@ -56,60 +68,206 @@ function Router() {
   const isAdmin = user?.role === "admin";
   
   return (
-    <Switch>
-      <Route path="/" component={HomePage} />
-      <Route path="/auth" component={AuthPage} />
-      
-      {/* Shop Pages */}
-      <Route path="/shop" component={ShopPage} />
-      <Route path="/shop/product/:id" component={ProductDetail} />
-      <Route path="/shop/:platformSlug" component={PlatformShop} />
-      <Route path="/shop/category/:categorySlug" component={CategoryShop} />
-      <Route path="/shop/checkout/:productId" component={ShopCheckout} />
-      <Route path="/shop/success" component={PaymentSuccess} />
-      
-      {/* Platform Pages */}
-      <Route path="/twitch" component={TwitchPlatform} />
-      
-      {/* Service Pages */}
-      <Route path="/twitch-viewers" component={TwitchViewers} />
-      <Route path="/kick-viewers" component={KickViewers} />
-      
-      {/* User Dashboard Routes */}
-      <ProtectedRoute path="/app" component={Dashboard} />
-      <ProtectedRoute path="/app/services" component={Services} />
-      <ProtectedRoute path="/app/bot-control" component={BotControl} />
-      <ProtectedRoute path="/app/billing" component={Billing} />
-      <ProtectedRoute path="/app/profile" component={Profile} />
-      
-      {/* Payment Routes */}
-      <ProtectedRoute path="/checkout" component={Checkout} />
-      <ProtectedRoute path="/subscribe/:planId" component={Subscribe} />
-      
-      {/* Admin Routes */}
-      <ProtectedRoute path="/webadmin" component={AdminDashboard} />
-      <ProtectedRoute path="/webadmin/users" component={UsersPage} />
-      <ProtectedRoute path="/webadmin/users/:id" component={UserDetails} />
-      <ProtectedRoute path="/webadmin/payments" component={AdminPayments} />
-      <ProtectedRoute path="/webadmin/invoices" component={AdminInvoices} />
-      <ProtectedRoute path="/webadmin/services" component={AdminServices} />
-      <ProtectedRoute path="/webadmin/digital-products" component={DigitalProducts} />
-      <ProtectedRoute path="/webadmin/platforms" component={Platforms} />
-      <ProtectedRoute path="/webadmin/product-categories" component={ProductCategories} />
-      <ProtectedRoute path="/webadmin/smm-providers" component={SmmProviders} />
-      <ProtectedRoute path="/webadmin/comment-management" component={CommentManagement} />
-      <ProtectedRoute path="/webadmin/page-contents" component={AdminPageContents} />
-      <ProtectedRoute path="/webadmin/blog" component={Blog} />
-      <ProtectedRoute path="/webadmin/blog-categories" component={BlogCategories} />
-      <ProtectedRoute path="/webadmin/faq" component={Faq} />
-      <ProtectedRoute path="/webadmin/faq-categories" component={FaqCategories} />
-      <ProtectedRoute path="/webadmin/contact-messages" component={ContactMessages} />
-      <ProtectedRoute path="/webadmin/settings" component={Settings} />
-      <ProtectedRoute path="/webadmin/analytics" component={Analytics} />
-      
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<LoadingFallback />}>
+      <Switch>
+        <Route path="/" component={HomePage} />
+        <Route path="/auth">
+          <Suspense fallback={<LoadingFallback />}>
+            <AuthPage />
+          </Suspense>
+        </Route>
+        
+        {/* Shop Pages */}
+        <Route path="/shop">
+          <Suspense fallback={<LoadingFallback />}>
+            <ShopPage />
+          </Suspense>
+        </Route>
+        <Route path="/shop/product/:id">
+          <Suspense fallback={<LoadingFallback />}>
+            <ProductDetail />
+          </Suspense>
+        </Route>
+        <Route path="/shop/:platformSlug">
+          <Suspense fallback={<LoadingFallback />}>
+            <PlatformShop />
+          </Suspense>
+        </Route>
+        <Route path="/shop/category/:categorySlug">
+          <Suspense fallback={<LoadingFallback />}>
+            <CategoryShop />
+          </Suspense>
+        </Route>
+        <Route path="/shop/checkout/:productId">
+          <Suspense fallback={<LoadingFallback />}>
+            <ShopCheckout />
+          </Suspense>
+        </Route>
+        <Route path="/shop/success">
+          <Suspense fallback={<LoadingFallback />}>
+            <PaymentSuccess />
+          </Suspense>
+        </Route>
+        
+        {/* Platform Pages */}
+        <Route path="/twitch">
+          <Suspense fallback={<LoadingFallback />}>
+            <TwitchPlatform />
+          </Suspense>
+        </Route>
+        
+        {/* Service Pages */}
+        <Route path="/twitch-viewers">
+          <Suspense fallback={<LoadingFallback />}>
+            <TwitchViewers />
+          </Suspense>
+        </Route>
+        <Route path="/kick-viewers">
+          <Suspense fallback={<LoadingFallback />}>
+            <KickViewers />
+          </Suspense>
+        </Route>
+        
+        {/* User Dashboard Routes */}
+        <ProtectedRoute path="/app">
+          <Suspense fallback={<LoadingFallback />}>
+            <Dashboard />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/app/services">
+          <Suspense fallback={<LoadingFallback />}>
+            <Services />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/app/bot-control">
+          <Suspense fallback={<LoadingFallback />}>
+            <BotControl />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/app/billing">
+          <Suspense fallback={<LoadingFallback />}>
+            <Billing />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/app/profile">
+          <Suspense fallback={<LoadingFallback />}>
+            <Profile />
+          </Suspense>
+        </ProtectedRoute>
+        
+        {/* Payment Routes */}
+        <ProtectedRoute path="/checkout">
+          <Suspense fallback={<LoadingFallback />}>
+            <Checkout />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/subscribe/:planId">
+          <Suspense fallback={<LoadingFallback />}>
+            <Subscribe />
+          </Suspense>
+        </ProtectedRoute>
+        
+        {/* Admin Routes */}
+        <ProtectedRoute path="/webadmin">
+          <Suspense fallback={<LoadingFallback />}>
+            <AdminDashboard />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/users">
+          <Suspense fallback={<LoadingFallback />}>
+            <UsersPage />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/users/:id">
+          <Suspense fallback={<LoadingFallback />}>
+            <UserDetails />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/payments">
+          <Suspense fallback={<LoadingFallback />}>
+            <AdminPayments />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/invoices">
+          <Suspense fallback={<LoadingFallback />}>
+            <AdminInvoices />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/services">
+          <Suspense fallback={<LoadingFallback />}>
+            <AdminServices />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/digital-products">
+          <Suspense fallback={<LoadingFallback />}>
+            <DigitalProducts />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/platforms">
+          <Suspense fallback={<LoadingFallback />}>
+            <Platforms />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/product-categories">
+          <Suspense fallback={<LoadingFallback />}>
+            <ProductCategories />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/smm-providers">
+          <Suspense fallback={<LoadingFallback />}>
+            <SmmProviders />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/comment-management">
+          <Suspense fallback={<LoadingFallback />}>
+            <CommentManagement />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/page-contents">
+          <Suspense fallback={<LoadingFallback />}>
+            <AdminPageContents />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/blog">
+          <Suspense fallback={<LoadingFallback />}>
+            <Blog />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/blog-categories">
+          <Suspense fallback={<LoadingFallback />}>
+            <BlogCategories />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/faq">
+          <Suspense fallback={<LoadingFallback />}>
+            <Faq />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/faq-categories">
+          <Suspense fallback={<LoadingFallback />}>
+            <FaqCategories />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/contact-messages">
+          <Suspense fallback={<LoadingFallback />}>
+            <ContactMessages />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/settings">
+          <Suspense fallback={<LoadingFallback />}>
+            <Settings />
+          </Suspense>
+        </ProtectedRoute>
+        <ProtectedRoute path="/webadmin/analytics">
+          <Suspense fallback={<LoadingFallback />}>
+            <Analytics />
+          </Suspense>
+        </ProtectedRoute>
+        
+        {/* Fallback to 404 */}
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
