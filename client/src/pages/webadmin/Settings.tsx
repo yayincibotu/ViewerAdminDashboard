@@ -19,12 +19,18 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { SystemConfig, EmailTemplate, IpRestriction } from '@shared/schema';
 
+// Extended SystemConfig interface with UI properties added by the server
+interface EnhancedSystemConfig extends SystemConfig {
+  name?: string;
+  type?: string;
+}
+
 // Individual configuration item component
 const ConfigItem: React.FC<{
-  config: SystemConfig;
+  config: EnhancedSystemConfig;
   onSave: (id: number, value: string) => void;
 }> = ({ config, onSave }) => {
-  const [value, setValue] = useState(config.value);
+  const [value, setValue] = useState(config.value || '');
   const [isEditing, setIsEditing] = useState(false);
   
   const handleSave = () => {
@@ -32,8 +38,15 @@ const ConfigItem: React.FC<{
     setIsEditing(false);
   };
   
-  const isMultiline = config.type === 'text' || config.value.length > 100;
-  const isBooleanField = config.key.startsWith('is_') || 
+  // Determine if multiline based on content or configuration type
+  const isMultiline = (config.type === 'textarea' || config.type === 'text' || 
+                       (config.value && config.value.length > 100));
+  
+  // Determine if boolean field based on key prefixes/content or configuration type
+  const isBooleanField = config.type === 'boolean' || 
+    config.key.startsWith('is_') || 
+    config.key.startsWith('optimize_') || 
+    (config.key.startsWith('image_') && !config.key.includes('quality')) ||
     ['enabled', 'disabled', 'active', 'maintenance_mode', 'allow_registrations'].some(
       suffix => config.key.includes(suffix)
     );
@@ -43,7 +56,7 @@ const ConfigItem: React.FC<{
       <div className="flex flex-col space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="font-medium">{config.name}</h4>
+            <h4 className="font-medium">{config.name || config.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
             <p className="text-sm text-muted-foreground">{config.description}</p>
           </div>
           <Switch 
@@ -62,14 +75,14 @@ const ConfigItem: React.FC<{
   return (
     <div className="space-y-2">
       <div className="flex justify-between">
-        <Label>{config.name}</Label>
+        <Label>{config.name || config.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Label>
         {isEditing && (
           <div className="flex gap-2">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => {
-                setValue(config.value);
+                setValue(config.value || '');
                 setIsEditing(false);
               }}
             >
@@ -87,7 +100,7 @@ const ConfigItem: React.FC<{
       {isEditing ? (
         isMultiline ? (
           <Textarea
-            value={value}
+            value={value || ''}
             onChange={(e) => setValue(e.target.value)}
             rows={5}
             className={`w-full ${config.type === 'code' ? 'font-mono text-sm' : ''}`}
@@ -95,10 +108,10 @@ const ConfigItem: React.FC<{
           />
         ) : (
           <Input
-            value={value}
+            value={value || ''}
             onChange={(e) => setValue(e.target.value)}
-            type={config.type === 'number' ? 'number' : 'text'}
-            className={`w-full ${config.type === 'number' ? 'font-mono' : ''}`}
+            type={(config.type === 'number' || config.key.includes('max_age')) ? 'number' : 'text'}
+            className={`w-full ${(config.type === 'number' || config.key.includes('max_age')) ? 'font-mono' : ''}`}
             style={{ wordBreak: "break-word" }}
           />
         )
