@@ -5505,7 +5505,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/system-configs", requireAdmin, async (req, res) => {
     try {
       const configs = await storage.getAllSystemConfigs();
-      res.json(configs);
+      
+      // Add display names for better UX
+      const enhancedConfigs = configs.map(config => {
+        // Map performance related config keys to friendly names
+        const nameMap: Record<string, string> = {
+          // Performance configs
+          'cache_max_age_images': 'Browser Cache: Images',
+          'cache_max_age_static': 'Browser Cache: Static Assets',
+          'cache_max_age_api': 'Browser Cache: API Responses',
+          'optimize_minify_css': 'Minify CSS',
+          'optimize_minify_js': 'Minify JavaScript',
+          'optimize_defer_js': 'Load JavaScript Deferred',
+          'optimize_css_delivery': 'Optimize CSS Delivery',
+          'optimize_preconnect': 'Preconnect to Critical Origins',
+          'optimize_preload': 'Link Preloading',
+          'image_lazy_loading': 'Lazy Load Images',
+          'image_dimensions': 'Image Width/Height Attributes',
+          'image_compression': 'Image Compression',
+          'image_next_gen_formats': 'Next-gen Image Formats',
+          'image_quality': 'Image Quality (1-100)',
+          'optimize_lcp': 'Optimize LCP',
+          'optimize_fid': 'Optimize FID',
+          'optimize_cls': 'Optimize CLS',
+        };
+        
+        // Determine config type based on key and value pattern
+        let type = 'text';
+        
+        if (config.key.startsWith('is_') || 
+            config.key.startsWith('optimize_') || 
+            config.key.startsWith('image_') && !config.key.includes('quality') || 
+            ['enabled', 'disabled', 'active'].some(s => config.key.includes(s))) {
+          type = 'boolean';
+        } else if (config.key.startsWith('cache_max_age_') || config.key === 'image_quality') {
+          type = 'number';
+        } else if (config.value && config.value.includes('\n')) {
+          type = 'textarea';
+        }
+        
+        return {
+          ...config,
+          name: nameMap[config.key] || config.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          type
+        };
+      });
+      
+      res.json(enhancedConfigs);
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching system configurations: " + error.message });
     }
