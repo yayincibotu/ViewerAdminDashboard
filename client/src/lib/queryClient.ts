@@ -69,11 +69,21 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: getQueryFn({ on401: "returnNull" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
       retry: false,
+      // Sessiz bir şekilde 401 hatalarını işle
+      onError: (error: any) => {
+        // Kimlik doğrulama hatalarını konsola yazdırma
+        if (error?.response?.status === 401) {
+          // Sessizce işle, konsola hata yazdırma
+          return;
+        }
+        // Diğer hataları konsola yazdır
+        console.error('Query error:', error);
+      }
     },
     mutations: {
       retry: false,

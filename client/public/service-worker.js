@@ -41,6 +41,16 @@ self.addEventListener('activate', (event) => {
 
 // Network first, falling back to cache
 self.addEventListener('fetch', (event) => {
+  // Skip chrome-extension requests to fix console error
+  if (event.request.url.startsWith('chrome-extension://')) {
+    return;
+  }
+  
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -56,11 +66,14 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_NAME)
           .then((cache) => {
             // Don't cache API calls or backend routes
-            if (event.request.url.includes('/api/') || 
-                event.request.method !== 'GET') {
-              return response;
+            if (event.request.url.includes('/api/')) {
+              return;
             }
-            cache.put(event.request, responseToCache);
+            try {
+              cache.put(event.request, responseToCache);
+            } catch (error) {
+              console.log('Caching error:', error);
+            }
           });
 
         return response;
