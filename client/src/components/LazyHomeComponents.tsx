@@ -6,12 +6,41 @@ import React, { lazy, Suspense } from 'react';
 // HeroSection yükleme sırasında görünür olduğu için lazy loading kullanmıyoruz
 // export const LazyHeroSection = lazy(() => import('./HeroSection'));
 
-// Tembelce yüklenen bileşenler
-export const LazyFeatureCard = lazy(() => import('./FeatureCard'));
-export const LazyPlatformCard = lazy(() => import('./PlatformCard'));
-export const LazyBenefitCard = lazy(() => import('./BenefitCard'));
-export const LazyPricingCard = lazy(() => import('./PricingCard'));
-export const LazyPaymentMethodCard = lazy(() => import('./PaymentMethodCard'));
+// Tembelce yüklenen bileşenler - her biri için ayrı hata yönetimi
+export const LazyFeatureCard = lazy(() => 
+  import('./FeatureCard').catch(() => {
+    console.error('Failed to load FeatureCard component');
+    return { default: () => <div>Failed to load feature card</div> };
+  })
+);
+
+export const LazyPlatformCard = lazy(() => 
+  import('./PlatformCard').catch(() => {
+    console.error('Failed to load PlatformCard component');
+    return { default: () => <div>Failed to load platform card</div> };
+  })
+);
+
+export const LazyBenefitCard = lazy(() => 
+  import('./BenefitCard').catch(() => {
+    console.error('Failed to load BenefitCard component');
+    return { default: () => <div>Failed to load benefit card</div> };
+  })
+);
+
+export const LazyPricingCard = lazy(() => 
+  import('./PricingCard').catch(() => {
+    console.error('Failed to load PricingCard component');
+    return { default: () => <div>Failed to load pricing card</div> };
+  })
+);
+
+export const LazyPaymentMethodCard = lazy(() => 
+  import('./PaymentMethodCard').catch(() => {
+    console.error('Failed to load PaymentMethodCard component');
+    return { default: () => <div>Failed to load payment method card</div> };
+  })
+);
 
 /**
  * Lazy loading için yükleme göstergesi
