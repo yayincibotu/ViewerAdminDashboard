@@ -1068,15 +1068,32 @@ const ProductDetail = () => {
               </div>
             )}
             
-            {/* FAQ Section - Important for SEO */}
-            <div className="mt-8">
-              <h2 className="text-xl font-bold mb-4">Frequently Asked Questions</h2>
-              <OptimizedProductFaq 
-                platform={product.platform} 
-                category={product.category} 
-                deliveryTime={product.deliveryTime} 
-              />
-            </div>
+            {/* FAQ Section with Deferred Loading - Important for SEO */}
+            <DeferredContent
+              delay={800} // Further delay loading FAQ section as it's less critical
+              placeholder={
+                <div className="mt-8">
+                  <h2 className="text-xl font-bold mb-4">Frequently Asked Questions</h2>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+                    <div className="animate-pulse space-y-4">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                      <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                      <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              }
+            >
+              <div className="mt-8">
+                <h2 className="text-xl font-bold mb-4">Frequently Asked Questions</h2>
+                <OptimizedProductFaq 
+                  platform={product.platform} 
+                  category={product.category} 
+                  deliveryTime={product.deliveryTime} 
+                />
+              </div>
+            </DeferredContent>
             
             {/* SEO Content Section */}
             <section className="mt-8 prose prose-sm dark:prose-invert max-w-none">
