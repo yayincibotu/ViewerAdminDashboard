@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { ProductVisual, getPlatformIcon, getCategoryIcon } from '@/utils/productImageHelper';
 import { 
   generateSeoMetadata, 
   generateProductFaq, 
   optimizeProductDescription 
 } from '@/utils/seoOptimizer';
+import OptimizedImage from '@/components/OptimizedImage';
+import DeferredContent from '@/components/DeferredContent';
+import { startPerformanceMeasure, endPerformanceMeasure } from '@/lib/performance-utils';
 import { useParams, useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -138,11 +142,20 @@ const ProductDetail = () => {
   const [total, setTotal] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
+  const [seoMetadata, setSeoMetadata] = useState<any>(null);
+
+  // Başlangıçta performans ölçümü başlat
+  useEffect(() => {
+    // Sayfa yükleme süresini ölç
+    startPerformanceMeasure('product-detail-render');
+    
+    // Sayfa temizlendiğinde süreyi sonlandır
+    return () => {
+      endPerformanceMeasure('product-detail-render');
+    };
+  }, []);
   
-  // Fetch product details with direct API call and safer error handling
-  // Add this console log to understand what productId we're working with
-  console.log("Current ProductID parameter:", productId);
-  
+  // Ürün verilerini çek - optimize edilmiş sorgu ve önbellek ile
   const { 
     data: product, 
     isLoading,
@@ -151,20 +164,45 @@ const ProductDetail = () => {
   } = useQuery<Product>({
     queryKey: ['/api/digital-products', productId],
     queryFn: async () => {
-      console.log('Attempting to fetch product with ID:', productId);
       try {
-        // Use hardcoded ID for testing
         const actualId = productId || '3';
-        console.log('Using ID for fetch:', actualId);
         
+        // Önbellek kontrolü yap - localStorage önbelleğine bak
+        const cacheKey = `product_${actualId}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        
+        if (cachedData) {
+          try {
+            const parsedData = JSON.parse(cachedData);
+            const cacheTime = parsedData.timestamp;
+            const currentTime = new Date().getTime();
+            
+            // Önbellek 15 dakikadan yeni ise, önbellekten veriyi döndür
+            if (currentTime - cacheTime < 15 * 60 * 1000) {
+              return parsedData.data;
+            }
+          } catch (e) {
+            // Önbellek sorunu varsa, API'dan getir
+            console.error('Cache parse error:', e);
+          }
+        }
+        
+        // API'dan yeni veri getir
         const res = await fetch(`/api/digital-products/${actualId}`);
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
+        
         const data = await res.json();
         
-        console.log('API response for product:', data);
-        
-        // Even if we get valid JSON, do additional validation
+        // Veriyi doğrula
         if (data && typeof data === 'object' && data.id) {
-          console.log('Valid product data found, returning');
+          // Veriyi yerel önbelleğe kaydet
+          localStorage.setItem(cacheKey, JSON.stringify({
+            data: data,
+            timestamp: new Date().getTime()
+          }));
+          
           return data;
         }
         
@@ -224,7 +262,58 @@ const ProductDetail = () => {
     enabled: true, // Always try to load something
   });
   
-  // Fetch related products
+  // SEO meta verileri oluştur - ürün yüklendikten sonra
+  useEffect(() => {
+    if (product) {
+      const metaData = generateSeoMetadata({
+        title: `${product.name} | ViewerApps`,
+        description: product.description,
+        type: 'product',
+        image: product.imageUrl,
+        url: window.location.href,
+        price: product.price.toString(),
+        currency: 'USD'
+      });
+      
+      setSeoMetadata(metaData);
+      
+      // Ürün için yapısal veri (schema.org) ekle
+      const productSchema = {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": product.name,
+        "description": product.description,
+        "image": product.imageUrl,
+        "sku": `product-${product.id}`,
+        "mpn": `VA-${product.id}`,
+        "brand": {
+          "@type": "Brand",
+          "name": "ViewerApps"
+        },
+        "offers": {
+          "@type": "Offer",
+          "url": window.location.href,
+          "priceCurrency": "USD",
+          "price": product.price,
+          "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+          "availability": "https://schema.org/InStock"
+        }
+      };
+      
+      // Yapısal veriyi sayfaya ekle
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.innerHTML = JSON.stringify(productSchema);
+      document.head.appendChild(script);
+      
+      // Temizleme için script'i kaldır
+      return () => {
+        document.head.removeChild(script);
+      };
+    }
+  }, [product]);
+  
+  // İlgili ürünleri getir - gecikmeli yükleme ve önbellek ile
   const { 
     data: relatedProducts = [], 
     isLoading: isLoadingRelated 
