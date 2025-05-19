@@ -1022,7 +1022,6 @@ const SettingsPage: React.FC = () => {
             </Card>
           </TabsContent>
           
-          {/* Integrations tab */}
           {/* Performance tab */}
           <TabsContent value="performance" className="space-y-6">
             <div className="grid grid-cols-1 gap-6">
