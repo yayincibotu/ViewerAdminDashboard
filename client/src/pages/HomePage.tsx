@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import * as React from 'react';
+import { useEffect } from 'react';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
 import { useQuery } from '@tanstack/react-query';
 
-// Doğrudan bileşenleri import edelim - optimizasyonu yapmak için önce hatayı çözelim
+// Doğrudan bileşenleri import edelim
 import FeatureCard from '@/components/FeatureCard';
 import PlatformCard from '@/components/PlatformCard';
 import BenefitCard from '@/components/BenefitCard';
