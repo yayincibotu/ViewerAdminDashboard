@@ -1041,23 +1041,54 @@ const ProductDetail = () => {
               </div>
             </div>
             
-            {/* Related Products */}
+            {/* Related Products with Deferred Loading */}
             {relatedProducts && relatedProducts.length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-xl font-bold mb-4">Related Products</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {relatedProducts.slice(0, 3).map((relatedProduct) => (
-                    <Card key={relatedProduct.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                      <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-white font-bold text-xl">{relatedProduct.platform.name}</span>
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-medium mb-2 line-clamp-2 h-12">{relatedProduct.name}</h3>
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-primary">${relatedProduct.price.toFixed(2)}</span>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/shop/product/${relatedProduct.id}`}>
-                              View Details
+              <DeferredContent
+                defer={600} // Delay loading until after critical content is rendered
+                fallback={
+                  <div className="mt-8">
+                    <h2 className="text-xl font-bold mb-4">Related Products</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow animate-pulse">
+                          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-t-lg"></div>
+                          <div className="p-4">
+                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                }
+              >
+                <div className="mt-8">
+                  <h2 className="text-xl font-bold mb-4">Related Products</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {relatedProducts.slice(0, 3).map((relatedProduct) => (
+                      <Card key={relatedProduct.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                        <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                          {relatedProduct.imageUrl ? (
+                            <OptimizedImage 
+                              src={relatedProduct.imageUrl}
+                              alt={relatedProduct.name}
+                              className="w-full h-full object-cover"
+                              width={300}
+                              height={150}
+                              loadingStrategy="lazy"
+                              quality={75}
+                            />
+                          ) : (
+                            <span className="text-white font-bold text-xl">{relatedProduct.platform.name}</span>
+                          )}
+                        </div>
+                        <CardContent className="p-4">
+                          <h3 className="font-medium mb-2 line-clamp-2 h-12">{relatedProduct.name}</h3>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-primary">${relatedProduct.price.toFixed(2)}</span>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/shop/product/${relatedProduct.id}`}>
+                                View Details
                             </Link>
                           </Button>
                         </div>
@@ -1070,8 +1101,8 @@ const ProductDetail = () => {
             
             {/* FAQ Section with Deferred Loading - Important for SEO */}
             <DeferredContent
-              delay={800} // Further delay loading FAQ section as it's less critical
-              placeholder={
+              defer={800} // Further delay loading FAQ section as it's less critical
+              fallback={
                 <div className="mt-8">
                   <h2 className="text-xl font-bold mb-4">Frequently Asked Questions</h2>
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
