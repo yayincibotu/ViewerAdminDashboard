@@ -42,7 +42,12 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  // Copy the response to check if it's ok without consuming the body
+  // Don't throw error for 401 status (unauthorized) - just return the response
+  if (res.status === 401) {
+    return res;
+  }
+  
+  // For other errors, check if response is ok
   const clonedRes = res.clone();
   await throwIfResNotOk(clonedRes);
   return res;
@@ -73,17 +78,7 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
-      retry: false,
-      // Sessiz bir şekilde 401 hatalarını işle
-      onError: (error: any) => {
-        // Kimlik doğrulama hatalarını konsola yazdırma
-        if (error?.response?.status === 401) {
-          // Sessizce işle, konsola hata yazdırma
-          return;
-        }
-        // Diğer hataları konsola yazdır
-        console.error('Query error:', error);
-      }
+      retry: false
     },
     mutations: {
       retry: false,

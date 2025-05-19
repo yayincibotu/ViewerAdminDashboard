@@ -13,8 +13,9 @@ import PricingCard from '@/components/PricingCard';
 import PaymentMethodCard from '@/components/PaymentMethodCard';
 
 const HomePage: React.FC = () => {
+  // Kimlik doğrulama gerektirmeyen bir API çağrısı
   const { data: plans = [] } = useQuery({ 
-    queryKey: ['/api/subscription-plans'],
+    queryKey: ['/api/subscription-plans']
   });
   
   // Kritik görüntülerin önceden yüklenmesi için efekt
