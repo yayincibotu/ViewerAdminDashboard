@@ -1,17 +1,15 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
 import { useQuery } from '@tanstack/react-query';
 
-// Lazy loaded components for performance optimization
-import {
-  OptimizedFeatureCard,
-  OptimizedPlatformCard,
-  OptimizedBenefitCard,
-  OptimizedPricingCard,
-  OptimizedPaymentMethodCard
-} from '@/components/LazyHomeComponents';
+// Doğrudan bileşenleri import edelim - optimizasyonu yapmak için önce hatayı çözelim
+import FeatureCard from '@/components/FeatureCard';
+import PlatformCard from '@/components/PlatformCard';
+import BenefitCard from '@/components/BenefitCard';
+import PricingCard from '@/components/PricingCard';
+import PaymentMethodCard from '@/components/PaymentMethodCard';
 
 const HomePage: React.FC = () => {
   const { data: plans = [] } = useQuery({ 
@@ -200,7 +198,7 @@ const HomePage: React.FC = () => {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
               {features.map((feature, index) => (
-                <OptimizedFeatureCard
+                <FeatureCard
                   key={index}
                   icon={feature.icon}
                   title={feature.title}
@@ -218,7 +216,7 @@ const HomePage: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {platforms.map((platform, index) => (
-                <OptimizedPlatformCard
+                <PlatformCard
                   key={index}
                   icon={platform.icon}
                   bgColor={platform.bgColor}
@@ -248,7 +246,7 @@ const HomePage: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {benefits.map((benefit, index) => (
-                <OptimizedBenefitCard
+                <BenefitCard
                   key={index}
                   icon={benefit.icon}
                   title={benefit.title}
@@ -286,7 +284,7 @@ const HomePage: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {pricingPlans.map((plan, index) => (
-                <OptimizedPricingCard
+                <PricingCard
                   key={index}
                   name={plan.name}
                   price={plan.price}
@@ -602,7 +600,7 @@ const HomePage: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <OptimizedPaymentMethodCard
+              <PaymentMethodCard
                 title="Credit Card Payment"
                 description="Securely process payments using all major credit cards through our Stripe integration."
                 iconClass="fas fa-credit-card"
@@ -622,7 +620,7 @@ const HomePage: React.FC = () => {
                 buttonBgColor="bg-blue-600 hover:bg-blue-700"
               />
               
-              <OptimizedPaymentMethodCard
+              <PaymentMethodCard
                 title="Cryptocurrency Payment"
                 description="Pay anonymously using Bitcoin, Ethereum, or other popular cryptocurrencies."
                 iconClass="fab fa-bitcoin"
