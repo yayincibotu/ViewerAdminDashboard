@@ -727,14 +727,26 @@ const ProductDetail = () => {
                 </div>
               </div>
               
-              {/* Dynamic Product Visual */}
+              {/* Optimized Product Visual with Lazy Loading */}
               <div className="relative">
-                <ProductVisual 
-                  platform={product.platform.slug || 'default'}
-                  category={product.category.slug || 'default'}
-                  name={product.name}
-                  className="w-full"
-                />
+                {product.imageUrl ? (
+                  <OptimizedImage 
+                    src={product.imageUrl}
+                    alt={product.name}
+                    width={800}
+                    height={450}
+                    className="w-full h-auto object-cover"
+                    loadingStrategy="eager" // Critical above-the-fold content loads eagerly
+                    quality={90}
+                  />
+                ) : (
+                  <ProductVisual 
+                    platform={product.platform.slug || 'default'}
+                    category={product.category.slug || 'default'}
+                    name={product.name}
+                    className="w-full"
+                  />
+                )}
                 
                 {/* Floating Badges */}
                 <div className="absolute top-4 left-4 flex flex-col space-y-2">
