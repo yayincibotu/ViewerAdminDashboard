@@ -1,18 +1,80 @@
-import React from 'react';
+import React, { Suspense, useEffect } from 'react';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
-import FeatureCard from '@/components/FeatureCard';
-import PlatformCard from '@/components/PlatformCard';
-import BenefitCard from '@/components/BenefitCard';
-import PricingCard from '@/components/PricingCard';
-import PaymentMethodCard from '@/components/PaymentMethodCard';
 import { useQuery } from '@tanstack/react-query';
+
+// Lazy loaded components for performance optimization
+import {
+  OptimizedFeatureCard,
+  OptimizedPlatformCard,
+  OptimizedBenefitCard,
+  OptimizedPricingCard,
+  OptimizedPaymentMethodCard
+} from '@/components/LazyHomeComponents';
 
 const HomePage: React.FC = () => {
   const { data: plans = [] } = useQuery({ 
     queryKey: ['/api/subscription-plans'],
   });
+  
+  // Kritik görüntülerin önceden yüklenmesi için efekt
+  useEffect(() => {
+    // Anasayfada görünecek kritik görüntüleri önbelleğe alma
+    const preloadImages = () => {
+      const criticalImages = [
+        '/images/hero-bg.jpg',
+        '/images/platforms/twitch.jpg',
+        '/images/platforms/youtube.jpg'
+      ];
+      
+      // Görüntüleri browser önbelleğine alma
+      criticalImages.forEach(src => {
+        const img = new Image();
+        img.src = src;
+      });
+    };
+    
+    // Intersection Observer API ile lazy loading
+    const setupLazyLoading = () => {
+      const lazyImages = document.querySelectorAll('img[loading="lazy"]');
+      
+      if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target as HTMLImageElement;
+              if (img.dataset.src) {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+              }
+              imageObserver.unobserve(img);
+            }
+          });
+        });
+        
+        lazyImages.forEach(img => imageObserver.observe(img));
+      } else {
+        // Fallback for browsers that don't support IntersectionObserver
+        lazyImages.forEach(img => {
+          if ((img as HTMLImageElement).dataset.src) {
+            (img as HTMLImageElement).src = (img as HTMLImageElement).dataset.src!;
+          }
+        });
+      }
+    };
+    
+    // Önce kritik görüntüleri yükle
+    preloadImages();
+    
+    // Sonra lazy loading ayarla
+    setTimeout(setupLazyLoading, 1000);
+    
+    // Sayfa kapanırken cleanup
+    return () => {
+      // Cleanup
+    };
+  }, []);
   
   const features = [
     { icon: "fas fa-gift", title: "Free Trial", description: "Twitch Viewbot and Kick View" },
@@ -138,7 +200,7 @@ const HomePage: React.FC = () => {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
               {features.map((feature, index) => (
-                <FeatureCard
+                <OptimizedFeatureCard
                   key={index}
                   icon={feature.icon}
                   title={feature.title}
@@ -156,7 +218,7 @@ const HomePage: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {platforms.map((platform, index) => (
-                <PlatformCard
+                <OptimizedPlatformCard
                   key={index}
                   icon={platform.icon}
                   bgColor={platform.bgColor}
@@ -186,7 +248,7 @@ const HomePage: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {benefits.map((benefit, index) => (
-                <BenefitCard
+                <OptimizedBenefitCard
                   key={index}
                   icon={benefit.icon}
                   title={benefit.title}
@@ -224,7 +286,7 @@ const HomePage: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {pricingPlans.map((plan, index) => (
-                <PricingCard
+                <OptimizedPricingCard
                   key={index}
                   name={plan.name}
                   price={plan.price}
@@ -540,7 +602,7 @@ const HomePage: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <PaymentMethodCard
+              <OptimizedPaymentMethodCard
                 title="Credit Card Payment"
                 description="Securely process payments using all major credit cards through our Stripe integration."
                 iconClass="fas fa-credit-card"
@@ -560,7 +622,7 @@ const HomePage: React.FC = () => {
                 buttonBgColor="bg-blue-600 hover:bg-blue-700"
               />
               
-              <PaymentMethodCard
+              <OptimizedPaymentMethodCard
                 title="Cryptocurrency Payment"
                 description="Pay anonymously using Bitcoin, Ethereum, or other popular cryptocurrencies."
                 iconClass="fab fa-bitcoin"

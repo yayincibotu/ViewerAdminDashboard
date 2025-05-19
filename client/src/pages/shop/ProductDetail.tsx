@@ -1008,7 +1008,7 @@ const ProductDetail = () => {
             {/* Customer Reviews Section */}
             <section className="mt-8">
               <h2 className="text-xl font-bold mb-4">Customer Reviews</h2>
-              <ProductReviews 
+              <OptimizedProductReviews 
                 productId={product.id} 
                 platform={product.platform?.name || ""} 
                 category={product.category?.name || ""} 
@@ -1018,7 +1018,7 @@ const ProductDetail = () => {
             {/* Product Comparison - Hidden on small screens */}
             <div className="mt-8 hidden md:block">
               <h2 className="text-xl font-bold mb-4">Compare with Similar Products</h2>
-              <ProductComparison productId={product.id} />
+              <OptimizedProductComparison productId={product.id} />
             </div>
           </div>
           
