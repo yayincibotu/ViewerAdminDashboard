@@ -1,116 +1,75 @@
-import React, { lazy, Suspense } from 'react';
+import * as React from 'react';
+import { lazyLoad } from '@/lib/lazy-loader';
+import DeferredContent from '@/components/DeferredContent';
 
-// Anasayfa bileşenlerini tembel yükleme için
-// HeroSection ve PlatformCard gibi görünür alanlarda kullanılan bileşenler kritik, onları normal import etmeliyiz
+// Lazy loading ile yüklenecek ağır bileşenler
+export const LazyTestimonials = lazyLoad(() => import('@/components/Testimonials'), {
+  loadingKey: 'testimonials',
+  fallback: (
+    <div className="w-full p-6 bg-gray-50 rounded-lg animate-pulse">
+      <div className="h-6 bg-gray-200 rounded mb-4 w-1/3"></div>
+      <div className="space-y-4">
+        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div className="h-4 bg-gray-200 rounded"></div>
+        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+      </div>
+    </div>
+  )
+});
 
-// HeroSection yükleme sırasında görünür olduğu için lazy loading kullanmıyoruz
-// export const LazyHeroSection = lazy(() => import('./HeroSection'));
+export const LazyFeatures = lazyLoad(() => import('@/components/Features'), {
+  loadingKey: 'features',
+  fallback: (
+    <div className="w-full p-6 bg-gray-50 rounded-lg animate-pulse">
+      <div className="h-6 bg-gray-200 rounded mb-4"></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="p-4 bg-white rounded-lg shadow-sm">
+            <div className="h-10 w-10 bg-gray-200 rounded-full mb-3"></div>
+            <div className="h-4 bg-gray-200 rounded mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+});
 
-// Tembelce yüklenen bileşenler - her biri için ayrı hata yönetimi
-export const LazyFeatureCard = lazy(() => 
-  import('./FeatureCard').catch(() => {
-    console.error('Failed to load FeatureCard component');
-    return { default: () => <div>Failed to load feature card</div> };
-  })
-);
+export const LazyPartners = lazyLoad(() => import('@/components/Partners'), {
+  loadingKey: 'partners',
+  fallback: (
+    <div className="w-full p-6 bg-gray-50 rounded-lg animate-pulse">
+      <div className="h-5 bg-gray-200 rounded mb-4 w-1/4 mx-auto"></div>
+      <div className="flex flex-wrap justify-center gap-6">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-12 w-24 bg-gray-200 rounded"></div>
+        ))}
+      </div>
+    </div>
+  )
+});
 
-export const LazyPlatformCard = lazy(() => 
-  import('./PlatformCard').catch(() => {
-    console.error('Failed to load PlatformCard component');
-    return { default: () => <div>Failed to load platform card</div> };
-  })
-);
-
-export const LazyBenefitCard = lazy(() => 
-  import('./BenefitCard').catch(() => {
-    console.error('Failed to load BenefitCard component');
-    return { default: () => <div>Failed to load benefit card</div> };
-  })
-);
-
-export const LazyPricingCard = lazy(() => 
-  import('./PricingCard').catch(() => {
-    console.error('Failed to load PricingCard component');
-    return { default: () => <div>Failed to load pricing card</div> };
-  })
-);
-
-export const LazyPaymentMethodCard = lazy(() => 
-  import('./PaymentMethodCard').catch(() => {
-    console.error('Failed to load PaymentMethodCard component');
-    return { default: () => <div>Failed to load payment method card</div> };
-  })
-);
-
-/**
- * Lazy loading için yükleme göstergesi
- */
-export const LazyLoadComponent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Render performansı için yüklemeyi geciktiren sarmalayıcı
+export const DeferredHomeSection: React.FC<{
+  children: React.ReactNode;
+  title?: string;
+  delay?: number;
+}> = ({ children, title, delay = 500 }) => {
   return (
-    <Suspense
+    <DeferredContent 
+      defer={delay}
       fallback={
-        <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg p-4">
-          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2.5"></div>
-          <div className="h-2 bg-gray-200 rounded w-1/2"></div>
+        <div className="w-full p-6 bg-gray-50 rounded-lg animate-pulse">
+          {title && <div className="h-6 bg-gray-200 rounded mb-4 w-1/3"></div>}
+          <div className="space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          </div>
         </div>
       }
     >
       {children}
-    </Suspense>
-  );
-};
-
-/**
- * Tembelce yüklenen ve optimize edilmiş FeatureCard bileşeni
- */
-export const OptimizedFeatureCard: React.FC<any> = (props) => {
-  return (
-    <LazyLoadComponent>
-      <LazyFeatureCard {...props} />
-    </LazyLoadComponent>
-  );
-};
-
-/**
- * Tembelce yüklenen ve optimize edilmiş PlatformCard bileşeni
- */
-export const OptimizedPlatformCard: React.FC<any> = (props) => {
-  return (
-    <LazyLoadComponent>
-      <LazyPlatformCard {...props} />
-    </LazyLoadComponent>
-  );
-};
-
-/**
- * Tembelce yüklenen ve optimize edilmiş BenefitCard bileşeni
- */
-export const OptimizedBenefitCard: React.FC<any> = (props) => {
-  return (
-    <LazyLoadComponent>
-      <LazyBenefitCard {...props} />
-    </LazyLoadComponent>
-  );
-};
-
-/**
- * Tembelce yüklenen ve optimize edilmiş PricingCard bileşeni
- */
-export const OptimizedPricingCard: React.FC<any> = (props) => {
-  return (
-    <LazyLoadComponent>
-      <LazyPricingCard {...props} />
-    </LazyLoadComponent>
-  );
-};
-
-/**
- * Tembelce yüklenen ve optimize edilmiş PaymentMethodCard bileşeni
- */
-export const OptimizedPaymentMethodCard: React.FC<any> = (props) => {
-  return (
-    <LazyLoadComponent>
-      <LazyPaymentMethodCard {...props} />
-    </LazyLoadComponent>
+    </DeferredContent>
   );
 };
