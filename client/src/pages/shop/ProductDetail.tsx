@@ -8,7 +8,8 @@ import {
 } from '@/utils/seoOptimizer';
 import OptimizedImage from '@/components/OptimizedImage';
 import DeferredContent from '@/components/DeferredContent';
-import { startPerformanceMeasure, endPerformanceMeasure } from '@/lib/performance-utils';
+import PerformanceIndicator from '@/components/PerformanceIndicator';
+import { startPerformanceMeasure, endPerformanceMeasure, calculatePageWeight } from '@/lib/performance-utils';
 import { useParams, useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -149,11 +150,29 @@ const ProductDetail = () => {
     // Sayfa yükleme süresini ölç
     startPerformanceMeasure('product-detail-render');
     
+    // Sayfa ağırlığı ölçümlerini hesapla
+    const calculatePagePerformance = async () => {
+      if (product) {
+        // Ürün yüklendikten 1 saniye sonra ölçümleri yap
+        setTimeout(async () => {
+          const metrics = await calculatePageWeight();
+          if (metrics) {
+            console.log('Product Page Performance Metrics:', metrics);
+          }
+          
+          // Ölçüm tamamlandı
+          endPerformanceMeasure('product-detail-render');
+        }, 1000);
+      }
+    };
+    
+    calculatePagePerformance();
+    
     // Sayfa temizlendiğinde süreyi sonlandır
     return () => {
       endPerformanceMeasure('product-detail-render');
     };
-  }, []);
+  }, [product]);
   
   // Ürün verilerini çek - optimize edilmiş sorgu ve önbellek ile
   const { 
@@ -1156,6 +1175,9 @@ const ProductDetail = () => {
                 />
               </div>
             </DeferredContent>
+            
+            {/* Performance Indicator - Shows users the page performance improvements */}
+            <PerformanceIndicator pageId={`product-${productId}`} showDetails={false} />
             
             {/* SEO Content Section */}
             <section className="mt-8 prose prose-sm dark:prose-invert max-w-none">
