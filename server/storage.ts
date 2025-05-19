@@ -1025,10 +1025,23 @@ export class DatabaseStorage implements IStorage {
           }
         ]);
         
-        // Add sample admin user
+        // Generate a random, secure password for the sample admin user
+        const randomBytes = crypto.randomBytes(16);
+        const securePassword = randomBytes.toString('hex');
+        
+        // Log the randomly generated admin password - this will only appear in server logs during initial setup
+        console.log(`SECURITY NOTICE: Generated admin account with random password: ${securePassword}`);
+        console.log(`IMPORTANT: Please change this password immediately after first login.`);
+        
+        // Securely hash the random password
+        const bcrypt = require('bcrypt');
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(securePassword, saltRounds);
+        
+        // Add sample admin user with secure random password
         await this.createUser({
           username: "admin",
-          password: "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy", // hash for 'password'
+          password: hashedPassword,
           email: "admin@viewerapps.com",
           role: "admin"
         });
