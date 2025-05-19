@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useStripe, Elements, PaymentElement, useElements } from '@stripe/react-stripe-js';
+import { useStripe, PaymentElement, useElements } from '@stripe/react-stripe-js';
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
@@ -10,32 +10,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle, CreditCard, Lock, ShieldCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getStripe } from '@/lib/stripe-loader';
-import { Elements } from '@stripe/react-stripe-js';
+import StripeProvider from '@/components/payment/StripeProvider';
 
-// This component only loads Stripe when needed and provides the Elements context
-const StripeElementsProvider: React.FC<{clientSecret: string, children: React.ReactNode}> = ({ clientSecret, children }) => {
-  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
-  
-  useEffect(() => {
-    // Only initialize Stripe when this component mounts
-    setStripePromise(getStripe());
-  }, []);
-  
-  return (
-    <>
-      {stripePromise ? (
-        <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
-          {children}
-        </Elements>
-      ) : (
-        <div className="flex justify-center items-center py-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      )}
-    </>
-  );
-};
+// We're using the StripeProvider component from @/components/payment/StripeProvider 
+// instead of defining the provider here
 
 const CheckoutForm = ({ amount, serviceName }: { amount: number, serviceName: string }) => {
   const stripe = useStripe();
@@ -325,9 +303,9 @@ const CheckoutPage: React.FC = () => {
                       ) : (
                         <>
                           {clientSecret ? (
-                            <StripeElementsProvider clientSecret={clientSecret}>
+                            <StripeProvider clientSecret={clientSecret}>
                               <CheckoutForm amount={serviceAmount} serviceName={serviceName} />
-                            </StripeElementsProvider>
+                            </StripeProvider>
                           ) : (
                             <div className="text-center py-8 text-red-500">
                               Unable to initialize payment. Please try again later.
