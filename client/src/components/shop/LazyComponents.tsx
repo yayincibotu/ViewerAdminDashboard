@@ -2,8 +2,17 @@ import React, { lazy, Suspense } from 'react';
 
 // Ağır bileşenleri ayrı ayrı lazy-load için import ediyoruz
 export const LazyProductComparison = lazy(() => import('./ProductComparison'));
-export const LazyProductReviews = lazy(() => import('./ProductReviews'));
-export const LazyProductFaq = lazy(() => import('./ProductFaq'));
+// Named export'lar için özel işlem yapmalıyız
+export const LazyProductReviews = lazy(() => 
+  import('./ProductReviews').then(module => ({ 
+    default: module.ProductReviews 
+  }))
+);
+export const LazyProductFaq = lazy(() => 
+  import('./ProductFaq').then(module => ({ 
+    default: module.ProductFaq 
+  }))
+);
 
 interface LazyLoadComponentProps {
   children: React.ReactNode;

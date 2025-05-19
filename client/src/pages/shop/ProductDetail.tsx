@@ -5,8 +5,6 @@ import {
   generateProductFaq, 
   optimizeProductDescription 
 } from '@/utils/seoOptimizer';
-import { ProductReviews } from '@/components/shop/ProductReviews';
-import { ProductFaq } from '@/components/shop/ProductFaq';
 import { useParams, useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -35,8 +33,14 @@ import NavBar from '@/components/NavBar';
 import PricingCalculator from '@/components/shop/PricingCalculator';
 import ProductShowcase from '@/components/shop/ProductShowcase';
 import DeliveryEstimator from '@/components/shop/DeliveryEstimator';
-import ProductComparison from '@/components/shop/ProductComparison';
 import StickyBuyButton from '@/components/shop/StickyBuyButton';
+
+// Ağır bileşenleri tembelce yükleme (lazy loading) için import
+import { 
+  OptimizedProductComparison,
+  OptimizedProductReviews,
+  OptimizedProductFaq 
+} from '@/components/shop/LazyComponents';
 import Head from '@/components/shared/Head';
 import { 
   optimizeDynamicPage,
@@ -966,7 +970,7 @@ const ProductDetail = () => {
             {/* FAQ Section - Important for SEO */}
             <div className="mt-8">
               <h2 className="text-xl font-bold mb-4">Frequently Asked Questions</h2>
-              <ProductFaq 
+              <OptimizedProductFaq 
                 platform={product.platform} 
                 category={product.category} 
                 deliveryTime={product.deliveryTime} 
