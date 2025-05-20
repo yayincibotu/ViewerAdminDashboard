@@ -3,7 +3,6 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { serveStatic } from 'hono/cloudflare-workers';
-import { handle } from 'hono/vercel';
 
 // Types
 interface Env {
@@ -27,7 +26,7 @@ app.use('*', cors({
 }));
 
 // Static files
-app.get('/assets/*', serveStatic({ root: './' }));
+app.get('/assets/*', serveStatic({ root: './', manifest: {} }));
 
 // Health check
 app.get('/health', (c) => {
@@ -117,7 +116,4 @@ app.notFound((c) => {
 });
 
 // Export for Cloudflare Workers
-export default app;
-
-// Export for Vercel
-export const handle = app.handle; 
+export default app; 
