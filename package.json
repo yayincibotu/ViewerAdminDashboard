@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && wrangler build",
     "build:worker": "wrangler build",
     "deploy:worker": "wrangler deploy",
     "deploy:worker:staging": "wrangler deploy --env staging",

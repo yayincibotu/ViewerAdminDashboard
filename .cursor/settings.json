@@ -11,14 +11,14 @@
     "kvNamespaces": [
       {
         "binding": "VIEWER_KV",
-        "id": "your-kv-namespace-id"
+        "id": "a6cd15df654547adaebd7d4e8624efd5"
       }
     ],
     "d1Databases": [
       {
         "binding": "DB",
-        "databaseName": "viewer_db",
-        "databaseId": "your-database-id"
+        "databaseName": "viewerapps",
+        "databaseId": "21f45632-0762-4ac1-8d88-683387e84627"
       }
     ]
   }
