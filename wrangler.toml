@@ -1,0 +1,31 @@
+name = "viewer-admin-dashboard"
+main = "dist/worker.js"
+compatibility_date = "2024-05-20"
+
+[site]
+bucket = "./dist"
+entry-point = "workers-site"
+
+[env.production]
+workers_dev = false
+route = "your-domain.com/*"
+
+[env.staging]
+workers_dev = true
+
+[build]
+command = "npm run build"
+watch_dir = "src"
+
+[build.upload]
+format = "service-worker"
+
+[[kv_namespaces]]
+binding = "VIEWER_KV"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "viewer_db"
+database_id = "your-database-id" 

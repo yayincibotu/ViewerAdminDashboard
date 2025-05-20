@@ -1094,7 +1094,7 @@ const ProductDetail = () => {
             {/* Related Products with Deferred Loading */}
             {relatedProducts && relatedProducts.length > 0 && (
               <DeferredContent
-                defer={600} // Delay loading until after critical content is rendered
+                defer={600}
                 fallback={
                   <div className="mt-8">
                     <h2 className="text-xl font-bold mb-4">Related Products</h2>
@@ -1139,19 +1139,20 @@ const ProductDetail = () => {
                             <Button variant="outline" size="sm" asChild>
                               <Link href={`/shop/product/${relatedProduct.id}`}>
                                 View Details
-                            </Link>
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                              </Link>
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               </DeferredContent>
             )}
             
-            {/* FAQ Section with Deferred Loading - Important for SEO */}
+            {/* FAQ Section with Deferred Loading */}
             <DeferredContent
-              defer={800} // Further delay loading FAQ section as it's less critical
+              defer={800}
               fallback={
                 <div className="mt-8">
                   <h2 className="text-xl font-bold mb-4">Frequently Asked Questions</h2>

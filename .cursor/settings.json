@@ -1,0 +1,25 @@
+{
+  "cloudflare": {
+    "accountId": "your-account-id",
+    "workersDev": true,
+    "routes": [
+      {
+        "pattern": "your-domain.com/*",
+        "zoneId": "your-zone-id"
+      }
+    ],
+    "kvNamespaces": [
+      {
+        "binding": "VIEWER_KV",
+        "id": "your-kv-namespace-id"
+      }
+    ],
+    "d1Databases": [
+      {
+        "binding": "DB",
+        "databaseName": "viewer_db",
+        "databaseId": "your-database-id"
+      }
+    ]
+  }
+} 

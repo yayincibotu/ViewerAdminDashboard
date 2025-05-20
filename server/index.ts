@@ -1,25 +1,11 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { testDatabaseConnection } from "./db";
 
 const app = express();
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Support for nested objects
-
-// Test database connection on startup
-(async () => {
-  try {
-    const isConnected = await testDatabaseConnection();
-    if (isConnected) {
-      log('Database connection successful');
-    } else {
-      log('Warning: Database connection test failed. Some features may not work properly.');
-    }
-  } catch (error) {
-    log('Error testing database connection:', error);
-  }
-})();
+app.use(express.urlencoded({ extended: true })); // İç içe nesneleri desteklemesi için true yapıldı
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -75,11 +61,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, () => {
     log(`serving on port ${port}`);
     
     // Schedule daily automated reviews
